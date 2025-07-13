@@ -5,67 +5,73 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Header Section -->
   <header>
     <h1>Job Tracker</h1>
     <p>The start of the project</p>
   </header>
 
+  <!-- Main Board Section -->
   <main>
     <section class="board">
+      <!-- Saved Column -->
       <div class="column" id="saved">
         <div class="column-content">
           <h2>Saved</h2>
           <div class="input-wrapper" style="display: none;">
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied"/>
+            <input type="date" class="date-applied" />
             <input type="url" class="job-link" placeholder="Job Link" />
-            <textarea class = "job-notes" placeholder="Notes"></textarea>
+            <textarea class="job-notes" placeholder="Notes"></textarea>
             <button class="submit-button" data-column="saved">Submit Job</button>
           </div>
         </div>
         <button class="add-button" data-column="saved">Add Job</button>
       </div>
 
+      <!-- Applied Column -->
       <div class="column" id="applied">
         <div class="column-content">
           <h2>Applied</h2>
           <div class="input-wrapper" style="display: none;">
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied"/>
+            <input type="date" class="date-applied" />
             <input type="url" class="job-link" placeholder="Job Link" />
-            <textarea class = "job-notes" placeholder="Notes"></textarea>
+            <textarea class="job-notes" placeholder="Notes"></textarea>
             <button class="submit-button" data-column="applied">Submit Job</button>
           </div>
         </div>
         <button class="add-button" data-column="applied">Add Job</button>
       </div>
 
+      <!-- Interview Column -->
       <div class="column" id="interview">
         <div class="column-content">
           <h2>Interview</h2>
           <div class="input-wrapper" style="display: none;">
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied"/>
+            <input type="date" class="date-applied" />
             <input type="url" class="job-link" placeholder="Job Link" />
-            <textarea class = "job-notes" placeholder="Notes"></textarea>
+            <textarea class="job-notes" placeholder="Notes"></textarea>
             <button class="submit-button" data-column="interview">Submit Job</button>
           </div>
         </div>
         <button class="add-button" data-column="interview">Add Job</button>
       </div>
 
+      <!-- Offers / Decisions Column -->
       <div class="column" id="offers-decisions">
         <div class="column-content">
           <h2>Offers / Decisions</h2>
           <div class="input-wrapper" style="display: none;">
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied"/>
+            <input type="date" class="date-applied" />
             <input type="url" class="job-link" placeholder="Job Link" />
-            <textarea class = "job-notes" placeholder="Notes"></textarea>
+            <textarea class="job-notes" placeholder="Notes"></textarea>
             <button class="submit-button" data-column="offers-decisions">Submit Job</button>
           </div>
         </div>
@@ -74,6 +80,7 @@
     </section>
   </main>
 
+  <!-- Main Script -->
   <script src="script.js"></script>
 </body>
 </html>

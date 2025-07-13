@@ -1,3 +1,14 @@
+/*
+  Main Stylesheet for Job Tracker
+  -------------------------------
+  - Layout and structure
+  - Board and columns
+  - Job cards and forms
+  - Buttons and interactions
+  - Responsive and text wrapping
+*/
+
+/* General body and header styles */
 body {
   font-family: Arial, Helvetica, sans-serif;
   margin: 10px;
@@ -16,6 +27,7 @@ main {
   padding: 20px;
 }
 
+/* Board layout */
 .board {
   display: flex;
   gap: 20px;
@@ -23,6 +35,7 @@ main {
   flex-wrap: wrap;
 }
 
+/* Column styles */
 .column {
   position: relative;
   display: flex;
@@ -32,7 +45,7 @@ main {
   background-color: #E8EAF6;
   color: #FF6F61;
   border-radius: 8px;
-  width: 220px;
+  width: 300px;
   padding: 20px 20px 50px;
   min-height: 300px;
   box-shadow: 5px 5px 5px rgba(0, 0, 0, 0.1);
@@ -46,6 +59,7 @@ main {
   flex-grow: 1;
 }
 
+/* Job card styles */
 .job-card {
   background-color: #FAFAFA;
   position: relative;
@@ -54,8 +68,27 @@ main {
   margin: 10px 0;
   border-radius: 8px;
   border: 1px solid #ccc;
+  /* Ensure text wraps inside job cards */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
+/* Ensure all content inside job cards wraps */
+.job-card * {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Job details section (including notes) */
+.job-details {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Add button at the bottom of each column */
 .add-button {
   position: absolute;
   bottom: 10px;
@@ -74,6 +107,7 @@ main {
   color: white;
 }
 
+/* Submit button for job forms */
 .submit-button {
   background-color: #FAFAFA;
   color: #212121;
@@ -89,12 +123,14 @@ main {
   color: white;
 }
 
+/* Input form wrapper */
 .input-wrapper {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+/* Input fields for job forms */
 .job-input {
   background-color: #FAFAFA;
   color: #212121;
@@ -108,6 +144,7 @@ button:focus {
   outline: none;
 }
 
+/* Delete button for job cards */
 .delete-button {
   background: none;
   position: absolute;
@@ -121,16 +158,17 @@ button:focus {
 }
 
 .job-card:active {
-    cursor: grabbing;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  cursor: grabbing;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
+/* Drag and drop visual feedback */
 .drag-over {
   border: 2px dashed #5C6BC0;
   background-color: #E3F2FD;
 }
 
-
+/* Job title styling inside cards */
 .job-card span.job-title {
   color: #5C6BC0;
   font-size: 15px;
@@ -140,4 +178,3 @@ button:focus {
   padding-bottom: 5px;
   margin-bottom: 10px;
 }
-
