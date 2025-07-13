@@ -94,26 +94,26 @@ function createJobCard(job) {
 
      updateJobInLocalStorage(originalID, columnId, job);
 
-    displayDiv.innerHTML = `
-    <div><strong>Company:</strong> ${job.company || 'N/A'}</div>
-    <div><strong>Date Applied:</strong> ${job.date || 'N/A'}</div>
-    <div><strong>Job Link:</strong> <a href = "${job.link || '#'}" target = "_blank"> ${job.link || 'N/A'}</a></div>
-    <div><strong>Notes:</strong> ${job.notes || 'N/A'}</div>
-    `;
+     displayDiv.innerHTML = `
+       <div><strong>Company:</strong> ${job.company || 'N/A'}</div>
+       <div><strong>Date Applied:</strong> ${job.date || 'N/A'}</div>
+       <div><strong>Job Link:</strong> <a href="${job.link || '#'}" target="_blank">${job.link || 'N/A'}</a></div>
+       <div><strong>Notes:</strong> ${job.notes || 'N/A'}</div>
+     `;
 
-    const newEditButton = document.createElement('button');
-    newEditButton.textContent = 'Edit';
-    newEditButton.className = 'edit-button';
-    newEditButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      displayDiv.style.display = 'none';
-      editDiv.style.display = 'block';
-    });
+     const newEditButton = document.createElement('button');
+     newEditButton.textContent = 'Edit';
+     newEditButton.className = 'edit-button';
+     newEditButton.addEventListener('click', (e) => {
+       e.stopPropagation();
+       displayDiv.style.display = 'none';
+       editDiv.style.display = 'block';
+     });
 
-    displayDiv.appendChild(newEditButton);
+     displayDiv.appendChild(newEditButton);
 
-    editDiv.style.display = 'none';
-    displayDiv.style.display = 'block';
+     editDiv.style.display = 'none';
+     displayDiv.style.display = 'block';
     });
 
     
@@ -160,7 +160,7 @@ document.querySelectorAll('.column-content').forEach(container => {
     const sourceColumn = document.getElementById(draggedJob.sourceColumnId);
     const cards = sourceColumn.querySelectorAll('.job-card');
     for(let card of cards){
-      if (card.getAttribute('data-job-id', draggedJob.job.id)) {
+      if (card.getAttribute('data-job-id') == draggedJob.job.id) {
         card.remove();
         break;
       }
@@ -176,7 +176,7 @@ document.querySelectorAll('.column-content').forEach(container => {
 function removeJobLocalStorage(jobID, columnId){
     const data = JSON.parse(localStorage.getItem('jobData')) || {};
     if (!data[columnId]) return;
-    data[columnId] = data[columnId].filter(item => item.id !== job.id);
+    data[columnId] = data[columnId].filter(item => item && item.id !== jobID);
     localStorage.setItem('jobData', JSON.stringify(data));
 }
 
@@ -228,21 +228,17 @@ function saveJobToLocalStorage(job, columnID) {
 }
 
 function updateJobInLocalStorage(jobID, columnId, updatedJob) {
-    // Load existing job data from localStorage, store this in data variable; if null, set it to {}
     const data = JSON.parse(localStorage.getItem('jobData')) || {};
 
-    // If data doesn't have columnId key, return
-    if (!data[columnId]) return;
+    if (!data[columnId]) {
+        return;
+    }
 
-    // Find the index of the job with matching title in the column
     const jobIndex = data[columnId].findIndex(job => job.id === jobID);
 
-    // If the job was found
     if (jobIndex !== -1) {
-        // Replace the job at that position with the updated job data
         data[columnId][jobIndex] = updatedJob;
 
-        // Save the updated data back to local storage
         localStorage.setItem('jobData', JSON.stringify(data));
     }
 }
