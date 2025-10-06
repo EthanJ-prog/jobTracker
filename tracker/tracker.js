@@ -70,10 +70,11 @@ function createJobCard(job) {
   // 2. Edit view - appears when you click "Edit"
   const displayDiv = document.createElement('div');
   displayDiv.className = 'job-details';
+  const dateLabel = job.status === 'saved' ? 'Date Saved: ' : 'Date Applied: ';
   displayDiv.innerHTML = `
     <div><strong>Company:</strong> ${job.company || ''}</div>
-    <div><strong>Date Applied:</strong> ${job.date || ''}</div>
-    <div><strong>Job Link:</strong> <a href="${job.link || '#'}" target="_blank">${job.link || ''}</a></div>
+    <div><strong>${dateLabel}:</strong> ${job.date || ''}</div>
+    <div><strong>Job Link:</strong> <a href="${job.link || '#'}" target="_blank" class="job-link">${job.link ? 'View Job Posting' : 'No link'}</a></div> 
     <div><strong>Notes:</strong> ${job.notes || ''}</div>
   `;
 
@@ -152,10 +153,11 @@ function createJobCard(job) {
       });
       Object.assign(job, updatedValues);
       titleSpan.textContent = job.title;
+      const dateLabel = job.status === 'saved' ? 'Date Saved: ' : 'Date Applied: ';
       displayDiv.innerHTML = `
         <div><strong>Company:</strong> ${job.company || ''}</div>
-        <div><strong>Date Applied:</strong> ${job.date || ''}</div>
-        <div><strong>Job Link:</strong> <a href="${job.link || '#'}" target="_blank">${job.link || ''}</a></div>
+        <div><strong>${dateLabel}</strong> ${job.date || ''}</div>
+        <div><strong>Job Link:</strong> <a href="${job.link || '#'}" target="_blank" class="job-link">${job.link ? 'View Job Posting' : 'No link'}</a></div> 
         <div><strong>Notes:</strong> ${job.notes || ''}</div>
       `;
       const newEditButton = document.createElement('button');

@@ -1,21 +1,31 @@
 // Store all jobs in memory for filtering and manipulation
 let allJobs = [];
 
+const pageSize = 8;
+const reqSize = pageSize * 2;
+
+
 // Base URL for our backend API
 const API_BASE = 'http://localhost:3000';
 
 /**
  * Fetches jobs from the backend API with optional search query and pagination
  * @param {string} query - Search term for filtering jobs
- * @param {number} page - Page number for pagination (50 jobs per page)
+ * @param {number} page - Page number for pagination (8 jobs per page)
  */
+let currentPage = 1;
+let lastPageCount = 0;
+let currentQuery = '';
+let totalJobsCount = null;
+
 async function fetchJobs(query = '', page = 1) {
   showLoadingMessage(); // Show loading indicator while fetching
   try {
     // Build the query parameter string
     // If there's a search query, include it, otherwise just use pagination
     const qParam = query 
-      ? `?q=${encodeURIComponent(query)}&limit=50&offset=${(page-1)*50}` : `?limit=50&offset=${(page-1)*50})`;
+      ? `?q=${encodeURIComponent(query)}&limit=${reqSize}&offset=${(page-1)*pageSize}` 
+      : `?limit=${reqSize}&offset=${(page-1)*pageSize})`;
     
     // Make API request to our backend
     const resp = await fetch(`${API_BASE}/api/jobs${qParam}`);
@@ -25,10 +35,30 @@ async function fetchJobs(query = '', page = 1) {
 
     // Parse JSON response and ensure jobs is always an array
     const data = await resp.json();
-    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
-    allJobs = jobs; // Update global jobs array
-    displayJobs(jobs); // Show jobs on the page
-    console.log(`loaded ${jobs.length} jobs for query: ${query || '(all)'}`);
+    const allJobsFromAPI = Array.isArray(data.jobs) ? data.jobs : [];
+    const savedJobs = await getSavedJob();
+
+    const unsavedJobs = allJobsFromAPI.filter(job => {
+      return !savedJobs.some(savedJob =>
+        savedJob.title === job.title &&
+        savedJob.company === job.company
+      );
+    });
+
+    const toDisplay = unsavedJobs.slice(0, pageSize);
+
+    allJobs = toDisplay; // Update global jobs array
+    displayJobs(toDisplay); // Show jobs on the page
+
+    currentPage = page;
+    currentQuery = query;
+    lastPageCount = toDisplay.length;
+  updatePaginationControls();
+  updateDBCountLabel(query);
+
+
+
+    console.log(`loaded ${unsavedJobs.length} jobs for query: ${query || '(all)'}`);
   } catch (error) {
     console.error('Failed to load job:', error);
     showErrorMessage(error.message);
@@ -86,16 +116,25 @@ function createJobCard(job) {
     <p class="job-type">${job.employment_type || job.type || ''}</p>
     <p class="job-date">${formattedDate}</p>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
-    <button class="star-button">&#9734;</button> 
+    <button type="button" class="star-button">&#9734;</button> 
   `;
 
   // Add click handler to apply button if link exists
   const applyBtn = card.querySelector('.apply-button');
-  if (job.applied_link) {
+  if (job.apply_link) {
     applyBtn.addEventListener('click', () => {
       window.open(job.apply_link, '_blank'); // Open application link in new tab
     });
   }
+
+  const starButton = card.querySelector('.star-button');
+  starButton.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await saveJobToTracker(job);
+    card.remove();
+    console.log(`Saved ${job.title} to tracker and removed from finder`);
+  });
   
   return card;
 }
@@ -127,10 +166,40 @@ function showLoadingMessage() {
   `;
 }
 
+async function getSavedJob() {
+  try{
+    const response = await fetch(`${API_BASE}/jobs`);
+    const jobs = await response.json();
+    return jobs.filter(job => job.status === 'saved');
+  } catch (error){
+    console.error("Failed to get savedJobs:", error);
+    return [];
+  }
+}
+
+async function saveJobToTracker(job){
+  const jobData = {
+    title: job.title || '', 
+    company: job.company || '',
+    date: job.posted_date ? new Date(job.posted_date).toISOString().split('T')[0] : '',
+    link: job.apply_link || '',
+    notes: `Found via Job Finder - ${job.location || ''} - ${job.employment_type || ''}`,
+    status: 'saved'
+    };
+
+    await fetch(`${API_BASE}/jobs`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(jobData)
+    });
+}
+
 // When page loads, set up search and fetch initial jobs
 document.addEventListener('DOMContentLoaded', () => {
   console.log("Loaded job finder");
   setupSearch();
+  wirePaginationButtons();
+  updateDBCountLabel('');
   fetchJobs('');
 });
 
@@ -155,6 +224,54 @@ function setupSearch() {
       debounced(trimmed); // Otherwise search with trimmed term
     }
   });
+}
+
+function updatePaginationControls() {
+  const prevButton = document.getElementById('previousPage');
+  const nextButton = document.getElementById('nextPage');
+  const pageInfo = document.getElementById('pageInfo');
+  if(!prevButton || !nextButton || !pageInfo) return;
+  const startIndex = (currentPage - 1) * pageSize + 1;
+  const endIndex = startIndex + lastPageCount - 1;
+  const rangeText = `${startIndex}\u2013${Math.max(startIndex, endIndex)}`;
+  
+  pageInfo.innerHTML = (typeof totalJobsCount === 'number')
+    ? `<span class = "page-range">${rangeText}</span> / <span class = "page-total">${totalJobsCount}</span>`  
+    : `<span class = "page-range">${rangeText}</span>`;
+  prevButton.disabled = currentPage <= 1;
+  nextButton.disabled = lastPageCount < pageSize;
+}
+async function updateDBCountLabel(){
+  try{
+    const qParam = query ? `?q=${encodeURIComponent(query)}` : '';
+    const resp = await fetch(`${API_BASE}/api/jobs/count${qParam}`);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (typeof data.count === 'number'){
+      totalJobsCount = data.count;
+      updatePaginationControls();
+    }
+  } catch (error){
+    console.error("Failed to get job count:", error);
+  }
+}
+
+function wirePaginationButtons() {
+  const prevButton = document.getElementById('previousPage');
+  const nextButton = document.getElementById('nextPage');
+  if(prevButton) {
+    prevButton.addEventListener('click', () => {
+      if (currentPage > 1) {
+        fetchJobs(currentQuery, currentPage - 1);
+      }
+    });
+  }
+
+  if(nextButton) {
+    nextButton.addEventListener('click', () => {
+      fetchJobs(currentQuery, currentPage + 1);
+    });
+  }
 }
 
 /**

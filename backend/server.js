@@ -228,6 +228,25 @@ app.get('/jobs', (req, res) => {
     });
 } );
 
+app.get('api/jobs/count', (req, res) => {
+    const q = (req.query.q || '').toString().trim()
+    const params = [];
+    let whereClause = '';
+    if (q) {
+        whereClause = `WHERE title LIKE ? OR company LIKE ? OR location LIKE ?`;
+        const likeQ = `%${q}%`;
+        params.push(likeQ, likeQ, likeQ);
+    }
+    const countSQL = `SELECT COUNT(*) as total FROM job_listings ${whereClause}`;
+    db.get(countSQL, params, (err, row) => {
+        if (err) {
+            console.error('Error counting jobs:', err.message);
+            return res.status(500).json({error: 'failed to count jobs'});
+        }
+        res.json({total: row ? row.total : 0});
+    });
+});
+
 // ROUTE 4: Save a new job
 // Adds a new job to our database
 app.post('/jobs', (req, res) => {
