@@ -54,11 +54,17 @@ def ingest_queries(
     total = 0
     # Loop through each search query
     for q in queries:
+<<<<<<< HEAD
         # Loop through specified number of pages
         for p in range(start_page, start_page + pages):
             url = build_url(base_url, q, p, country, date_posted)
             print(f"Ingesting: query='{q}', page={p}, country={country}, date_posted={date_posted}") 
             
+=======
+        for p in range(start_page, start_page + pages):
+            url = build_url(base_url, q, p, country, date_posted)
+            print(f"Ingesting: query='{q}', page={p}, country={country}, date_posted={date_posted}") 
+>>>>>>> 18784b40a80b0ff6b41645d485452c51fd1a3bc9
             try:
                 # Make API request with timeout
                 resp = requests.get(url, timeout=30)
@@ -74,13 +80,17 @@ def ingest_queries(
                 
             except Exception as e:
                 print(f"Error: {e}")
+<<<<<<< HEAD
                 
             # Add delay between requests if specified
+=======
+>>>>>>> 18784b40a80b0ff6b41645d485452c51fd1a3bc9
             if delay_sec > 0:
                 time.sleep(delay_sec)
     return total
 
 def main(argv):
+<<<<<<< HEAD
     """
     Main function to handle command line arguments and run the job ingestion
     
@@ -96,6 +106,13 @@ def main(argv):
     parser.add_argument("--query", action="append")
     parser.add_argument("--start-page", type=int, default=1)
     parser.add_argument("--pages", type=int, default=3)
+=======
+    parser = argparse.ArgumentParser(description="Batch-ingest jobs via backend ingest endpoint")
+    parser.add_argument("--api-base", default="http://localhost:3000", help="Backend base URL")
+    parser.add_argument("--query", action="append")
+    parser.add_argument("--start-page", type = int, default = 1)
+    parser.add_argument("--pages", type = int, default = 3)
+>>>>>>> 18784b40a80b0ff6b41645d485452c51fd1a3bc9
     parser.add_argument("--country", default="us", help="Country code")
     parser.add_argument("--date-posted", default="week", help="Date filter")
     parser.add_argument("--delay", type=float, default=1.0, help="Delay between calls")
@@ -112,7 +129,12 @@ def main(argv):
 
     print(f"Backend: {args.api_base} | queries={queries}")
 
+<<<<<<< HEAD
     # Run the job ingestion
+=======
+    print(f"Backend: {args.api_base} | queries={queries}")
+
+>>>>>>> 18784b40a80b0ff6b41645d485452c51fd1a3bc9
     total = ingest_queries(
         base_url=args.api_base, 
         queries=queries,

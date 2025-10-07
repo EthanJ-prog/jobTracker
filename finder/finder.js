@@ -116,7 +116,7 @@ function createJobCard(job) {
     <p class="job-type">${job.employment_type || job.type || ''}</p>
     <p class="job-date">${formattedDate}</p>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
-    <button type="button" class="star-button">&#9734;</button> 
+    <button type="button" class="star-button">&#9733;</button> 
   `;
 
   // Add click handler to apply button if link exists
