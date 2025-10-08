@@ -1,46 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- 'lang' tells browsers and screen readers what language the page is in -->
 
 <head>
-  <!-- The head section contains information about our webpage, not visible content -->
-  <title>Pathfinder - Progress Map</title> <!-- This shows up in the browser tab -->
-  <link rel="stylesheet" href="tracker.css"> <!-- Connects our CSS file for making the page look nice -->
+  <!-- Basic meta tags for character encoding and responsive design -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  
+  <!-- Page title and stylesheet -->
+  <title>Pathfinder - Progress Map</title>
+  <link rel="stylesheet" href="tracker.css">
 </head>
 
 <body>
-<!-- Everything visible on the page goes in the body -->
+  <!-- Site header with title and subtitle -->
+  <header class="site-header">
+    <h1>Progress Map</h1>
+    <p class="subtitle">Track your job applications and career progress</p>
+  </header>
 
-<header class="site-header">
-  <!-- Header section - Shows at the top of the page -->
-  <h1>Progress Map</h1> <!-- Main title -->
-  <p class="subtitle">Track your job applications and career progress</p> <!-- Subtitle explaining what the app does -->
-</header>
-
-  <!-- Main Board Section - This is where all our job tracking happens -->
+  <!-- Main content area with kanban board -->
   <main>
-    <!-- Navigation Menu - For moving between different pages -->
-    <!-- The ☰ symbol creates a hamburger menu that's common on mobile sites -->
+    <!-- Mobile navigation with hamburger menu -->
     <nav class="navigation">
       <button id="hamburgerToggle" aria-label="Toggle menu">☰</button>
       <div id="nav-bar">
-        <!-- Link to the job finder page -->
-        <a href="../finder/finder.html" class="nav-button">Job Tracker</a>
-        <a href="https://www.gofundme.com/c/start?utm_source=google&utm_medium=cpc&utm_campaign=3Q_US_Brand_Plus&utm_content=general&utm_term=gofundme_e_c_&gad_source=1&gad_campaignid=20279257806&gbraid=0AAAAADj5gID6Xix4w7eRLdwsl-zpoVKbJ&gclid=Cj0KCQjw267GBhCSARIsAOjVJ4EkVcbMUkXnXC5fP3Q9SfCn8CtT7I7jakzuojS_A0oznSJyDBqu5vMaAh44EALw_wcB"  target = "_blank" class = "nav-buttonn">GoFundMe</a>
+        <!-- Navigation link to job finder page -->
+        <a href="../finder/finder.html" class="nav-button">Job Finder</a>
+        <!-- External link to GoFundMe -->
+        <a href="https://www.gofundme.com/c/start?utm_source=google&utm_medium=cpc&utm_campaign=3Q_US_Brand_Plus&utm_content=general&utm_term=gofundme_e_c_&gad_source=1&gad_campaignid=20279257806&gbraid=0AAAAADj5gID6Xix4w7eRLdwsl-zpoVKbJ&gclid=Cj0KCQjw267GBhCSARIsAOjVJ4EkVcbMUkXnXC5fP3Q9SfCn8CtT7I7jakzuojS_A0oznSJyDBqu5vMaAh44EALw_wcB"  target = "_blank" class = "nav-button nav-button-secondary">GoFundMe</a>
       </div>
     </nav>
 
-    <!-- Board Section - Contains all our job tracking columns -->
+    <!-- Kanban board section with job tracking columns -->
     <section class="board">
-      <!-- Each column represents a different stage in the job application process -->
       
-      <!-- Saved Column - For jobs you're interested in but haven't applied to yet -->
+      <!-- Saved jobs column with job creation form -->
       <div class="column" id="saved">
         <div class="column-content">
           <h2>Saved</h2>
-          <!-- Hidden form that appears when adding a new job -->
+          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <!-- Form fields for job details -->
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
             <input type="date" class="date-applied" />
@@ -49,18 +48,15 @@
             <button class="submit-button" data-column="saved">Submit Job</button>
           </div>
         </div>
-        <!-- Button to add a new job to this column -->
         <button class="add-button" data-column="saved">Add Job</button>
       </div>
 
-      <!-- Applied Column - For jobs you've submitted applications to -->
-      <!-- Similar structure to Saved column -->
+      <!-- Applied jobs column -->
       <div class="column" id="applied">
         <div class="column-content">
           <h2>Applied</h2>
-          <!-- Hidden form that appears when adding a new job -->
+          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <!-- Form fields for job details -->
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
             <input type="date" class="date-applied" />
@@ -69,18 +65,15 @@
             <button class="submit-button" data-column="applied">Submit Job</button>
           </div>
         </div>
-        <!-- Button to add a new job to this column -->
         <button class="add-button" data-column="applied">Add Job</button>
       </div>
 
-      <!-- Interview Column - For jobs where you're in the interview process -->
-      <!-- Similar structure to Saved column -->
+      <!-- Interview stage column -->
       <div class="column" id="interview">
         <div class="column-content">
           <h2>Interview</h2>
-          <!-- Hidden form that appears when adding a new job -->
+          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <!-- Form fields for job details -->
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
             <input type="date" class="date-applied" />
@@ -89,18 +82,15 @@
             <button class="submit-button" data-column="interview">Submit Job</button>
           </div>
         </div>
-        <!-- Button to add a new job to this column -->
         <button class="add-button" data-column="interview">Add Job</button>
       </div>
 
-      <!-- Offers / Decisions Column - For jobs where you've received offers or made decisions -->
-      <!-- Similar structure to Saved column -->
+      <!-- Job offers and decisions column -->
       <div class="column" id="offers-decisions">
         <div class="column-content">
           <h2>Offers / Decisions</h2>
-          <!-- Hidden form that appears when adding a new job -->
+          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <!-- Form fields for job details -->
             <input type="text" class="job-title" placeholder="Job Title" />
             <input type="text" class="company-name" placeholder="Company" />
             <input type="date" class="date-applied" />
@@ -109,13 +99,12 @@
             <button class="submit-button" data-column="offers-decisions">Submit Job</button>
           </div>
         </div>
-        <!-- Button to add a new job to this column -->
         <button class="add-button" data-column="offers-decisions">Add Job</button>
       </div>
     </section>
   </main>
 
-  <!-- Connects our JavaScript file that makes everything interactive -->
+  <!-- JavaScript functionality for drag-and-drop and job management -->
   <script src="tracker.js"></script>
 </body>
 </html>

@@ -1,64 +1,61 @@
-// Store all jobs in memory for filtering and manipulation
+// Global state variables for job management
 let allJobs = [];
 
-const pageSize = 8;
-const reqSize = pageSize * 2;
-
-
-// Base URL for our backend API
+// API configuration constants
 const API_BASE = 'http://localhost:3000';
+const PAGE_SIZE = 8; // Number of jobs to display per page
+const REQUEST_SIZE = PAGE_SIZE * 2; // Request more jobs to account for saved jobs filtering
 
-/**
- * Fetches jobs from the backend API with optional search query and pagination
- * @param {string} query - Search term for filtering jobs
- * @param {number} page - Page number for pagination (8 jobs per page)
- */
+// Pagination and search state
 let currentPage = 1;
 let lastPageCount = 0;
 let currentQuery = '';
 let totalJobsCount = null;
 
+/**
+ * Fetches jobs from the API with search and pagination
+ * Filters out jobs that are already saved to avoid duplicates
+ * @param {string} query - Search query string
+ * @param {number} page - Page number for pagination
+ */
 async function fetchJobs(query = '', page = 1) {
-  showLoadingMessage(); // Show loading indicator while fetching
+  showLoadingMessage();
   try {
-    // Build the query parameter string
-    // If there's a search query, include it, otherwise just use pagination
-    const qParam = query 
-      ? `?q=${encodeURIComponent(query)}&limit=${reqSize}&offset=${(page-1)*pageSize}` 
-      : `?limit=${reqSize}&offset=${(page-1)*pageSize})`;
-    
-    // Make API request to our backend
-    const resp = await fetch(`${API_BASE}/api/jobs${qParam}`);
-    if (!resp.ok) {
-      throw new Error(`API error ${resp.status}`);
+    // Build API query parameters
+    const queryParam = query 
+      ? `?q=${encodeURIComponent(query)}&limit=${REQUEST_SIZE}&offset=${(page-1)*PAGE_SIZE}` 
+      : `?limit=${REQUEST_SIZE}&offset=${(page-1)*PAGE_SIZE}`;
+
+    // Fetch jobs from API
+    const response = await fetch(`${API_BASE}/api/jobs${queryParam}`);
+    if (!response.ok) {
+      throw new Error(`API error ${response.status}`);
     }
 
-    // Parse JSON response and ensure jobs is always an array
-    const data = await resp.json();
+    const data = await response.json();
     const allJobsFromAPI = Array.isArray(data.jobs) ? data.jobs : [];
-    const savedJobs = await getSavedJob();
 
+    // Get saved jobs to filter out duplicates
+    const savedJobs = await getSavedJobs();
     const unsavedJobs = allJobsFromAPI.filter(job => {
-      return !savedJobs.some(savedJob =>
-        savedJob.title === job.title &&
+      return !savedJobs.some(savedJob => 
+        savedJob.title === job.title && 
         savedJob.company === job.company
       );
     });
 
-    const toDisplay = unsavedJobs.slice(0, pageSize);
+    // Display only the requested page size
+    const toDisplay = unsavedJobs.slice(0, PAGE_SIZE);
+    allJobs = toDisplay;
+    displayJobs(toDisplay);
 
-    allJobs = toDisplay; // Update global jobs array
-    displayJobs(toDisplay); // Show jobs on the page
-
+    // Update pagination state
     currentPage = page;
     currentQuery = query;
     lastPageCount = toDisplay.length;
-  updatePaginationControls();
-  updateDBCountLabel(query);
-
-
-
-    console.log(`loaded ${unsavedJobs.length} jobs for query: ${query || '(all)'}`);
+    updatePaginationControls();
+    updateDbCountLabel(query);
+    console.log(`loaded ${allJobsFromAPI.length} jobs, showing ${unsavedJobs.length} unsaved jobs for query: ${query || '(all)'}`);
   } catch (error) {
     console.error('Failed to load job:', error);
     showErrorMessage(error.message);
@@ -66,14 +63,15 @@ async function fetchJobs(query = '', page = 1) {
 }
 
 /**
- * Displays job cards in the container
- * Shows a "No jobs found" message if the array is empty
+ * Displays job cards in the job listings container
+ * Shows appropriate message if no jobs are found
+ * @param {Array} jobs - Array of job objects to display
  */
 function displayJobs(jobs) {
   const container = document.querySelector('.job-listings-container');
-  container.innerHTML = ''; // Clear existing content
+  container.innerHTML = '';
 
-  // Show message if no jobs found
+  // Show no jobs message if empty
   if (jobs.length === 0) {
     container.innerHTML = `
       <div class="no-jobs-message"> 
@@ -84,7 +82,7 @@ function displayJobs(jobs) {
     return;
   }
 
-  // Create and add job cards to container
+  // Create and append job cards
   jobs.forEach(job => {
     const jobCard = createJobCard(job);
     container.appendChild(jobCard);
@@ -92,23 +90,22 @@ function displayJobs(jobs) {
 }
 
 /**
- * Creates a job card element with job details and apply button
- * @param {Object} job - Job object containing title, company, location etc.
- * @returns {HTMLElement} The created job card
+ * Creates a job card DOM element with job details and interactive buttons
+ * @param {Object} job - Job object containing job details
+ * @returns {HTMLElement} - Job card DOM element
  */
 function createJobCard(job) {
   const card = document.createElement('div');
   card.className = 'job-card';
-  
 
-  // Format the date string
+  // Format the posted date for display
   const formattedDate = job.posted_date ? new Date(job.posted_date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
   }) : '';
   
-  // Fill card with job details, using empty string as fallback if property is missing
+  // Create job card HTML structure
   card.innerHTML = `
     <h3 class="job-title">${job.title || ''}</h3> 
     <p class="job-company">${job.company || ''}</p>
@@ -116,31 +113,37 @@ function createJobCard(job) {
     <p class="job-type">${job.employment_type || job.type || ''}</p>
     <p class="job-date">${formattedDate}</p>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
-    <button type="button" class="star-button">&#9733;</button> 
+    <button type="button" class="star-button">&#9734;</button>
   `;
 
-  // Add click handler to apply button if link exists
-  const applyBtn = card.querySelector('.apply-button');
+  // Add apply button functionality
+  const applyButton = card.querySelector('.apply-button');
   if (job.apply_link) {
-    applyBtn.addEventListener('click', () => {
-      window.open(job.apply_link, '_blank'); // Open application link in new tab
+    applyButton.addEventListener('click', () => {
+      window.open(job.apply_link, '_blank');
     });
   }
 
+  // Add star button functionality for saving jobs
   const starButton = card.querySelector('.star-button');
+  
   starButton.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Save job to tracker and remove from finder
     await saveJobToTracker(job);
     card.remove();
-    console.log(`Saved ${job.title} to tracker and removed from finder`);
+    
+    console.log('Job saved and removed from finder:', job.title);
   });
   
   return card;
 }
 
 /**
- * Shows error message when job fetching fails
+ * Displays error message in the job listings container
+ * @param {string} message - Error message to display
  */
 function showErrorMessage(message) {
   const container = document.querySelector('.job-listings-container');
@@ -154,7 +157,7 @@ function showErrorMessage(message) {
 }
 
 /**
- * Shows loading message while fetching jobs
+ * Displays loading message while fetching jobs
  */
 function showLoadingMessage() {
   const container = document.querySelector('.job-listings-container');
@@ -166,116 +169,146 @@ function showLoadingMessage() {
   `;
 }
 
-async function getSavedJob() {
-  try{
+/**
+ * Fetches saved jobs from the tracker to filter out duplicates
+ * @returns {Array} - Array of saved job objects
+ */
+async function getSavedJobs() {
+  try {
     const response = await fetch(`${API_BASE}/jobs`);
     const jobs = await response.json();
     return jobs.filter(job => job.status === 'saved');
-  } catch (error){
-    console.error("Failed to get savedJobs:", error);
+  } catch (error) {
+    console.error('Failed to get saved jobs:', error);
     return [];
   }
 }
 
-async function saveJobToTracker(job){
+/**
+ * Saves a job to the tracker database
+ * @param {Object} job - Job object to save
+ */
+async function saveJobToTracker(job) {
   const jobData = {
-    title: job.title || '', 
+    title: job.title || '',
     company: job.company || '',
     date: job.posted_date ? new Date(job.posted_date).toISOString().split('T')[0] : '',
     link: job.apply_link || '',
     notes: `Found via Job Finder - ${job.location || ''} - ${job.employment_type || ''}`,
     status: 'saved'
-    };
+  };
 
-    await fetch(`${API_BASE}/jobs`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(jobData)
-    });
+  await fetch(`${API_BASE}/jobs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(jobData)
+  });
 }
 
-// When page loads, set up search and fetch initial jobs
+// Initialize the job finder when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   console.log("Loaded job finder");
   setupSearch();
   wirePaginationButtons();
-  updateDBCountLabel('');
+  updateDbCountLabel('');
   fetchJobs('');
 });
 
 /**
- * Sets up search input with debounced event handler
- * Debouncing prevents too many API calls while user is typing
+ * Sets up search input with debounced search functionality
+ * Prevents excessive API calls while user is typing
  */
 function setupSearch() {
   const searchInput = document.getElementById('searchInput');
-  // Create debounced search function that waits 400ms after last keystroke
   const debounced = debounce((term) => {
     fetchJobs(term, 1);
   }, 400);
 
-  // Add input event listener
   searchInput.addEventListener('input', (e) => {
     const searchTerm = e.target.value;
     const trimmed = searchTerm.trim();
     if (trimmed.length === 0) {
-      fetchJobs('', 1); // If search is empty, show all jobs
+      fetchJobs('', 1);
     } else {
-      debounced(trimmed); // Otherwise search with trimmed term
+      debounced(trimmed);
     }
   });
 }
 
+/**
+ * Updates pagination controls based on current state
+ * Enables/disables buttons and updates page information display
+ */
 function updatePaginationControls() {
-  const prevButton = document.getElementById('previousPage');
-  const nextButton = document.getElementById('nextPage');
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
   const pageInfo = document.getElementById('pageInfo');
-  if(!prevButton || !nextButton || !pageInfo) return;
-  const startIndex = (currentPage - 1) * pageSize + 1;
+
+  if (!prevBtn || !nextBtn || !pageInfo) return;
+
+  // Calculate display range
+  const startIndex = (currentPage - 1) * PAGE_SIZE + 1;
   const endIndex = startIndex + lastPageCount - 1;
+
   const rangeText = `${startIndex}\u2013${Math.max(startIndex, endIndex)}`;
-  
+
+  // Update page info with range and total count
   pageInfo.innerHTML = (typeof totalJobsCount === 'number')
-    ? `<span class = "page-range">${rangeText}</span> / <span class = "page-total">${totalJobsCount}</span>`  
-    : `<span class = "page-range">${rangeText}</span>`;
-  prevButton.disabled = currentPage <= 1;
-  nextButton.disabled = lastPageCount < pageSize;
+    ? `<span class="page-range">${rangeText}</span> / <span class="page-total">${totalJobsCount}</span>`
+    : `<span class="page-range">${rangeText}</span>`;
+
+  // Enable/disable pagination buttons
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = lastPageCount < PAGE_SIZE;
 }
-async function updateDBCountLabel(){
-  try{
-    const qParam = query ? `?q=${encodeURIComponent(query)}` : '';
-    const resp = await fetch(`${API_BASE}/api/jobs/count${qParam}`);
-    if (!resp.ok) return;
-    const data = await resp.json();
-    if (typeof data.count === 'number'){
-      totalJobsCount = data.count;
+
+/**
+ * Updates the total job count from the database
+ * Used for pagination display
+ * @param {string} query - Search query to get count for
+ */
+async function updateDbCountLabel(query) {
+  try {
+    const queryParam = query ? `?q=${encodeURIComponent(query)}` : '';
+    const response = await fetch(`${API_BASE}/api/jobs/count${queryParam}`);
+    if (!response.ok) return;
+
+    const data = await response.json();
+
+    if (typeof data.total === 'number') {
+      totalJobsCount = data.total;
       updatePaginationControls();
     }
-  } catch (error){
-    console.error("Failed to get job count:", error);
+  } catch (e) {
+    // Silently handle errors for count updates
   }
 }
 
+/**
+ * Sets up event listeners for pagination buttons
+ * Handles previous and next page navigation
+ */
 function wirePaginationButtons() {
-  const prevButton = document.getElementById('previousPage');
-  const nextButton = document.getElementById('nextPage');
-  if(prevButton) {
-    prevButton.addEventListener('click', () => {
+  const prevBtn = document.getElementById('prevPage');
+  const nextBtn = document.getElementById('nextPage');
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
       if (currentPage > 1) {
         fetchJobs(currentQuery, currentPage - 1);
       }
     });
   }
 
-  if(nextButton) {
-    nextButton.addEventListener('click', () => {
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
       fetchJobs(currentQuery, currentPage + 1);
     });
   }
 }
 
 /**
- * Toggles visibility of filter panel
+ * Toggles the visibility of the filter panel
  */
 function toggleFilters() {
   const panel = document.getElementById('filterPanel');
@@ -283,56 +316,57 @@ function toggleFilters() {
 }
 
 /**
- * Helper function to prevent too many function calls
- * Waits for pause in triggering before executing
+ * Creates a debounced version of a function to limit execution frequency
+ * @param {Function} fn - Function to debounce
+ * @param {number} delay - Delay in milliseconds
+ * @returns {Function} - Debounced function
  */
 function debounce(fn, delay) {
   let timeoutId;
   return function(...args) {
-    clearTimeout(timeoutId); // Clear previous timeout
+    clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn.apply(this, args), delay);
   };
 }
 
-// Get the menu elements
+// Mobile navigation functionality
 const hamburgerBtn = document.getElementById('hamburgerToggle');
 const navBar = document.getElementById('nav-bar');
 
-// Toggle menu when hamburger is clicked
+// Toggle mobile navigation menu
 hamburgerBtn.addEventListener('click', () => {
     navBar.classList.toggle('is-active');
 });
 
-// Close menu when clicking outside
+// Close mobile menu when clicking outside
 document.addEventListener('click', (e) => {
     if (!navBar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
         navBar.classList.remove('is-active');
     }
 });
 
-// Close menu when escape key is pressed
+// Close mobile menu with Escape key
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         navBar.classList.remove('is-active');
     }
 });
 
-// Tab switching functionality
+// Tab navigation functionality
 document.addEventListener('DOMContentLoaded', () => {
     const tabButtons = document.querySelectorAll('.tab-button');
     
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // Remove active class from all buttons and panes
+            // Remove active class from all tabs and panes
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
             
-            // Add active class to clicked button
+            // Add active class to clicked tab and corresponding pane
             button.classList.add('active');
             
-            // Show corresponding pane
-            const tabId = button.dataset.tab;
-            document.getElementById(`${tabId}-tab`).classList.add('active');
+            const tabID = button.dataset.tab;
+            document.getElementById(`${tabID}-tab`).classList.add('active');
         });
     });
 });

@@ -1,5 +1,4 @@
-/* Reset and base styles - Removes default browser styling */
-/* This makes sure our design looks the same in all browsers */
+/* Reset default browser styles and set consistent box-sizing */
 *,
 *::before,
 *::after {
@@ -8,8 +7,7 @@
   padding: 0;
 }
 
-/* Main page background styling */
-/* Creates a subtle gradient background with a dot pattern */
+/* Main body styling with gradient background and dot pattern */
 body {
   font-family: "Segoe UI", Roboto, sans-serif;
   background: linear-gradient(135deg, #f4f6f8, #e8ecf5);
@@ -21,14 +19,14 @@ body {
   flex-direction: column;
 }
 
-/* Header Section - The top part of our page */
-/* Contains the main title and subtitle */
+/* Site header container with centered content */
 .site-header {
   text-align: center;
   padding: 40px 20px 20px;
   color: #2c3e50;
 }
 
+/* Main site title with gradient text effect */
 .site-header h1 {
   font-size: 2.8rem;
   font-weight: 700;
@@ -39,15 +37,14 @@ body {
   margin-bottom: 10px;
 }
 
-/* Subtitle text under the main title */
+/* Site subtitle styling */
 .site-header .subtitle {
   font-size: 1.2rem;
   color: #555;
   font-weight: 400;
 }
 
-/* Main content area - Where all our job columns live */
-/* Uses flex to center everything and make it responsive */
+/* Main content area with flexible layout */
 main {
   flex: 1;
   padding: 40px 20px;
@@ -55,47 +52,47 @@ main {
   justify-content: center;
   align-items: flex-start;
   width: 100%;
-  overflow-x: auto; /* Allows horizontal scrolling if needed */
+  overflow-x: auto;
 }
 
-/* Board container - Holds all the job status columns */
-/* Creates a semi-transparent white background with shadow */
+/* Kanban board container with glassmorphism effect */
 .board {
   display: flex;
-  justify-content: center; /* Changed from space-evenly */
+  justify-content: center;
   align-items: flex-start;
   gap: 24px;
-  flex-wrap: nowrap; /* Changed from wrap to prevent wrapping */
+  flex-wrap: nowrap;
   padding: 24px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  max-width: 1500px; /* Increased from 1300px */
+  max-width: 1500px;
   width: 100%;
-  overflow-x: auto; /* Allows horizontal scrolling if needed */
+  overflow-x: auto;
 }
 
-/* Individual column styling - Applied, Interviewing, etc. */
-/* Each column is a white box that lifts up when hovered */
+/* Individual kanban column styling */
 .column {
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);
   padding: 24px;
-  width: 300px; /* Slightly reduced width */
-  min-width: 300px; /* Added to prevent column shrinking */
-  min-height: 400px; /* Added min-height */
+  width: 300px;
+  min-width: 300px;
+  min-height: 400px;
   display: flex;
   flex-direction: column;
   gap: 15px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Column hover effect with lift animation */
 .column:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
 
+/* Column header styling */
 .column h2 {
   font-size: 1.4rem;
   font-weight: 600;
@@ -103,13 +100,12 @@ main {
   margin-bottom: 10px;
 }
 
-/* Job card - Individual job posting cards within columns */
-/* Cards have a subtle shadow and lift up when hovered */
+/* Individual job card styling with drag-and-drop support */
 .job-card {
   position: relative;
   background: #fff;
   color: #212121;
-  margin: 12px 0; /* Vertical spacing between cards */
+  margin: 12px 0;
   border-radius: 14px;
   padding: 20px;
   border: 1px solid #e0e4ec;
@@ -117,11 +113,11 @@ main {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  height: 260px; /* Fixed height */
-  overflow-y: auto; /* Scrollable if content is too long */
+  height: 260px;
+  overflow-y: auto;
 }
 
-/* Job title styling */
+/* Job card title styling with bottom border */
 .job-card .job-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -129,10 +125,10 @@ main {
   padding-bottom: 8px;
   margin-bottom: 4px;
   border-bottom: 2px solid #e8eaf6;
-  padding-right: 30px; /* Space for delete button */
+  padding-right: 30px;
 }
 
-/* Job details styling */
+/* Job details container with scrollable content */
 .job-card .job-details {
   display: flex;
   flex-direction: column;
@@ -140,15 +136,17 @@ main {
   font-size: 0.92rem;
   color: #4a5568;
   overflow-y: auto;
-  padding-right: 8px; /* Space for scrollbar */
+  padding-right: 8px;
 }
 
+/* Individual job detail row */
 .job-card .job-details div {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
+/* Job detail labels styling */
 .job-card .job-details strong {
   color: #2d3748;
   font-size: 0.9rem;
@@ -156,7 +154,7 @@ main {
   letter-spacing: 0.5px;
 }
 
-/* Job link styling */
+/* Job link styling with hover effects */
 .job-card .job-link {
   color: #5C6BC0;
   text-decoration: none;
@@ -164,12 +162,13 @@ main {
   transition: color 0.2s ease;
 }
 
+/* Job link hover state */
 .job-card .job-link:hover {
   color: #3949ab;
   text-decoration: underline;
 }
 
-/* Edit form styling */
+/* Form inputs within job cards */
 .job-card .job-details input,
 .job-card .job-details textarea {
   width: 100%;
@@ -181,6 +180,7 @@ main {
   transition: all 0.2s ease;
 }
 
+/* Form input focus state */
 .job-card .job-details input:focus,
 .job-card .job-details textarea:focus {
   border-color: #5C6BC0;
@@ -189,17 +189,14 @@ main {
   box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.1);
 }
 
-/* Card button layout */
+/* Button group container for job card actions */
 .job-card .button-group {
   display: flex;
   gap: 8px;
   margin-top: 8px;
 }
 
-/* Button Styles */
-/* All buttons share similar gradient backgrounds and hover effects */
-
-/* Add/Submit buttons - Primary action buttons */
+/* Primary action buttons (add and submit) */
 .add-button,
 .submit-button {
   background: linear-gradient(135deg, #5C6BC0, #007acc);
@@ -213,6 +210,7 @@ main {
   transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
 }
 
+/* Primary button hover effect */
 .add-button:hover,
 .submit-button:hover {
   background: linear-gradient(135deg, #4a59a8, #0060a1);
@@ -220,13 +218,14 @@ main {
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+/* Primary button active state */
 .add-button:active,
 .submit-button:active {
   transform: translateY(0);
   box-shadow: none;
 }
 
-/* Edit button - Smaller version of primary buttons */
+/* Edit button styling for job cards */
 .edit-button {
   background: linear-gradient(135deg, #5C6BC0, #007acc);
   color: #fff;
@@ -238,24 +237,25 @@ main {
   transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
 }
 
+/* Edit button hover effect */
 .edit-button:hover {
   background: linear-gradient(135deg, #4a59a8, #0060a1);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
+/* Edit button active state */
 .edit-button:active {
   transform: translateY(0);
   box-shadow: none;
 }
 
-/* Delete button - Red warning button */
-/* Positioned in top-right corner of job cards */
+/* Delete button positioned in top-right corner of job card */
 .delete-button {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: #e53935; /* Red color for delete */
+  background: #e53935;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -266,14 +266,14 @@ main {
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Delete button hover effect */
 .delete-button:hover {
   background: #d32f2f;
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Update button - Used for saving changes */
-/* Similar to primary buttons but with different spacing */
+/* Update button for saving job edits */
 .update-button {
   background: linear-gradient(135deg, #5C6BC0, #007acc);
   color: #fff;
@@ -286,21 +286,22 @@ main {
   transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
 }
 
+/* Update button hover effect */
 .update-button:hover {
   background: linear-gradient(135deg, #4a59a8, #0060a1);
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
+/* Update button active state */
 .update-button:active {
   transform: translateY(0);
   box-shadow: none;
 }
 
-/* Cancel button - Secondary action button */
-/* Light gray button for canceling actions */
+/* Cancel button for canceling job edits */
 .cancel-button {
-  background: #e0e0e0; /* light gray */
+  background: #e0e0e0;
   color: #555;
   font-weight: 500;
   border-radius: 6px;
@@ -310,6 +311,7 @@ main {
   transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
+/* Cancel button hover effect */
 .cancel-button:hover {
   background: #cccccc;
   color: #333;
@@ -317,13 +319,11 @@ main {
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
+/* Cancel button active state */
 .cancel-button:active {
   transform: translateY(0);
   box-shadow: none;
 }
-
-/* Navigation Styles */
-/* Controls for moving between pages and sections */
 
 /* Page navigation container */
 .page-nav {
@@ -337,7 +337,7 @@ main {
     border-radius: 8px;
 }
 
-/* Navigation button - Used for links between pages */
+/* Primary navigation button styling */
 .nav-button {
     position: absolute;
     display: block;
@@ -350,54 +350,35 @@ main {
     padding: 10px 0;
     border-radius: 6px;
     margin-bottom: 10px;
-}
-
-.nav-buttonn {
-    position: absolute;
-    display: block;
-    width: 80%;
-    text-align: center;
-    text-decoration: none;
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
-    color: white;
-    top: 175px;
-    padding: 10px 0;
-    border-radius: 6px;
-    margin-bottom: 10px;
     transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
 }
 
-/* Navigation button hover effect */
-.nav-buttonn:hover {
-    background: linear-gradient(135deg, #4a59a8, #0060a1);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+/* Secondary navigation button styling (positioned lower) */
+.nav-button-secondary {
+    top: 175px;
 }
 
-/* Mobile Menu Styles */
-/* Hamburger menu for mobile devices */
 
-/* Sliding menu container */
-/* Starts hidden off-screen and slides in when active */
+/* Mobile navigation sidebar (hidden by default) */
 #nav-bar {
-    position: fixed; /* Stays in place while scrolling */
+    position: fixed;
     top: 0;
-    left: -300px; /* Start off-screen */
+    left: -300px;
     width: 250px;
     height: 100vh;
     background: #fff;
     padding: 2rem 1rem;
     box-shadow: 2px 0 6px rgba(0,0,0,0.2);
     transition: transform 0.3s ease;
-    z-index: 1000; /* Appears above other content */
+    z-index: 1000;
 }
 
-/* When nav menu is active */
+/* Active state for mobile navigation */
 #nav-bar.is-active {
-    transform: translateX(300px); /* Slide in when active */
+    transform: translateX(300px);
 }
 
-/* Optional styling for the button */
+/* Hamburger menu toggle button */
 #hamburgerToggle {
     position: fixed;
     top: 1rem;
@@ -413,8 +394,7 @@ main {
     transition: background-color 0.2s ease;
 }
 
-/* Visual feedback when hovering over buttons */
-/* Makes buttons slightly darker when the mouse is over them */
+/* Navigation button hover effects */
 .nav-button:hover,
 #hamburgerToggle:hover {
     background: linear-gradient(135deg, #4a59a8, #0060a1);
@@ -422,7 +402,7 @@ main {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Input wrapper updates */
+/* Input wrapper for job creation forms */
 .input-wrapper {
     display: flex;
     flex-direction: column;
@@ -433,6 +413,7 @@ main {
     margin-top: 10px;
 }
 
+/* Form inputs within input wrapper */
 .input-wrapper input,
 .input-wrapper textarea {
     padding: 8px;
@@ -441,37 +422,38 @@ main {
     font-size: 0.92rem;
 }
 
+/* Textarea specific styling with resize controls */
 .input-wrapper textarea {
-    height: 80px; /* Limit textarea height */
+    height: 80px;
     resize: vertical;
     min-height: 60px;
     max-height: 120px;
 }
 
-/* Board container updates */
+/* Duplicate board styling (consolidated above) */
 .board {
     display: flex;
-    justify-content: center; /* Changed from space-evenly */
+    justify-content: center;
     align-items: flex-start;
     gap: 24px;
-    flex-wrap: nowrap; /* Changed from wrap to prevent wrapping */
+    flex-wrap: nowrap;
     padding: 24px;
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.7);
     box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    max-width: 1500px; /* Increased from 1300px */
+    max-width: 1500px;
     width: 100%;
-    overflow-x: auto; /* Allows horizontal scrolling if needed */
+    overflow-x: auto;
 }
 
-/* Column updates */
+/* Duplicate column styling (consolidated above) */
 .column {
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.08);
     padding: 24px;
-    width: 300px; /* Slightly reduced width */
-    min-width: 300px; /* Added to prevent column shrinking */
+    width: 300px;
+    min-width: 300px;
     min-height: 400px;
     display: flex;
     flex-direction: column;
@@ -479,7 +461,7 @@ main {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Main content area update */
+/* Duplicate main styling (consolidated above) */
 main {
     flex: 1;
     padding: 40px 20px;
@@ -487,10 +469,10 @@ main {
     justify-content: center;
     align-items: flex-start;
     width: 100%;
-    overflow-x: auto; /* Allows horizontal scrolling if needed */
+    overflow-x: auto;
 }
 
-/* Add responsive styles for smaller screens */
+/* Responsive design for smaller screens */
 @media (max-width: 1500px) {
     .board {
         padding: 16px;
@@ -503,5 +485,4 @@ main {
         padding: 20px;
     }
 }
-
 

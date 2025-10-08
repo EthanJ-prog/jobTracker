@@ -1,39 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- The lang attribute helps screen readers and browsers know what language the page is in -->
 <head>
-  <!-- Meta tags provide information about the webpage to browsers -->
-  <meta charset="UTF-8"> <!-- Defines the character encoding (how text is stored) -->
+  <!-- Basic meta tags for character encoding and responsive design -->
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <!-- Viewport meta tag helps with mobile responsiveness - makes the page look good on phones -->
   
-  <title>Pathfinder - Job Finder</title> <!-- Shows up in browser tab -->
-  <link rel="stylesheet" href="finder.css"> <!-- Connects our CSS file for styling -->
+  <!-- Page title and stylesheet -->
+  <title>Pathfinder - Job Finder</title>
+  <link rel="stylesheet" href="finder.css">
 </head>
 
 <body>
-    <!-- Navigation Menu -->
-    <!-- Hamburger menu button (☰) for mobile devices -->
+    <!-- Mobile navigation with hamburger menu -->
     <nav class="navigation">
     <button id="hamburgerToggle" aria-label="Toggle menu">☰</button>
     <div id="nav-bar">
+        <!-- Navigation link to job tracker page -->
         <a href="../tracker/tracker.html" class="nav-button">Job Tracker</a>
-        <a href="https://www.gofundme.com/c/start?utm_source=google&utm_medium=cpc&utm_campaign=3Q_US_Brand_Plus&utm_content=general&utm_term=gofundme_e_c_&gad_source=1&gad_campaignid=20279257806&gbraid=0AAAAADj5gID6Xix4w7eRLdwsl-zpoVKbJ&gclid=Cj0KCQjw267GBhCSARIsAOjVJ4EkVcbMUkXnXC5fP3Q9SfCn8CtT7I7jakzuojS_A0oznSJyDBqu5vMaAh44EALw_wcB"  target = "_blank" class = "nav-buttonn">GoFundMe</a>
+        <!-- External link to GoFundMe -->
+        <a href="https://www.gofundme.com/c/start?utm_source=google&utm_medium=cpc&utm_campaign=3Q_US_Brand_Plus&utm_content=general&utm_term=gofundme_e_c_&gad_source=1&gad_campaignid=20279257806&gbraid=0AAAAADj5gID6Xix4w7eRLdwsl-zpoVKbJ&gclid=Cj0KCQjw267GBhCSARIsAOjVJ4EkVcbMUkXnXC5fP3Q9SfCn8CtT7I7jakzuojS_A0oznSJyDBqu5vMaAh44EALw_wcB"  target = "_blank" class = "nav-button nav-button-secondary">GoFundMe</a>
     </div>
 </nav>
 
-  <main> <!-- Main content wrapper -->
-    <!-- Search and Filter Section -->
+  <main>
+    <!-- Main search and filter section -->
     <section class="board">
-      <!-- Search bar container with input and filter button -->
+      <!-- Search input and filter toggle -->
       <div class="search-bar-container">
         <input type="text" id="searchInput" placeholder="Search jobs..." />
-        <!-- Filter button that shows/hides filter options when clicked -->
         <button class="filter-button" onclick="toggleFilters()">Filters</button>
       </div>
 
-      <!-- Filter panel with job search options -->
+      <!-- Advanced filter panel (hidden by default) -->
       <div class="filter-panel" id="filterPanel">
+        <!-- Job type filter dropdown -->
         <div class="filter-group">
             <label for="jobType">Job Type:</label>
             <select id="jobType" name="jobType">
@@ -45,11 +45,13 @@
             </select>
         </div>
 
+        <!-- Location filter input -->
         <div class="filter-group">
             <label for="location">Location:</label>
             <input type="text" id="location" name="location" placeholder="City or Remote">
         </div>
         
+        <!-- Experience level filter dropdown -->
         <div class="filter-group">
             <label for="experience">Experience Level:</label>
             <select id="experience" name="experience">
@@ -60,11 +62,13 @@
             </select>
         </div>
 
+        <!-- Salary filter input -->
         <div class="filter-group">
             <label for="salary">Minimum Salary:</label>
             <input type="number" id="salary" name="salary" placeholder="Minimum yearly salary (in dollars)">
         </div>
 
+        <!-- Filter action buttons -->
         <div class="filter-actions">
             <button class="apply-filters" id="applyFilters">Apply Filters</button>
             <button class="clear-filters" id="clearFilters">Clear All</button>
@@ -72,32 +76,28 @@
     </div>
     </section>
 
-    <!-- Tabs Section for Job Listings, Resume Match, and Job Map -->
+    <!-- Tabbed interface section -->
     <section class="tabs-section">
-      <!-- Tab Navigation -->
+      <!-- Tab navigation buttons -->
       <div class="tab-navigation">
         <button class="tab-button active" data-tab="jobs">Job Listings</button>
         <button class="tab-button" data-tab="resume">Resume Match</button>
         <button class="tab-button" data-tab="map">Job Map</button>
       </div>
 
-      <!-- Tab Content -->
+      <!-- Tab content containers -->
       <div class="tab-content">
-        <!-- Jobs Tab -->
+        <!-- Job listings tab (active by default) -->
         <div id="jobs-tab" class="tab-pane active">
           <section class="job-listings-section">
             <h2>Job Listings</h2>
-            <!-- Container where JavaScript will add job cards -->
+
+            <!-- Dynamic job cards container -->
             <div class="job-listings-container"></div>
-            <div class="pagination-controls">
-              <button id="previousPage" disabled>Previous</button>
-              <span id="pageInfo">Page 1</span>
-              <button id="nextPage" disabled>Next</button>
-            </div>
           </section>
         </div>
 
-        <!-- Resume Tab -->
+        <!-- Resume matching tab -->
         <div id="resume-tab" class="tab-pane">
           <section class="resume-upload-section">
             <h2>Upload Your Resume</h2>
@@ -105,12 +105,11 @@
             
             <!-- Resume upload form -->
             <form id="resumeForm" class="resume-form">
-              <!-- File input that only accepts document files -->
               <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
               <button type="submit">Get Suggestions</button>
             </form>
 
-            <!-- Container for AI-suggested jobs -->
+            <!-- Container for AI-generated job suggestions -->
             <div id="suggested-jobs" class="suggested-jobs">
               <h3>Suggested Jobs</h3>
               <p class="placeholder-text">Upload your resume to see tailored job suggestions here.</p>
@@ -118,11 +117,11 @@
           </section>
         </div>
 
-        <!-- Map Tab -->
+        <!-- Job map tab -->
         <div id="map-tab" class="tab-pane">
           <section class="map-section">
             <h2>Job Locations</h2>
-            <!-- Container where the map will be displayed -->
+            <!-- Map container for visualizing job locations -->
             <div id="map"></div>
           </section>
         </div>
@@ -130,8 +129,14 @@
     </section>
   </main>
 
-  <!-- Connects our JavaScript file -->
-  <!-- Placed at the bottom so the page loads faster -->
-  <script src="finder.js"></script>
-</body>
-</html>
+          <!-- Pagination controls fixed at bottom -->
+          <div class="pagination-controls">
+            <button id="prevPage" disabled>Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button id="nextPage" disabled>Next</button>
+          </div>
+
+          <!-- JavaScript functionality -->
+          <script src="finder.js"></script>
+        </body>
+        </html>
