@@ -1,12 +1,39 @@
+:root {
+    /* Primary colors */
+    --primary: #5C6BC0;
+    --primary-dark: #3949ab;
+    --primary-light: #7986cb;
+
+    /* Neutral colors */
+    --text-primary: #212121;
+    --text-secondary: #555;
+    --background: #f4f6f8;
+    --surface: #ffffff;
+
+    /* Accent colors */
+    --accent: #007acc;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --error: #e53935;
+
+    /* Common values */
+    --border-radius: 8px;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+    --transition: all 0.2s ease;
+}
+
 body {
     font-family: "Segoe UI", Roboto, sans-serif;
     background: linear-gradient(135deg, #f4f6f8, #e8ecf5);
     background-image: radial-gradient(circle at 20px 20px, rgba(0,0,0,0.02) 2px, transparent 0);
     background-size: 40px 40px;
-    color: #212121;
+    color: var(--text-primary);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    margin: 0;
+    padding: 0;
 }
 
 /* Search bar container with glassmorphism effect */
@@ -20,6 +47,7 @@ body {
     background: rgba(255, 255, 255, 0.7);
     box-shadow: 0 4px 16px rgba(92, 107, 192, 0.08);
     border-radius: 12px;
+    margin-top: 20px;
 }
 
 /* Main search input field styling */
@@ -36,7 +64,7 @@ body {
 
 /* Search input focus state with brand color */
 #searchInput:focus {
-    border-color: #5C6BC0;
+    border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.2);
     outline: none;
 }
@@ -44,7 +72,7 @@ body {
 /* Filter toggle button with gradient background */
 .filter-button {
     padding: 10px 16px;
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
     border-radius: 6px;
@@ -88,7 +116,7 @@ body {
 /* Pagination button styling */
 .pagination-controls button {
     padding: 8px 12px;
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
     border-radius: 6px;
@@ -157,9 +185,9 @@ body {
 .job-title {
     margin: 0 0 8px;
     font-size: 20px;
-    color: #5C6BC0;
+    color: var(--primary);
     font-weight: 600;
-    border-bottom: 2px solid #5C6BC0;
+    border-bottom: 2px solid var(--primary);
     padding-bottom: 6px;
     padding-right: 40px;
 }
@@ -178,7 +206,7 @@ body {
     left: 20px;
     right: 20px;
     margin-top: 24px;
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
     padding: 10px 14px;
@@ -227,14 +255,14 @@ body {
 /* Filter inputs focus state */
 .filter-panel input:focus,
 .filter-panel select:focus {
-    border-color: #5C6BC0;
+    border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.2);
     outline: none;
 }
 
 /* Apply filters button styling */
 .apply-filters {
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
     padding: 8px 14px;
@@ -282,7 +310,7 @@ body {
 /* Error message retry button */
 .error-message button {
     padding: 5px 8px;
-    background-color: #5C6BC0;
+    background-color: var(--primary);
     color: white;
     border: none;
     border-radius: 6px;
@@ -360,7 +388,7 @@ body {
 
 /* Resume form submit button */
 .resume-form button {
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
     padding: 10px 16px;
@@ -438,7 +466,7 @@ body {
     width: 80%;
     text-align: center;
     text-decoration: none;
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     top: 125px;
     padding: 10px 0;
@@ -459,47 +487,57 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-
-/* Mobile navigation sidebar (hidden by default) */
-#nav-bar {
+/* Navigation Bar */
+.navbar {
     position: fixed;
     top: 0;
-    left: -300px;
-    width: 250px;
-    height: 100vh;
-    background: #fff;
-    padding: 2rem 1rem;
-    box-shadow: 2px 0 6px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     z-index: 1000;
 }
 
-/* Active state for mobile navigation */
-#nav-bar.is-active {
-    transform: translateX(300px);
-}
-
-/* Hamburger menu toggle button */
-#hamburgerToggle {
-    position: fixed;
-    top: 1rem;
-    left: 1rem;
-    z-index: 1001;
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
-    color: white;
-    border: none;
-    padding: 0.8rem 1rem;
-    border-radius: 6px;
+.nav-brand {
     font-size: 1.5rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
+    font-weight: bold;
 }
 
-/* Hamburger button hover effect */
-#hamburgerToggle:hover {
-    background: linear-gradient(135deg, #4a59a8, #0060a1);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.nav-brand a {
+    text-decoration: none;
+    color: var(--primary);
+    transition: color 0.2s ease;
+}
+
+.nav-brand a:hover {
+    color: #3949ab;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary);
+}
+
+/* Add margin-top to main content to account for fixed navbar */
+main {
+    margin-top: 80px;
+    flex: 1;
+    padding: 40px 20px;
 }
 
 /* Tab navigation container */
@@ -518,8 +556,8 @@ body {
 .tab-button {
     padding: 12px 24px;
     background: white;
-    border: 2px solid #5C6BC0;
-    color: #5C6BC0;
+    border: 2px solid var(--primary);
+    color: var(--primary);
     border-radius: 8px;
     cursor: pointer;
     font-size: 16px;
@@ -529,7 +567,7 @@ body {
 
 /* Active tab button styling */
 .tab-button.active {
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border-color: transparent;
 }
@@ -624,11 +662,6 @@ body {
     transform: scale(1.2);
 }
 
-/* Filled star state */
-.star-button.filled {
-    content: '★';
-}
-
 /* Star pop animation keyframes */
 @keyframes starPop {
     0% { transform: scale(1); }
@@ -639,6 +672,39 @@ body {
 /* Star button animation class */
 .star-button.animate {
     animation: starPop 0.3s ease;
+}
+
+/* Common button styles */
+.button {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
+}
+
+.button:hover {
+    background: linear-gradient(135deg, #4a59a8, #0060a1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Common card styles */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(92, 107, 192, 0.12);
 }
 
 

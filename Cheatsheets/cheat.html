@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Cheat Sheet</title>
+</head>
+<body>
+
+<!-- 
+    HTML BASICS
+    ==========
+    - HTML uses tags that open with < > and close with </ >
+    - Most elements need both opening and closing tags
+    - Some elements are self-closing like <img /> or <input />
+-->
+
+<!-- 
+    DOCUMENT STRUCTURE
+    =================
+    <!DOCTYPE html> - Tells browser this is an HTML5 document
+    <html> - Root element of the page
+    <head> - Contains metadata, title, and links to resources
+    <body> - Contains visible content
+-->
+
+<!-- 
+    META TAGS
+    =========
+    Used in <head> for important page information:
+-->
+<head>
+    <!-- Sets character encoding -->
+    <meta charset="UTF-8">
+    
+    <!-- Makes page mobile-responsive -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Links to CSS files -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<!-- 
+    NAVIGATION
+    =========
+    <nav> creates navigation menus:
+-->
+<nav>
+    <!-- Basic navigation structure -->
+    <div class="brand">Site Name</div>
+    <div class="links">
+        <a href="/page1">Link 1</a>
+        <a href="/page2">Link 2</a>
+    </div>
+</nav>
+
+<!-- 
+    SECTIONS & CONTAINERS
+    ===================
+    Different ways to structure content:
+-->
+<!-- Header usually contains intro content -->
+<header>
+    <h1>Main Title</h1>
+    <p>Subtitle or description</p>
+</header>
+
+<!-- Section groups related content -->
+<section>
+    <h2>Section Title</h2>
+    <div class="content">
+        <!-- Content goes here -->
+    </div>
+</section>
+
+<!-- 
+    FORMS & INPUTS
+    =============
+    Used for collecting user input:
+-->
+<form>
+    <!-- Text input -->
+    <input type="text" placeholder="Enter text">
+
+    <!-- Date input -->
+    <input type="date">
+
+    <!-- URL input -->
+    <input type="url" placeholder="Enter website">
+
+    <!-- File upload -->
+    <input type="file" accept=".pdf,.doc">
+
+    <!-- Textarea for longer text -->
+    <textarea placeholder="Enter notes"></textarea>
+
+    <!-- Dropdown/Select -->
+    <select>
+        <option value="option1">Option 1</option>
+        <option value="option2">Option 2</option>
+    </select>
+
+    <!-- Submit button -->
+    <button type="submit">Submit</button>
+</form>
+
+<!-- 
+    CARDS & GRID LAYOUTS
+    ===================
+    Common pattern for displaying items:
+-->
+<div class="grid">
+    <!-- Individual card -->
+    <div class="card">
+        <h3>Card Title</h3>
+        <p>Card content</p>
+        <button>Action</button>
+    </div>
+</div>
+
+<!-- 
+    MODALS & OVERLAYS
+    ================
+    Popup windows for additional content:
+-->
+<div class="overlay">
+    <div class="modal">
+        <button class="close">&times;</button>
+        <h2>Modal Title</h2>
+        <div class="modal-content">
+            <!-- Modal content -->
+        </div>
+    </div>
+</div>
+
+<!-- 
+    COMMON ATTRIBUTES
+    ===============
+    id="uniqueName" - Unique identifier for element
+    class="className" - Groups similar elements for styling
+    style="property: value" - Inline CSS styles
+    data-* - Custom data attributes
+    onclick="function()" - Click event handler
+    placeholder="text" - Default text in input fields
+-->
+
+<!-- 
+    BEST PRACTICES
+    =============
+    1. Use semantic HTML elements (<header>, <nav>, <section>, etc.)
+    2. Include proper meta tags for SEO and mobile
+    3. Keep structure clean and well-indented
+    4. Use comments to explain complex sections
+    5. Ensure proper closing of all tags
+    6. Use descriptive class and ID names
+-->
+
+</body>
+</html>

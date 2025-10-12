@@ -138,6 +138,11 @@ function createJobCard(job) {
     console.log('Job saved and removed from finder:', job.title);
   });
   
+  card.addEventListener('click', (e) => {
+    if(e.target.closest('button')) return;
+    openJobDetailOverlay();
+  });
+
   return card;
 }
 
@@ -329,28 +334,6 @@ function debounce(fn, delay) {
   };
 }
 
-// Mobile navigation functionality
-const hamburgerBtn = document.getElementById('hamburgerToggle');
-const navBar = document.getElementById('nav-bar');
-
-// Toggle mobile navigation menu
-hamburgerBtn.addEventListener('click', () => {
-    navBar.classList.toggle('is-active');
-});
-
-// Close mobile menu when clicking outside
-document.addEventListener('click', (e) => {
-    if (!navBar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
-        navBar.classList.remove('is-active');
-    }
-});
-
-// Close mobile menu with Escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        navBar.classList.remove('is-active');
-    }
-});
 
 // Tab navigation functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -369,5 +352,29 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`${tabID}-tab`).classList.add('active');
         });
     });
+    initializeJobDetailOverlay();
 });
+
+function openJobDetailOverlay(job)
+{
+  const overlay = document.getElementById('jobDetailOverlay');
+  document.getElementById('overlayJobTitle').textContent = job.title || 'No title';
+  document.getElementById('overlayJobCompany').textContent = job.company || 'No company';
+  document.getElementById('overlayJobLocation').textContent = job.location || 'No location';
+  document.getElementById('overlayJobEmploymentType').textContent = job.employment_type || 'No employment type';
+  document.getElementById('overlayPostedDate').textContent = job.posted_date ? new Date(job.posted_date).toLocaleDateString() : 'No date';
+  const salaryContainer = document.getElementById('overlaySalary');
+  if(job.salary_min || job.salary_max)
+  {
+    const currency = job.salary_currency || 'USD';
+    const salaryText = job.salary_min && job.salary_max ? 
+    `${job.salary_min} - ${job.salary_max} ${currency}` :
+    job.salary_min ? `${job_salary_min} ${currency}` :
+    `${job.salary_max} ${currency}`;
+    document.getElementById('overlaySalary').textContent = salaryText;
+    salaryContainer.style.display = 'block';
+  } else{    
+    salaryContainer.style.display = 'block';
+  }
+}
 

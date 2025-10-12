@@ -337,25 +337,3 @@ document.querySelectorAll('.submit-button').forEach(button => {
 
   });
 });
-// Mobile navigation functionality
-const hamburgerBtn = document.getElementById('hamburgerToggle');
-const navBar = document.getElementById('nav-bar');
-
-// Toggle mobile navigation menu
-hamburgerBtn.addEventListener('click', () => {
-    navBar.classList.toggle('is-active');
-});
-
-// Close mobile menu when clicking outside
-document.addEventListener('click', (e) => {
-    if (!navBar.contains(e.target) && !hamburgerBtn.contains(e.target)) {
-        navBar.classList.remove('is-active');
-    }
-});
-
-// Close mobile menu with Escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        navBar.classList.remove('is-active');
-    }
-});

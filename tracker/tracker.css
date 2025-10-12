@@ -7,6 +7,20 @@
   padding: 0;
 }
 
+/* Shared base styles */
+body {
+    font-family: "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #f4f6f8, #e8ecf5);
+    background-image: radial-gradient(circle at 20px 20px, rgba(0,0,0,0.02) 2px, transparent 0);
+    background-size: 40px 40px;
+    color: #212121;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+}
+
 /* Main body styling with gradient background and dot pattern */
 body {
   font-family: "Segoe UI", Roboto, sans-serif;
@@ -24,6 +38,7 @@ body {
   text-align: center;
   padding: 40px 20px 20px;
   color: #2c3e50;
+  margin-top: 60px; /* Add space below fixed navbar */
 }
 
 /* Main site title with gradient text effect */
@@ -46,13 +61,15 @@ body {
 
 /* Main content area with flexible layout */
 main {
-  flex: 1;
-  padding: 40px 20px;
+    margin-top: 80px;
+    flex: 1;
+    padding: 40px 20px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   width: 100%;
   overflow-x: auto;
+  margin-top: 80px; /* Add space below fixed navbar */
 }
 
 /* Kanban board container with glassmorphism effect */
@@ -60,13 +77,13 @@ main {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 24px;
+  gap: 32px;
   flex-wrap: nowrap;
-  padding: 24px;
+  padding: 24px 32px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  max-width: 1500px;
+  max-width: 1800px; /* Increased from 1500px */
   width: 100%;
   overflow-x: auto;
 }
@@ -76,10 +93,10 @@ main {
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  padding: 24px;
-  width: 300px;
-  min-width: 300px;
-  min-height: 400px;
+  padding: 28px;
+  width: 380px; /* Increased from 300px */
+  min-width: 380px; /* Increased from 300px */
+  min-height: 600px; /* Increased from 400px */
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -107,14 +124,14 @@ main {
   color: #212121;
   margin: 12px 0;
   border-radius: 14px;
-  padding: 20px;
+  padding: 24px;
   border: 1px solid #e0e4ec;
   box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  height: 260px;
-  overflow-y: auto;
+  gap: 12px;
+  height: 360px; /* Increased from 260px */
+  overflow-y: visible; /* Changed from auto to prevent scrolling */
 }
 
 /* Job card title styling with bottom border */
@@ -359,47 +376,50 @@ main {
 }
 
 
-/* Mobile navigation sidebar (hidden by default) */
-#nav-bar {
+/* Navigation Bar */
+.navbar {
     position: fixed;
     top: 0;
-    left: -300px;
-    width: 250px;
-    height: 100vh;
-    background: #fff;
-    padding: 2rem 1rem;
-    box-shadow: 2px 0 6px rgba(0,0,0,0.2);
-    transition: transform 0.3s ease;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     z-index: 1000;
 }
 
-/* Active state for mobile navigation */
-#nav-bar.is-active {
-    transform: translateX(300px);
-}
-
-/* Hamburger menu toggle button */
-#hamburgerToggle {
-    position: fixed;
-    top: 1rem;
-    left: 1rem;
-    z-index: 1001;
-    background: linear-gradient(135deg, #5C6BC0, #007acc);
-    color: white;
-    border: none;
-    padding: 0.8rem 1rem;
-    border-radius: 6px;
+.nav-brand {
     font-size: 1.5rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
+    font-weight: bold;
 }
 
-/* Navigation button hover effects */
-.nav-button:hover,
-#hamburgerToggle:hover {
-    background: linear-gradient(135deg, #4a59a8, #0060a1);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+.nav-brand a {
+    text-decoration: none;
+    color: #5C6BC0;
+    transition: color 0.2s ease;
+}
+
+.nav-brand a:hover {
+    color: #3949ab;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #5C6BC0;
 }
 
 /* Input wrapper for job creation forms */
@@ -435,13 +455,13 @@ main {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    gap: 24px;
+    gap: 32px;
     flex-wrap: nowrap;
-    padding: 24px;
+    padding: 24px 32px;
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.7);
     box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    max-width: 1500px;
+    max-width: 1800px; /* Increased from 1500px */
     width: 100%;
     overflow-x: auto;
 }
@@ -451,10 +471,10 @@ main {
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    padding: 24px;
-    width: 300px;
-    min-width: 300px;
-    min-height: 400px;
+    padding: 28px;
+    width: 380px; /* Increased from 300px */
+    min-width: 380px; /* Increased from 300px */
+    min-height: 600px; /* Increased from 400px */
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -463,6 +483,7 @@ main {
 
 /* Duplicate main styling (consolidated above) */
 main {
+    margin-top: 80px;
     flex: 1;
     padding: 40px 20px;
     display: flex;
@@ -470,18 +491,83 @@ main {
     align-items: flex-start;
     width: 100%;
     overflow-x: auto;
+    margin-top: 80px; /* Add space below fixed navbar */
+}
+
+/* Common button styles */
+.button {
+    background: linear-gradient(135deg, #5C6BC0, #007acc);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
+}
+
+.button:hover {
+    background: linear-gradient(135deg, #4a59a8, #0060a1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Common card styles */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(92, 107, 192, 0.12);
+}
+
+/* CSS Variables for theming */
+:root {
+    /* Primary colors */
+    --primary: #5C6BC0;
+    --primary-dark: #3949ab;
+    --primary-light: #7986cb;
+
+    /* Neutral colors */
+    --text-primary: #212121;
+    --text-secondary: #555;
+    --background: #f4f6f8;
+    --surface: #ffffff;
+
+    /* Accent colors */
+    --accent: #007acc;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --error: #e53935;
+
+    /* Common values */
+    --border-radius: 8px;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+    --transition: all 0.2s ease;
 }
 
 /* Responsive design for smaller screens */
-@media (max-width: 1500px) {
+@media (max-width: 1800px) {
     .board {
         padding: 16px;
-        gap: 16px;
+        gap: 20px;
     }
     
     .column {
-        width: 280px;
-        min-width: 280px;
+        width: 340px;
+        min-width: 340px;
+        padding: 24px;
+    }
+    
+    .job-card {
+        height: 340px;
         padding: 20px;
     }
 }

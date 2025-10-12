@@ -8,17 +8,52 @@
   <!-- Page title and stylesheet -->
   <title>Pathfinder - Job Finder</title>
   <link rel="stylesheet" href="finder.css">
+  <style>
+    /* Common button styles */
+    .button {
+        background: linear-gradient(135deg, #5C6BC0, #007acc);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
+    }
+
+    .button:hover {
+        background: linear-gradient(135deg, #4a59a8, #0060a1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    /* Common card styles */
+    .card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(92, 107, 192, 0.12);
+    }
+  </style>
 </head>
 
 <body>
-    <!-- Mobile navigation with hamburger menu -->
-    <nav class="navigation">
-    <button id="hamburgerToggle" aria-label="Toggle menu">☰</button>
-    <div id="nav-bar">
-        <!-- Navigation link to job tracker page -->
-        <a href="../tracker/tracker.html" class="nav-button">Job Tracker</a>
-        <!-- External link to GoFundMe -->
-        <a href="https://www.gofundme.com/c/start?utm_source=google&utm_medium=cpc&utm_campaign=3Q_US_Brand_Plus&utm_content=general&utm_term=gofundme_e_c_&gad_source=1&gad_campaignid=20279257806&gbraid=0AAAAADj5gID6Xix4w7eRLdwsl-zpoVKbJ&gclid=Cj0KCQjw267GBhCSARIsAOjVJ4EkVcbMUkXnXC5fP3Q9SfCn8CtT7I7jakzuojS_A0oznSJyDBqu5vMaAh44EALw_wcB"  target = "_blank" class = "nav-button nav-button-secondary">GoFundMe</a>
+
+  <!-- Navigation bar section -->
+  <nav class="navbar">
+    <div class="nav-brand">
+        <a href="../home/home.html">Pathfinder</a>
+    </div>
+    <div class="nav-links">
+        <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
+        <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
     </div>
 </nav>
 
@@ -134,6 +169,51 @@
             <button id="prevPage" disabled>Previous</button>
             <span id="pageInfo">Page 1</span>
             <button id="nextPage" disabled>Next</button>
+          </div>
+          
+          <!-- Job detail overlay modal -->
+          <div id="jobDetailOverlay" class="job-overlay">
+
+            <!-- Main content container -->
+            <div class="jobOverlayContent">
+              <!-- Header with job title and close button -->
+              <div class="job-overlay-header">
+                <h2 id="overlayJobTitle"></h2>
+                <button class="close-overlay" id="closeOverlay">&times;</button>
+              </div>
+
+              <!-- Body Section -->
+               <div class="jobOverlayBody"> 
+                <div class="jobOverlayMeta">  
+                  <div class="metaItem">
+                    <strong>Company:</strong> <span id="overlayCompany"></span>
+                  </div>
+                  <div class="metaItem">
+                    <strong>Location:</strong> <span id="overlayLocation"></span>
+                </div>
+                  <div class="metaItem">
+                    <strong>Type:</strong> <span id="overlayEmploymentType"></span>
+                  </div>
+                  <div class="metaItem">
+                    <strong>Posted:</strong> <span id="overlayPostedDate"></span>
+                  </div>
+                  <div class="metaItem" id="overlaySalaryContainer" style="display: none;">
+                    <strong>Salary:</strong> <span id="overlaySalary"></span>
+                  </div>
+                  <div class="metaItem" id="overlayRemoteContainer" style="display: none;">
+                    <strong>Remote:</strong> <span id="overlayRemote"></span>
+                  </div>
+
+                  <div class="jobOverlayDescription">
+                    <h3>Job Description</h3>
+                    <div id="overlayDescription"></div>
+                  </div>
+                  <div class="jobOverlayFooter"> 
+                    <button class="overlayApplyButton" id="overlayApplyButton" target="_blank">Apply Now</button>
+                    <button class="overlaySaveButton" id="overlaySaveButton">Save Job</button>
+                  </div>
+
+            </div>
           </div>
 
           <!-- JavaScript functionality -->
