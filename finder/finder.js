@@ -374,7 +374,71 @@ function openJobDetailOverlay(job)
     document.getElementById('overlaySalary').textContent = salaryText;
     salaryContainer.style.display = 'block';
   } else{    
-    salaryContainer.style.display = 'block';
+    salaryContainer.style.display = 'none';
   }
+  const remoteContainer = document.getElementById('overlayRemoteContainer');
+  if (job.is_remote !== undefined){
+
+    document.getElementById('overlayRemote').textContent = job.is_remote ? 'Yes' : 'No';
+    remoteContainer.style.display = 'block';
+
+  } 
+  else{
+    remoteContainer.style.display ='none';
+  }
+  const desc = job.description ? 
+    job.description
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .trim() : 'No description available';
+  document.getElementById('overlayDescription').innerHTML = desc.replace(/\n/g, '<>');
+  const applyBtn = document.getElementById('overlayApplyButton');
+  if (job.apply_link){
+    applyBtn.disabled = false;
+    applyBtn.textContent('Apply Now');
+    applyBtn.onclick = () => window.open(job.apply_link, '_blank');
+  }
+  else{
+    applyBtn.disabled = true;
+    applyBtn.textContent('No Apply Link');
+
+  }
+  document.getElementById('overlaySaveButton').onclick = async () => {
+    try {
+      await saveJobToTracker(job);
+      closeJobDetailOverlay();
+      document.querySelectorAll('.job-card').forEach(card => {
+        if (card.querySelector('.job-title').textContent === job.title) card.remove();
+      });
+    } catch (error){
+      alert('Failed to save job. Please try again.');
+    }
+
+  };
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
 
+function closeJobDetailOverlay() {
+  document.getElementById('jobDetailOverlay').classList.remove('show')
+  document.body.style.overflow = '';
+}
+
+
+function initializeJobDetailOverlay() {
+  const overlay = document.getElementById('jobDetailOverlay');
+  const closeButton = document.getElementById('closeOverlay');
+
+  closeButton.addEventListener('click', closeJobDetailOverlay);
+
+  overlay.addEventListener('click', (e) =>{
+    if (e.target == overlay) closeJobDetailOverlay();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay.classList.contains('show')){
+      closeJobDetailOverlay();
+    }
+  });
+}
