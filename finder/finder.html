@@ -135,19 +135,52 @@
         <!-- Resume matching tab -->
         <div id="resume-tab" class="tab-pane">
           <section class="resume-upload-section">
-            <h2>Upload Your Resume</h2>
-            <p class="resume-subtext">Get job recommendations tailored to your skills using AI</p>
+            <h2>Resume Analysis</h2>
+            <p class="resume-subtext">Get personalized job matches and improve your resume</p>
             
-            <!-- Resume upload form -->
-            <form id="resumeForm" class="resume-form">
-              <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
-              <button type="submit">Get Suggestions</button>
-            </form>
+            <!-- Enhanced file upload area -->
+            <div class="resume-preview" id="dropZone">
+              <div class="file-input-container">
+                <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+                <div class="upload-trigger">
+                  <span class="upload-icon">📄</span>
+                  <span>Drop your resume here or click to upload</span>
+                </div>
+                <p class="file-types">Supported formats: PDF, DOC, DOCX</p>
+              </div>
+            </div>
 
-            <!-- Container for AI-generated job suggestions -->
-            <div id="suggested-jobs" class="suggested-jobs">
-              <h3>Suggested Jobs</h3>
-              <p class="placeholder-text">Upload your resume to see tailored job suggestions here.</p>
+            <!-- Skills Analysis Section -->
+            <div class="skills-match" id="skillsAnalysis" style="display: none;">
+              <h3>Skills Analysis</h3>
+              <div class="match-indicator">
+                <span class="match-percentage">0%</span>
+                <div class="match-bar">
+                  <div class="match-fill" style="width: 0%"></div>
+                </div>
+              </div>
+              
+              <h4>Detected Skills</h4>
+              <div class="skills-grid" id="detectedSkills"></div>
+              
+              <h4>Missing In-Demand Skills</h4>
+              <div class="skills-grid" id="missingSkills"></div>
+            </div>
+
+            <!-- Improvement Suggestions -->
+            <div class="suggestions" id="resumeSuggestions" style="display: none;">
+              <h3>Resume Improvement Tips</h3>
+              <div class="suggestion-list">
+                <!-- Suggestions will be added dynamically -->
+              </div>
+            </div>
+
+            <!-- Job Matches -->
+            <div id="suggested-jobs" class="suggested-jobs" style="display: none;">
+              <h3>Best Job Matches</h3>
+              <div class="job-matches-grid">
+                <!-- Matched jobs will be added here -->
+              </div>
             </div>
           </section>
         </div>
@@ -157,7 +190,10 @@
           <section class="map-section">
             <h2>Job Locations</h2>
             <!-- Map container for visualizing job locations -->
-            <div id="map"></div>
+            <div id="map">
+              <!-- Map will be rendered here -->
+               
+            </div>
           </section>
         </div>
       </div>
