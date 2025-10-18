@@ -217,6 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
   wirePaginationButtons();
   updateDbCountLabel('');
   fetchJobs('');
+  const pageCtrls = document.querySelector('.pagination-controls');
+  if(pageCtrls){
+    pageCtrls.style.display = 'flex';
+  }
 });
 
 /**
@@ -350,6 +354,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const tabID = button.dataset.tab;
             document.getElementById(`${tabID}-tab`).classList.add('active');
+
+            const pageCtrls = document.querySelector('.pagination-controls');
+            if (pageCtrls){
+              if (tabID === 'jobs'){
+                pageCtrls.style.display = 'flex';
+              } else {
+                pageCtrls.style.display = 'none';
+              }
+            }
         });
     });
     initializeJobDetailOverlay();
@@ -443,3 +456,4 @@ function initializeJobDetailOverlay() {
     }
   });
 }
+
