@@ -211,7 +211,7 @@
           <div id="jobDetailOverlay" class="job-overlay">
 
             <!-- Main content container -->
-            <div class="jobOverlayContent">
+            <div class="job-overlay-content">
               <!-- Header with job title and close button -->
               <div class="job-overlay-header">
                 <h2 id="overlayJobTitle"></h2>
@@ -219,35 +219,38 @@
               </div>
 
               <!-- Body Section -->
-               <div class="jobOverlayBody"> 
-                <div class="jobOverlayMeta">  
-                  <div class="metaItem">
+               <div class="job-overlay-body"> 
+                <div class="job-overlay-meta">  
+                  <div class="meta-item">
                     <strong>Company:</strong> <span id="overlayCompany"></span>
                   </div>
-                  <div class="metaItem">
+                  <div class="meta-item">
                     <strong>Location:</strong> <span id="overlayLocation"></span>
                 </div>
-                  <div class="metaItem">
+                  <div class="meta-item">
                     <strong>Type:</strong> <span id="overlayEmploymentType"></span>
                   </div>
-                  <div class="metaItem">
+                  <div class="meta-item">
                     <strong>Posted:</strong> <span id="overlayPostedDate"></span>
                   </div>
-                  <div class="metaItem" id="overlaySalaryContainer" style="display: none;">
+                  <div class="meta-item" id="overlaySalaryContainer" style="display: none;">
                     <strong>Salary:</strong> <span id="overlaySalary"></span>
                   </div>
-                  <div class="metaItem" id="overlayRemoteContainer" style="display: none;">
+                  <div class="meta-item" id="overlayRemoteContainer" style="display: none;">
                     <strong>Remote:</strong> <span id="overlayRemote"></span>
                   </div>
+                </div>
 
-                  <div class="jobOverlayDescription">
+                  <div class="job-overlay-description">
                     <h3>Job Description</h3>
                     <div id="overlayDescription"></div>
                   </div>
-                  <div class="jobOverlayFooter"> 
-                    <button class="overlayApplyButton" id="overlayApplyButton" target="_blank">Apply Now</button>
-                    <button class="overlaySaveButton" id="overlaySaveButton">Save Job</button>
-                  </div>
+              </div>
+              
+              <div class="job-overlay-footer"> 
+                <button class="overlay-apply-button" id="overlayApplyButton">Apply Now</button>
+                <button class="overlay-save-button" id="overlaySaveButton">Save Job</button>
+              </div>
 
             </div>
           </div>

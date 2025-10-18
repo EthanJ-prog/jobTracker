@@ -139,8 +139,8 @@ function createJobCard(job) {
   });
   
   card.addEventListener('click', (e) => {
-    if(e.target.closest('button')) return;
-    openJobDetailOverlay();
+    if (e.target.closest('button')) return;
+    openJobDetailOverlay(job);
   });
 
   return card;
@@ -355,55 +355,55 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeJobDetailOverlay();
 });
 
-function openJobDetailOverlay(job)
-{
+function openJobDetailOverlay(job) {
   const overlay = document.getElementById('jobDetailOverlay');
+  
   document.getElementById('overlayJobTitle').textContent = job.title || 'No title';
-  document.getElementById('overlayJobCompany').textContent = job.company || 'No company';
-  document.getElementById('overlayJobLocation').textContent = job.location || 'No location';
-  document.getElementById('overlayJobEmploymentType').textContent = job.employment_type || 'No employment type';
-  document.getElementById('overlayPostedDate').textContent = job.posted_date ? new Date(job.posted_date).toLocaleDateString() : 'No date';
-  const salaryContainer = document.getElementById('overlaySalary');
-  if(job.salary_min || job.salary_max)
-  {
+  document.getElementById('overlayCompany').textContent = job.company || 'No company';
+  document.getElementById('overlayLocation').textContent = job.location || 'No location';
+  document.getElementById('overlayEmploymentType').textContent = job.employment_type || 'No type';
+  document.getElementById('overlayPostedDate').textContent = job.posted_date ? 
+    new Date(job.posted_date).toLocaleDateString() : 'No date';
+  
+  const salaryContainer = document.getElementById('overlaySalaryContainer');
+  if (job.salary_min || job.salary_max) {
     const currency = job.salary_currency || 'USD';
     const salaryText = job.salary_min && job.salary_max ? 
-    `${job.salary_min} - ${job.salary_max} ${currency}` :
-    job.salary_min ? `${job_salary_min} ${currency}` :
-    `${job.salary_max} ${currency}`;
+      `${job.salary_min} - ${job.salary_max} ${currency}` :
+      job.salary_min ? `${job.salary_min} ${currency}` :
+      `${job.salary_max} ${currency}`;
     document.getElementById('overlaySalary').textContent = salaryText;
     salaryContainer.style.display = 'block';
-  } else{    
+  } else {
     salaryContainer.style.display = 'none';
   }
+  
   const remoteContainer = document.getElementById('overlayRemoteContainer');
-  if (job.is_remote !== undefined){
-
+  if (job.is_remote !== undefined) {
     document.getElementById('overlayRemote').textContent = job.is_remote ? 'Yes' : 'No';
     remoteContainer.style.display = 'block';
-
-  } 
-  else{
-    remoteContainer.style.display ='none';
+  } else {
+    remoteContainer.style.display = 'none';
   }
+  
   const desc = job.description ? 
     job.description
       .replace(/<[^>]*>/g, '')
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')
       .trim() : 'No description available';
-  document.getElementById('overlayDescription').innerHTML = desc.replace(/\n/g, '<>');
+  document.getElementById('overlayDescription').innerHTML = desc.replace(/\n/g, '<br>');
+  
   const applyBtn = document.getElementById('overlayApplyButton');
-  if (job.apply_link){
+  if (job.apply_link) {
     applyBtn.disabled = false;
-    applyBtn.textContent('Apply Now');
+    applyBtn.textContent = 'Apply Now';
     applyBtn.onclick = () => window.open(job.apply_link, '_blank');
-  }
-  else{
+  } else {
     applyBtn.disabled = true;
-    applyBtn.textContent('No Apply Link');
-
+    applyBtn.textContent = 'No Apply Link';
   }
+  
   document.getElementById('overlaySaveButton').onclick = async () => {
     try {
       await saveJobToTracker(job);
@@ -411,33 +411,34 @@ function openJobDetailOverlay(job)
       document.querySelectorAll('.job-card').forEach(card => {
         if (card.querySelector('.job-title').textContent === job.title) card.remove();
       });
-    } catch (error){
+    } catch (error) {
       alert('Failed to save job. Please try again.');
     }
-
   };
+  
   overlay.classList.add('show');
   document.body.style.overflow = 'hidden';
 }
 
 function closeJobDetailOverlay() {
-  document.getElementById('jobDetailOverlay').classList.remove('show')
+  document.getElementById('jobDetailOverlay').classList.remove('show');
   document.body.style.overflow = '';
 }
 
-
 function initializeJobDetailOverlay() {
   const overlay = document.getElementById('jobDetailOverlay');
-  const closeButton = document.getElementById('closeOverlay');
-
-  closeButton.addEventListener('click', closeJobDetailOverlay);
-
-  overlay.addEventListener('click', (e) =>{
-    if (e.target == overlay) closeJobDetailOverlay();
+  const closeBtn = document.getElementById('closeOverlay');
+  
+  closeBtn.addEventListener('click', closeJobDetailOverlay);
+  
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      closeJobDetailOverlay();
+    }
   });
-
+  
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overlay.classList.contains('show')){
+    if (e.key === 'Escape' && overlay.classList.contains('show')) {
       closeJobDetailOverlay();
     }
   });
