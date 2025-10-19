@@ -46,6 +46,42 @@ db.run(`
     )
 `);
 
+function calculateExpiryDate(postedDate, createdAt){
+    const twoWeeksInMS = 14 * 24 * 60 * 60 * 1000;
+    let expirationMethod = 'posted_date';
+    let expiresAt = null;
+    if(postedDate){
+        try{
+            const postedDateTime = new Date(postedDate);
+            if(!isNaN(postedDateTime.getTime())){
+                expiresAt = new Date(postedDateTime.getTime() + twoWeeksInMS).toISOString();
+                expirationMethod = 'posted_date';
+            }
+        } catch (err) {
+            console.warn('Failed to parse posted date: ', postedDate, err.message);
+        }
+    }
+
+    if(!expiresAt && createdAt) {
+        try {
+            const createdDateTime = new Date(createdAt);
+            if(!isNaN(createdDateTime.getTime())){
+                expiresAt = new Date(createdDateTime.getTime() + twoWeeksInMS).toISOString();
+                expirationMethod = 'created_at';
+            }
+        } catch (err) {
+            console.warn('Failed to parse created date: ', createdAt, err.message);
+        }
+    }
+
+    if (!expiresAt) expirationMethod = 'Never';
+
+    return {
+        expiresAt, 
+        expirationMethod
+    };
+}
+
 /**
  * Maps JSearch API job data to our database schema
  * @param {Object} job - Job object from JSearch API
@@ -76,12 +112,14 @@ function mapJSearchJobToDB(job){
  */
 function upsertJobListing(db, row){
     return new Promise((resolve, reject) => {
+        const expiration = calculateExpiryDate(row.posted_date, new Date().toISOString());
         // SQL query to insert or update job listing based on job_id
         const sql = `
             INSERT INTO job_listings (
                 job_id, title, company, location, employment_type, description, 
-                apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency,
+                status, expiration_method, expires_at, 
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 title = excluded.title,
                 company = excluded.company,
@@ -93,7 +131,9 @@ function upsertJobListing(db, row){
                 posted_date = excluded.posted_date,
                 salary_min = excluded.salary_min,
                 salary_max = excluded.salary_max,
-                salary_currency = excluded.salary_currency
+                salary_currency = excluded.salary_currency,
+                expiration_method = excluded.expiration_method,
+                expires_at = excluded.expires_at
         `;
         
         // Execute the upsert query with job data
@@ -112,6 +152,9 @@ function upsertJobListing(db, row){
                 row.salary_min,
                 row.salary_max,
                 row.salary_currency,
+                'active',
+                expiration.expiration_method,
+                expiration.expires_at
             ], 
             function(err) {
                 if(err) return reject(err);
@@ -196,15 +239,15 @@ app.get('/api/jobs', (req, res) =>{
     
     // Build dynamic WHERE clause for search
     const params = [];
-    let whereClause = '';
+    let whereClause = "WHERE status = 'active'";
     if (query) {
-        whereClause = `WHERE title LIKE ? OR company LIKE ? OR location LIKE ?`;
+        whereClause = `AND (title LIKE ? OR company LIKE ? OR location LIKE ?)`;
         const likeQuery = `%${query}%`;
         params.push(likeQuery, likeQuery, likeQuery);
     }
     
     // Construct SQL query with search and pagination
-    const sql = `SELECT id, job_id, title, company, location, employment_type, description, apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency
+    const sql = `SELECT id, job_id, title, company, location, employment_type, description, apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency, status, expiration_method, expires_at, created_at
                  FROM job_listings ${whereClause}
                  ORDER BY created_at DESC
                  LIMIT ? OFFSET ?`;
@@ -236,7 +279,10 @@ db.run(`
         salary_min INTEGER,
         salary_max INTEGER,
         salary_currency TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        status TEXT DEFAULT 'active',
+        expiration_method TEXT DEFAULT 'posted_date',
+        expires_at DATETIME
     )
 `);
 
@@ -281,6 +327,28 @@ app.get('/api/jobs/count', (req, res) => {
         }
 
         res.json({ total: row ? row.total : 0 });
+    });
+});
+app.post('/api/jobs/mark-expired', (req, res) => {
+    const currentTime = new Date().toISOString();
+    const sql = `
+        UPDATE job_listings
+        SET status = 'expired'
+        WHERE status = 'active'
+        AND expires_at IS NOT NULL
+        AND expires_at <= ?
+    `;
+
+    db.run(sql, [currentTime], function(err){
+        if(err) {
+            console.error('Error making expired jobs: ', err.message);
+            return res.status(500).json({error: 'Failed to mark expired jobs'});
+        }
+
+        res.json({
+            message:'Expired jobs marked successfully',
+            expired_count: this.changes
+        });
     });
 });
 
