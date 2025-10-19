@@ -36,6 +36,9 @@ body {
     line-height: 1.6;
     color: var(--text-primary);
     background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+    min-height: 100vh;  /* Added to ensure full viewport height */
+    display: flex;      /* Added for flex layout */
+    flex-direction: column; /* Added to stack children vertically */
 }
 
 /* Navigation Bar */
@@ -173,7 +176,7 @@ body {
     text-align: center;
     padding: 2rem;
     background: #f8f9fa;
-    margin-top: 2rem;
+    margin-top: auto;  /* Changed from margin-top: 2rem to auto */
 }
 
 /* Responsive Design */
