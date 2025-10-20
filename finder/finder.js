@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Prevents excessive API calls while user is typing
  */
 function setupSearch() {
-  const searchInput = document.getElementById('searchInput');
+  const searchInput = document.getElementById('search-input');
   const debounced = debounce((term) => {
     fetchJobs(term, 1);
   }, 400);
@@ -301,9 +301,9 @@ function setupSearch() {
  * Enables/disables buttons and updates page information display
  */
 function updatePaginationControls() {
-  const prevBtn = document.getElementById('prevPage');
-  const nextBtn = document.getElementById('nextPage');
-  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
+  const pageInfo = document.getElementById('page-info');
 
   if (!prevBtn || !nextBtn || !pageInfo) return;
 
@@ -350,8 +350,8 @@ async function updateDbCountLabel(query) {
  * Handles previous and next page navigation
  */
 function wirePaginationButtons() {
-  const prevBtn = document.getElementById('prevPage');
-  const nextBtn = document.getElementById('nextPage');
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
 
   if (prevBtn) {
     prevBtn.addEventListener('click', () => {
@@ -372,7 +372,7 @@ function wirePaginationButtons() {
  * Toggles the visibility of the filter panel
  */
 function toggleFilters() {
-  const panel = document.getElementById('filterPanel');
+  const panel = document.getElementById('filter-panel');
   panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
 }
 
@@ -421,25 +421,25 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function openJobDetailOverlay(job) {
-  const overlay = document.getElementById('jobDetailOverlay');
+  const overlay = document.getElementById('job-detail-overlay');
   
-  document.getElementById('overlayJobTitle').textContent = job.title || 'No title';
-  document.getElementById('overlayCompany').textContent = job.company || 'No company';
-  document.getElementById('overlayLocation').textContent = job.location || 'No location';
-  document.getElementById('overlayEmploymentType').textContent = job.employment_type || 'No type';
-  document.getElementById('overlayPostedDate').textContent = job.posted_date ? 
+  document.getElementById('overlay-job-title').textContent = job.title || 'No title';
+  document.getElementById('overlay-company').textContent = job.company || 'No company';
+  document.getElementById('overlay-location').textContent = job.location || 'No location';
+  document.getElementById('overlay-employment-type').textContent = job.employment_type || 'No type';
+  document.getElementById('overlay-posted-date').textContent = job.posted_date ? 
     new Date(job.posted_date).toLocaleDateString() : 'No date';
   
   // Fix the "Added to DB" field
-  const createdDateElement = document.getElementById('overlayCreatedDate');
+  const createdDateElement = document.getElementById('overlay-created-date');
   if (createdDateElement) {
     createdDateElement.textContent = job.created_at ? 
       new Date(job.created_at).toLocaleDateString() : 'Unknown';
   }
   
   // Always show salary container with formatted currency
-  const salaryContainer = document.getElementById('overlaySalaryContainer');
-  const salaryElement = document.getElementById('overlaySalary');
+  const salaryContainer = document.getElementById('overlay-salary-container');
+  const salaryElement = document.getElementById('overlay-salary');
   
   // Format salary with currency symbol and commas (same as job card)
   const formatSalary = (min, max, currency) => {
@@ -471,8 +471,8 @@ function openJobDetailOverlay(job) {
   salaryContainer.style.display = 'block';
   
   // Always show remote container
-  const remoteContainer = document.getElementById('overlayRemoteContainer');
-  document.getElementById('overlayRemote').textContent = job.is_remote ? 'Yes' : 'No';
+  const remoteContainer = document.getElementById('overlay-remote-container');
+  document.getElementById('overlay-remote').textContent = job.is_remote ? 'Yes' : 'No';
   remoteContainer.style.display = 'block';
   
   const desc = job.description ? 
@@ -481,9 +481,9 @@ function openJobDetailOverlay(job) {
       .replace(/&nbsp;/g, ' ')
       .replace(/&amp;/g, '&')
       .trim() : 'No description available';
-  document.getElementById('overlayDescription').innerHTML = desc.replace(/\n/g, '<br>');
+  document.getElementById('overlay-description').innerHTML = desc.replace(/\n/g, '<br>');
   
-  const applyBtn = document.getElementById('overlayApplyButton');
+  const applyBtn = document.getElementById('overlay-apply-button');
   if (job.apply_link) {
     applyBtn.disabled = false;
     applyBtn.textContent = 'Apply Now';
@@ -493,7 +493,7 @@ function openJobDetailOverlay(job) {
     applyBtn.textContent = 'No Apply Link';
   }
   
-  document.getElementById('overlaySaveButton').onclick = async () => {
+  document.getElementById('overlay-save-button').onclick = async () => {
     try {
       await saveJobToTracker(job);
       closeJobDetailOverlay();
@@ -510,13 +510,13 @@ function openJobDetailOverlay(job) {
 }
 
 function closeJobDetailOverlay() {
-  document.getElementById('jobDetailOverlay').classList.remove('show');
+  document.getElementById('job-detail-overlay').classList.remove('show');
   document.body.style.overflow = '';
 }
 
 function initializeJobDetailOverlay() {
-  const overlay = document.getElementById('jobDetailOverlay');
-  const closeBtn = document.getElementById('closeOverlay');
+  const overlay = document.getElementById('job-detail-overlay');
+  const closeBtn = document.getElementById('close-overlay');
   
   closeBtn.addEventListener('click', closeJobDetailOverlay);
   
