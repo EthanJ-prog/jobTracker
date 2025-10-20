@@ -7,7 +7,7 @@ const API_BASE = "http://localhost:3000";
  * @param {Object} options - Additional fetch options (method, body, etc.)
  * @returns {Promise<Object>} - Parsed JSON response from the API
  */
-async function apiCall(endpoint, options ={}) {
+async function apiCall(endpoint, options = {}) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json'
@@ -15,22 +15,22 @@ async function apiCall(endpoint, options ={}) {
     ...options
   });
 
-  if(!response.ok){
+  if (!response.ok) {
     throw new Error(`API call failed: ${response.status} ${response.statusText}`);
   }
   return response.json();
 };
 
 // Initialize the job tracker when DOM is loaded
-window.addEventListener('DOMContentLoaded', async() => {
+window.addEventListener('DOMContentLoaded', async () => {
   try {
     // Fetch all jobs from the API
-    const jobs = await apiCall('/jobs')
-    console.log('Jobs loaded from the server: ', jobs);
+    const jobs = await apiCall('/jobs');
+    console.log('Jobs loaded from the server:', jobs);
     
     // Create job cards and place them in appropriate columns
-    if (jobs && jobs.length > 0){
-      jobs.forEach(job =>{
+    if (jobs && jobs.length > 0) {
+      jobs.forEach(job => {
         const jobCard = createJobCard(job);
         const targetColumn = document.getElementById(job.status);
         targetColumn.querySelector('.column-content').insertBefore(jobCard, targetColumn.querySelector('.input-wrapper'));
@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded', async() => {
       console.log('No jobs found in the database');
     }
   } catch (error) {
-    console.error('Failed to load jobs from the server: ', error)
+    console.error('Failed to load jobs from the server:', error);
     alert('Failed to load jobs from the server, please refresh your page');
   }
 });
@@ -131,7 +131,7 @@ function createJobCard(job) {
 
   // Add update button functionality
   card.querySelector('.update-button').addEventListener('click', async () => {
-    try{
+    try {
       // Collect updated values from form inputs
       const updatedValues = {
         title: editDiv.querySelector('.edit-title').value.trim(),
@@ -173,7 +173,7 @@ function createJobCard(job) {
       displayDiv.style.display = 'block';
       console.log(`${job.id} updated successfully`);
     } catch (error) {
-      console.error('Failed to update job: ', error);
+      console.error('Failed to update job:', error);
       alert('Failed to update job, please try again');
     }
   });
@@ -250,7 +250,7 @@ document.querySelectorAll('.column-content').forEach(container => {
 
       console.log(`${draggedJob.job.id} moved from ${draggedJob.sourceColumnId} to ${targetColumnId}`);
     } catch (error) {
-      console.error('Failed to update job status: ', error);
+      console.error('Failed to update job status:', error);
       alert('Failed to move job');
     }
 

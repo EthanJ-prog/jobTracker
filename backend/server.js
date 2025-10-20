@@ -46,38 +46,53 @@ db.run(`
     )
 `);
 
-function calculateExpiryDate(postedDate, createdAt){
-    const twoWeeksInMS = 14 * 24 * 60 * 60 * 1000;
+/**
+ * Calculates expiration date and method for a job
+ * @param {string} postedDate - Posted date from API (can be null)
+ * @param {string} createdAt - When job was added to our database
+ * @returns {Object} Object with expiration details
+ */
+function calculateJobExpiration(postedDate, createdAt) {
+    const twoWeeksInMs = 14 * 24 * 60 * 60 * 1000; // 14 days in milliseconds
     let expirationMethod = 'posted_date';
     let expiresAt = null;
-    if(postedDate){
-        try{
+    
+    // If we have a posted date, use it for expiration calculation
+    if (postedDate) {
+        try {
+            // Parse the posted date (could be ISO string or timestamp)
             const postedDateTime = new Date(postedDate);
-            if(!isNaN(postedDateTime.getTime())){
-                expiresAt = new Date(postedDateTime.getTime() + twoWeeksInMS).toISOString();
+            if (!isNaN(postedDateTime.getTime())) {
+                // Add 2 weeks to posted date
+                expiresAt = new Date(postedDateTime.getTime() + twoWeeksInMs).toISOString();
                 expirationMethod = 'posted_date';
             }
-        } catch (err) {
-            console.warn('Failed to parse posted date: ', postedDate, err.message);
+        } catch (error) {
+            console.warn('Failed to parse posted date:', postedDate, error.message);
         }
     }
-
-    if(!expiresAt && createdAt) {
+    
+    // If no valid posted date, use created_at as fallback
+    if (!expiresAt && createdAt) {
         try {
             const createdDateTime = new Date(createdAt);
-            if(!isNaN(createdDateTime.getTime())){
-                expiresAt = new Date(createdDateTime.getTime() + twoWeeksInMS).toISOString();
+            if (!isNaN(createdDateTime.getTime())) {
+                // Add 2 weeks to created date
+                expiresAt = new Date(createdDateTime.getTime() + twoWeeksInMs).toISOString();
                 expirationMethod = 'created_at';
             }
-        } catch (err) {
-            console.warn('Failed to parse created date: ', createdAt, err.message);
+        } catch (error) {
+            console.warn('Failed to parse created date:', createdAt, error.message);
         }
     }
-
-    if (!expiresAt) expirationMethod = 'Never';
-
+    
+    // If we still can't calculate expiration, mark as never expires
+    if (!expiresAt) {
+        expirationMethod = 'never';
+    }
+    
     return {
-        expiresAt, 
+        expiresAt,
         expirationMethod
     };
 }
@@ -112,13 +127,15 @@ function mapJSearchJobToDB(job){
  */
 function upsertJobListing(db, row){
     return new Promise((resolve, reject) => {
-        const expiration = calculateExpiryDate(row.posted_date, new Date().toISOString());
+        // Calculate expiration details for this job
+        const expiration = calculateJobExpiration(row.posted_date, new Date().toISOString());
+        
         // SQL query to insert or update job listing based on job_id
         const sql = `
             INSERT INTO job_listings (
                 job_id, title, company, location, employment_type, description, 
                 apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency,
-                status, expiration_method, expires_at, 
+                status, expiration_method, expires_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 title = excluded.title,
@@ -136,7 +153,7 @@ function upsertJobListing(db, row){
                 expires_at = excluded.expires_at
         `;
         
-        // Execute the upsert query with job data
+        // Execute the upsert query with job data including expiration info
         db.run(
             sql, 
             [
@@ -152,9 +169,9 @@ function upsertJobListing(db, row){
                 row.salary_min,
                 row.salary_max,
                 row.salary_currency,
-                'active',
-                expiration.expiration_method,
-                expiration.expires_at
+                'active', // Default status for new jobs
+                expiration.expirationMethod,
+                expiration.expiresAt
             ], 
             function(err) {
                 if(err) return reject(err);
@@ -237,16 +254,17 @@ app.get('/api/jobs', (req, res) =>{
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100); // Cap at 100
     const offset = (parseInt(req.query.offset, 10) || 0); 
     
-    // Build dynamic WHERE clause for search
+    // Build dynamic WHERE clause for search - only show active jobs
     const params = [];
-    let whereClause = "WHERE status = 'active'";
+    let whereClause = "WHERE status = 'active'"; // Only show active jobs
+    
     if (query) {
-        whereClause = `AND (title LIKE ? OR company LIKE ? OR location LIKE ?)`;
+        whereClause += ` AND (title LIKE ? OR company LIKE ? OR location LIKE ?)`;
         const likeQuery = `%${query}%`;
         params.push(likeQuery, likeQuery, likeQuery);
     }
     
-    // Construct SQL query with search and pagination
+    // Construct SQL query with search and pagination - include new columns
     const sql = `SELECT id, job_id, title, company, location, employment_type, description, apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency, status, expiration_method, expires_at, created_at
                  FROM job_listings ${whereClause}
                  ORDER BY created_at DESC
@@ -289,12 +307,14 @@ db.run(`
 /**
  * Legacy endpoint to fetch jobs from old jobs table
  * GET /jobs
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 app.get('/jobs', (req, res) => {
     db.all('SELECT * FROM jobs', [], (err, rows) => {
         if (err) {
             console.error('Error fetching jobs:', err.message);
-            return res.status(500).json({error: 'failed to fetch jobs'});
+            return res.status(500).json({error: 'Failed to fetch jobs'});
         }
         res.json(rows);
     });
@@ -303,6 +323,8 @@ app.get('/jobs', (req, res) => {
 /**
  * Get total count of job listings with optional search filter
  * GET /api/jobs/count?q=search
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 app.get('/api/jobs/count', (req, res) => {
     const query = (req.query.q || '').toString().trim();
@@ -323,31 +345,42 @@ app.get('/api/jobs/count', (req, res) => {
     db.get(countSQL, params, (err, row) => {
         if (err) {
             console.error('Error counting jobs:', err.message);
-            return res.status(500).json({error: 'failed to count jobs'});
+            return res.status(500).json({error: 'Failed to count jobs'});
         }
 
         res.json({ total: row ? row.total : 0 });
     });
 });
+/**
+ * Mark expired jobs as expired based on their expiration dates
+ * POST /api/jobs/mark-expired
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 app.post('/api/jobs/mark-expired', (req, res) => {
+    // Get current time in ISO format
     const currentTime = new Date().toISOString();
+    
+    // SQL query to mark jobs as expired if their expires_at date has passed
     const sql = `
-        UPDATE job_listings
-        SET status = 'expired'
-        WHERE status = 'active'
-        AND expires_at IS NOT NULL
+        UPDATE job_listings 
+        SET status = 'expired' 
+        WHERE status = 'active' 
+        AND expires_at IS NOT NULL 
         AND expires_at <= ?
     `;
-
-    db.run(sql, [currentTime], function(err){
-        if(err) {
-            console.error('Error making expired jobs: ', err.message);
+    
+    // Execute the update query
+    db.run(sql, [currentTime], function(err) {
+        if (err) {
+            console.error('Error marking expired jobs:', err.message);
             return res.status(500).json({error: 'Failed to mark expired jobs'});
         }
-
-        res.json({
-            message:'Expired jobs marked successfully',
-            expired_count: this.changes
+        
+        // Return how many jobs were marked as expired
+        res.json({ 
+            message: 'Expired jobs marked successfully',
+            expired_count: this.changes 
         });
     });
 });
@@ -355,6 +388,8 @@ app.post('/api/jobs/mark-expired', (req, res) => {
 /**
  * Create a new job entry in the legacy jobs table
  * POST /jobs
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 app.post('/jobs', (req, res) => {
     const {title, company, date, link, notes, status} = req.body;
@@ -362,7 +397,7 @@ app.post('/jobs', (req, res) => {
     db.run(query, [title, company, date, link, notes, status || 'saved'], function (err) {
         if (err) {
             console.error('Error putting jobs:', err.message);
-            return res.status(500).json({error: 'failed to put jobs'});
+            return res.status(500).json({error: 'Failed to create job'});
         }
         res.status(201).json({id: this.lastID});
     });
@@ -371,6 +406,8 @@ app.post('/jobs', (req, res) => {
 /**
  * Update an existing job entry
  * PUT /jobs/:id
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 app.put('/jobs/:id', (req, res) =>{
     const jobId = req.params.id;
@@ -379,7 +416,7 @@ app.put('/jobs/:id', (req, res) =>{
     db.run(query, [title, company, date, link, notes, status || 'saved', jobId], function(err) {
         if (err) {
             console.error('Error updating jobs:', err.message);
-            return res.status(500).json({error: 'failed to update job'});
+            return res.status(500).json({error: 'Failed to update job'});
         }
         res.json({updated: this.changes});
     });
@@ -388,13 +425,15 @@ app.put('/jobs/:id', (req, res) =>{
 /**
  * Delete a job entry
  * DELETE /jobs/:id
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 app.delete('/jobs/:id', (req, res) =>{
     const jobId = req.params.id;
     db.run('DELETE FROM jobs WHERE id = ?', [jobId], function(err){
          if (err) {
             console.error('Error deleting jobs:', err.message);
-            return res.status(500).json({error: 'failed to delete job'});
+            return res.status(500).json({error: 'Failed to delete job'});
         }
         res.json({deleted: this.changes});
     })
@@ -403,6 +442,8 @@ app.delete('/jobs/:id', (req, res) =>{
 /**
  * Health check endpoint
  * GET /
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
 app.get('/', (req, res) => {
     res.send('Backend is running!');

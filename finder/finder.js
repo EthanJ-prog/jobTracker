@@ -105,15 +105,67 @@ function createJobCard(job) {
     day: 'numeric'
   }) : '';
   
-  // Create job card HTML structure
+  // Format the created date (when added to our DB)
+  const formattedCreatedDate = job.created_at ? new Date(job.created_at).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }) : 'N/A';
+  
+  // Helper function to format values with fallbacks
+  const formatValue = (value, fallback = 'N/A') => {
+    if (!value || value.trim() === '') return fallback;
+    return value;
+  };
+  
+  // Format remote status based on API data
+  const remoteStatus = job.is_remote === 1 ? 'Remote' : 
+                      job.is_remote === 0 ? 'On-site' : 'N/A';
+  
+  // Format employment type
+  const employmentType = formatValue(job.employment_type || job.type, 'Not specified');
+  
+  // Format salary with currency symbol and commas
+  const formatSalary = (min, max, currency) => {
+    if (!min && !max) return 'Salary not available';
+    
+    const currencySymbols = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'CAD': 'C$',
+      'AUD': 'A$'
+    };
+    
+    const symbol = currencySymbols[currency] || '$';
+    const formatNumber = (num) => num ? num.toLocaleString() : '';
+    
+    if (min && max) {
+      return `${symbol}${formatNumber(min)} - ${symbol}${formatNumber(max)}`;
+    } else if (min) {
+      return `${symbol}${formatNumber(min)}+`;
+    } else if (max) {
+      return `Up to ${symbol}${formatNumber(max)}`;
+    }
+    return 'Salary not available';
+  };
+  
+  const salaryText = formatSalary(job.salary_min, job.salary_max, job.salary_currency);
+  
+  // Create job card HTML structure with all details (consistent order)
   card.innerHTML = `
-    <h3 class="job-title">${job.title || ''}</h3> 
-    <p class="job-company">${job.company || ''}</p>
-    <p class="job-location">${job.location || ''}</p>
-    <p class="job-type">${job.employment_type || job.type || ''}</p>
-    <p class="job-date">${formattedDate}</p>
+    <h3 class="job-title">${formatValue(job.title, 'No title available')}</h3> 
+    <div class="job-details">
+      <p class="job-company"><strong>Company:</strong> ${formatValue(job.company, 'Company not specified')}</p>
+      <p class="job-location"><strong>Location:</strong> ${formatValue(job.location, 'No location specified')}</p>
+      <p class="job-type"><strong>Type:</strong> ${employmentType}</p>
+      <p class="job-remote"><strong>Remote:</strong> ${remoteStatus}</p>
+      <p class="job-date"><strong>Posted:</strong> ${formattedDate}</p>
+      <p class="job-added"><strong>Added to DB:</strong> ${formattedCreatedDate}</p>
+      <p class="job-salary"><strong>Salary:</strong> ${salaryText}</p>
+    </div>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
-    <button type="button" class="star-button">&#9733;</button>
+    <button type="button" class="star-button">&#9734;</button>
   `;
 
   // Add apply button functionality
@@ -378,26 +430,50 @@ function openJobDetailOverlay(job) {
   document.getElementById('overlayPostedDate').textContent = job.posted_date ? 
     new Date(job.posted_date).toLocaleDateString() : 'No date';
   
-  const salaryContainer = document.getElementById('overlaySalaryContainer');
-  if (job.salary_min || job.salary_max) {
-    const currency = job.salary_currency || 'USD';
-    const salaryText = job.salary_min && job.salary_max ? 
-      `${job.salary_min} - ${job.salary_max} ${currency}` :
-      job.salary_min ? `${job.salary_min} ${currency}` :
-      `${job.salary_max} ${currency}`;
-    document.getElementById('overlaySalary').textContent = salaryText;
-    salaryContainer.style.display = 'block';
-  } else {
-    salaryContainer.style.display = 'none';
+  // Fix the "Added to DB" field
+  const createdDateElement = document.getElementById('overlayCreatedDate');
+  if (createdDateElement) {
+    createdDateElement.textContent = job.created_at ? 
+      new Date(job.created_at).toLocaleDateString() : 'Unknown';
   }
   
+  // Always show salary container with formatted currency
+  const salaryContainer = document.getElementById('overlaySalaryContainer');
+  const salaryElement = document.getElementById('overlaySalary');
+  
+  // Format salary with currency symbol and commas (same as job card)
+  const formatSalary = (min, max, currency) => {
+    if (!min && !max) return 'Salary not available';
+    
+    const currencySymbols = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'CAD': 'C$',
+      'AUD': 'A$'
+    };
+    
+    const symbol = currencySymbols[currency] || '$';
+    const formatNumber = (num) => num ? num.toLocaleString() : '';
+    
+    if (min && max) {
+      return `${symbol}${formatNumber(min)} - ${symbol}${formatNumber(max)}`;
+    } else if (min) {
+      return `${symbol}${formatNumber(min)}+`;
+    } else if (max) {
+      return `Up to ${symbol}${formatNumber(max)}`;
+    }
+    return 'Salary not available';
+  };
+  
+  const salaryText = formatSalary(job.salary_min, job.salary_max, job.salary_currency);
+  salaryElement.textContent = salaryText;
+  salaryContainer.style.display = 'block';
+  
+  // Always show remote container
   const remoteContainer = document.getElementById('overlayRemoteContainer');
-  if (job.is_remote !== undefined) {
-    document.getElementById('overlayRemote').textContent = job.is_remote ? 'Yes' : 'No';
-    remoteContainer.style.display = 'block';
-  } else {
-    remoteContainer.style.display = 'none';
-  }
+  document.getElementById('overlayRemote').textContent = job.is_remote ? 'Yes' : 'No';
+  remoteContainer.style.display = 'block';
   
   const desc = job.description ? 
     job.description
