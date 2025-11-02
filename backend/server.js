@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const fetch = require('node-fetch');
+const {GoogleGenerativeAI} = require('@google/generative-ai');
 
 // Initialize Express application
 const app = express();
@@ -27,6 +28,22 @@ const db = new sqlite3.Database('jobs.db', (err) => {
 // JSearch API configuration
 const JSEARCH_API_KEY = process.env.JSEARCH_API_KEY;
 const JSEARCH_BASE_URL = process.env.JSEARCH_BASE_URL || 'https://jsearch.p.rapidapi.com';
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+let geminiModel = null;
+
+if (GEMINI_API_KEY) {
+    try {
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        geminiModel = genAI.getGenerativeModel({model: 'gemini-2.5-flash'});
+        console.log('Gemini API Model loaded successfully');
+    } catch (err) {
+        console.warn('Warning! Failed to initilize Gemini AI: ', err.message);
+    }
+} else {
+    console.warn('Warning! Gemini API key is not set, job description and resume matching will not be available');
+}
 
 // Validate API key configuration
 if (!JSEARCH_API_KEY) {
@@ -439,6 +456,29 @@ app.delete('/jobs/:id', (req, res) =>{
     })
 }); 
 
+app.post('/api/jobs/summarize-description', async(req, res) => {
+    try {
+        const {description} = req.body;
+        if (!description || typeof description !== 'string') {
+            return res.status(400).json({error: 'Description is required'});
+        }
+        if (!geminiModel) {
+            return res.status(500).json({error: 'Gemini AI Model is not initialized'});
+        }
+
+        const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+        const prompt = `Summarize this job description in ONE concise paragraph (maximum 200 words). Focus on key responsibilities, required skills, and benefits. Keep it professional and informative: ${cleanDescription.substring(0,5000)}`;
+        const result = await geminiModel.generateContent(prompt);
+        const response = await result.response;
+        const summary = response.text().trim();
+
+        res.json({summary: summary});
+    } catch (err){
+        console.error('Error summarizing description:', error);
+        res.status(500).json({error: 'Internal server error'});
+    }
+});
+
 /**
  * Health check endpoint
  * GET /
@@ -453,5 +493,6 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server started at http://localhost:${PORT}`);
 });
+
 
 
