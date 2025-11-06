@@ -36,33 +36,6 @@ body {
     padding: 0;
 }
 
-/* Site header container with centered content */
-.site-header {
-    text-align: center;
-    padding: 10px 20px 5px; /* Reduced padding further */
-    color: #2c3e50;
-    margin-top: 50px; /* Reduced top margin */
-}
-
-/* Main site title with gradient text effect */
-.site-header h1 {
-    font-size: 2.5rem; /* Slightly smaller */
-    font-weight: 700;
-    letter-spacing: 1px;
-    background: linear-gradient(135deg, #3a7bd5, #00d2ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 5px; /* Reduced bottom margin */
-}
-
-/* Site subtitle styling */
-.site-header .subtitle {
-    font-size: 1.1rem; /* Slightly smaller */
-    color: #436280;
-    font-weight: 400;
-    margin-bottom: 10px; /* Added bottom margin */
-}
-
 /* Adjust main content spacing */
 main {
     margin-top: 10px; /* Reduced top margin further */
@@ -70,37 +43,78 @@ main {
     padding: 15px 20px; /* Reduced top padding */
 }
 
-/* Search bar container with glassmorphism effect */
+/* Search section styling */
 .search-bar-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 12px;
-    padding: 15px; /* Reduced padding */
-    flex-wrap: wrap;
-    background: rgba(255, 255, 255, 0.7);
-    box-shadow: 0 4px 16px rgba(92, 107, 192, 0.08);
+    gap: 16px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
-    margin-top: 0;
+    box-shadow: var(--shadow-sm);
+    margin: 20px auto;
+    max-width: 800px;
+    position: relative;
+    backdrop-filter: blur(8px);
 }
 
 /* Main search input field styling */
-#searchInput {
-    padding: 10px 16px;
-    font-size: 16px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    width: 300px;
-    max-width: 100%;
-    box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
-    transition: border 0.2s ease, box-shadow 0.2s ease;
+#search-input {
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 1rem;
+    border: 2px solid #e0e7ff;
+    border-radius: 8px;
+    background: white;
+    transition: all 0.2s ease;
+    width: 100%;
+    max-width: 600px;
+    color: var(--text-primary);
 }
 
 /* Search input focus state with brand color */
-#searchInput:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.2);
+#search-input:focus {
     outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(92, 107, 192, 0.15);
+}
+
+#search-input::placeholder {
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+
+/* Search button styling */
+.search-button {
+    padding: 14px 24px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+/* Search button hover effect */
+.search-button:hover {
+    background: linear-gradient(135deg, #4a59a8, #0060a1);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Search results count */
+.search-results-count {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
 }
 
 /* Filter toggle button with gradient background */
@@ -231,6 +245,25 @@ main {
     margin: 2px 0;
     color: #666;
     font-size: 14px;
+}
+
+.job-description-summary{
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0
+}
+
+.job-description-text{
+    margin: 0;
+    color: #555;
+    font-size: 13px;
+    line-height: 1.6;
+    font-style: normal;
+}
+
+.job-description-text em{
+    color: #999;
+    font-size: 12px;
 }
 
 /* Apply button positioned at bottom of job card */

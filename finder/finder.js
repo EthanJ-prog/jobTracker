@@ -163,6 +163,9 @@ function createJobCard(job) {
       <p class="job-date"><strong>Posted:</strong> ${formattedDate}</p>
       <p class="job-added"><strong>Added to DB:</strong> ${formattedCreatedDate}</p>
       <p class="job-salary"><strong>Salary:</strong> ${salaryText}</p>
+      <div class="job-description-summary"> 
+        <p class="job-description-text"><em>Loading description...</em></p>
+      </div>
     </div>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
     <button type="button" class="star-button">&#9734;</button>
@@ -195,8 +198,51 @@ function createJobCard(job) {
     openJobDetailOverlay(job);
   });
 
+  if(job.description) {
+    loadJobDescriptionSummary(card, job.description);
+  } else {
+    const descElement = card.querySelector('.job-description-text');
+    if (descElement) {
+      descElement.innerHTML = '<em>No description available</em>';
+    }
+  }
+
   return card;
 }
+
+  async function loadJobDescriptionSummary(card, description){
+    try {
+      const descElement = card.querySelector('.job-description-text');
+      if(!descElement) return;
+
+      await fetch(`${API_BASE}/api/jobs/summarize-description`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({description: description})
+      });
+
+      if (!response.ok){
+        throw new Error(`API error ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.summary) {
+        descElement.innerHTML = `<strong>Description: </strong>${data.summary}`;
+      } else {
+        descElement.innerHTML = '<em>Unable to generate summary</em>';
+      }
+
+    } catch (err) {
+      console.error('Unable to fetch job description text: ', err);
+      const descElement = card.querySelector('.job-description-text');
+      if (descElement) {
+        descElement.innerHTML = '<em>Description summary unavailable</em>';
+      }
+    }
+  }
+
 
 /**
  * Displays error message in the job listings container
