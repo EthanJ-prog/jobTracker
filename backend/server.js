@@ -114,6 +114,27 @@ function calculateJobExpiration(postedDate, createdAt) {
     };
 }
 
+async function generateJobDescriptionSummary(description) {
+    if(!description || typeof description !== 'string' || !description.trim()){
+        return null;
+    }
+
+    if(!geminiModel) return null;
+
+    try {
+        const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+        if (!cleanDescription) return null;
+        const prompt = `Summarize this job description in ONE concise paragraph (maximum 200 words). Focus on key responsibilities, required skills, and benefits. Keep it professional and informative: ${cleanDescription.substring(0,5000)}`;
+        const result = await geminiModel.generateContent(prompt);
+        const response = await result.response;
+        const summary = response.text().trim();
+        return summary || null;
+    } catch (err) {
+        console.error('Error generating job description summary:', err.message);
+        return null;
+    }
+}
+
 /**
  * Maps JSearch API job data to our database schema
  * @param {Object} job - Job object from JSearch API
@@ -142,24 +163,38 @@ function mapJSearchJobToDB(job){
  * @param {Object} row - Job data to upsert
  * @returns {Promise<number>} Number of affected rows
  */
-function upsertJobListing(db, row){
+async function upsertJobListing(db, row){
+    const expiration = calculateJobExpiration(row.posted_date, new Date().toISOString());
+    let descriptionSummary = null;
+    if(row.description){
+        const existingJob = await new Promise((resolve, reject) => {
+            db.get('SELECT description_summary FROM job_listings WHERE job_id = ?', [row.job_id], (err, result) => {
+                if(err) return reject(err);
+                resolve(resolve);
+            });
+        }).catch(() => null);
+        if (!existingJob || !existingJob.description_summary) {
+            descriptionSummary = await generateJobDescriptionSummary(row.description);
+        } else {
+            descriptionSummary = existingJob.description_summary;
+        }
+    }
+
     return new Promise((resolve, reject) => {
-        // Calculate expiration details for this job
-        const expiration = calculateJobExpiration(row.posted_date, new Date().toISOString());
-        
         // SQL query to insert or update job listing based on job_id
         const sql = `
             INSERT INTO job_listings (
-                job_id, title, company, location, employment_type, description, 
+                job_id, title, company, location, employment_type, description, description_summary, 
                 apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency,
                 status, expiration_method, expires_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 title = excluded.title,
                 company = excluded.company,
                 location = excluded.location,
                 employment_type = excluded.employment_type,
                 description = excluded.description,
+                description_summary = COALESCE(excluded.description_summary, job_listings.description_summary),
                 apply_link = excluded.apply_link,
                 is_remote = excluded.is_remote,
                 posted_date = excluded.posted_date,
@@ -180,6 +215,7 @@ function upsertJobListing(db, row){
                 row.location,
                 row.employment_type,
                 row.description,
+                descriptionSummary,
                 row.apply_link,
                 row.is_remote,
                 row.posted_date,
@@ -282,7 +318,7 @@ app.get('/api/jobs', (req, res) =>{
     }
     
     // Construct SQL query with search and pagination - include new columns
-    const sql = `SELECT id, job_id, title, company, location, employment_type, description, apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency, status, expiration_method, expires_at, created_at
+    const sql = `SELECT id, job_id, title, company, location, employment_type, description, description_summary, apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency, status, expiration_method, expires_at, created_at
                  FROM job_listings ${whereClause}
                  ORDER BY created_at DESC
                  LIMIT ? OFFSET ?`;
@@ -308,6 +344,7 @@ db.run(`
         location TEXT,
         employment_type TEXT,
         description TEXT,
+        description_summary TEXT,
         apply_link TEXT,
         is_remote BOOLEAN,
         posted_date TEXT,
@@ -474,7 +511,7 @@ app.post('/api/jobs/summarize-description', async(req, res) => {
 
         res.json({summary: summary});
     } catch (err){
-        console.error('Error summarizing description:', error);
+        console.error('Error summarizing description:', err);
         res.status(500).json({error: 'Internal server error'});
     }
 });

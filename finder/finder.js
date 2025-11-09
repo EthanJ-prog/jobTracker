@@ -164,7 +164,7 @@ function createJobCard(job) {
       <p class="job-added"><strong>Added to DB:</strong> ${formattedCreatedDate}</p>
       <p class="job-salary"><strong>Salary:</strong> ${salaryText}</p>
       <div class="job-description-summary"> 
-        <p class="job-description-text"><em>Loading description...</em></p>
+        <p class="job-description-text">${job.description_summary ? `<strong>Description: </strong>${job.description_summary}` : '<em>Description summary unavailable</em>'}</p>
       </div>
     </div>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
@@ -215,7 +215,7 @@ function createJobCard(job) {
       const descElement = card.querySelector('.job-description-text');
       if(!descElement) return;
 
-      await fetch(`${API_BASE}/api/jobs/summarize-description`, {
+      const response = await fetch(`${API_BASE}/api/jobs/summarize-description`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
