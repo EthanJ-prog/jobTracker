@@ -153,6 +153,7 @@ async function generateJobDescriptionSummary(description) {
         const data = await response.json();
         const summary = data.response ? data.response.trim() : null;
         return summary || null;
+
     } catch (err) {
         console.error('Error generating job description summary:', err.message);
         return null;

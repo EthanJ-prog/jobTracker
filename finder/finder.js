@@ -319,6 +319,23 @@ document.addEventListener('DOMContentLoaded', () => {
   if(pageCtrls){
     pageCtrls.style.display = 'flex';
   }
+
+  // highlight nav link for current page
+  (function setActiveNav() {
+    const current = window.location.href;
+    document.querySelectorAll('.nav-link').forEach(a => {
+      const href = a.getAttribute('href') || '';
+      if (!href) return;
+      // simple, robust check for local and server paths
+      if ((current.includes('finder.html') && href.includes('finder.html')) ||
+          (current.includes('tracker.html') && href.includes('tracker.html'))) {
+        a.classList.add('active');
+      } else {
+        a.classList.remove('active');
+      }
+    });
+  })();
+
 });
 
 /**

@@ -42,6 +42,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.error('Failed to load jobs from the server:', error);
     alert('Failed to load jobs from the server, please refresh your page');
   }
+
+  // highlight nav link for current page
+  (function setActiveNav() {
+    const current = window.location.href;
+    document.querySelectorAll('.nav-link').forEach(a => {
+      const href = a.getAttribute('href') || '';
+      if (!href) return;
+      if ((current.includes('finder.html') && href.includes('finder.html')) ||
+          (current.includes('tracker.html') && href.includes('tracker.html'))) {
+        a.classList.add('active');
+      } else {
+        a.classList.remove('active');
+      }
+    });
+  })();
 });
 
 // Global variable to track the currently dragged job and its source column
