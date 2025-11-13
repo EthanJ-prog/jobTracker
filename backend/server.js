@@ -6,7 +6,6 @@ const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const fetch = require('node-fetch');
-const {GoogleGenerativeAI} = require('@google/generative-ai');
 
 // Initialize Express application
 const app = express();
@@ -29,21 +28,26 @@ const db = new sqlite3.Database('jobs.db', (err) => {
 const JSEARCH_API_KEY = process.env.JSEARCH_API_KEY;
 const JSEARCH_BASE_URL = process.env.JSEARCH_BASE_URL || 'https://jsearch.p.rapidapi.com';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 
-let geminiModel = null;
+let ollamaAvailable = null;
 
-if (GEMINI_API_KEY) {
+async function checkOllamaAvailablility() {
     try {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        geminiModel = genAI.getGenerativeModel({model: 'gemini-2.5-flash'});
-        console.log('Gemini API Model loaded successfully');
+        const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
+        if (response.ok){
+            ollamaAvailable = true
+            console.log(`Ollama connected succesfully at ${OLLAMA_BASE_URL} using model ${OLLAMA_MODEL}`);
+        } else{
+            console.warn('Ollama server not responding');
+        }
     } catch (err) {
-        console.warn('Warning! Failed to initilize Gemini AI: ', err.message);
+        console.warn('Ollama server not responding');    
     }
-} else {
-    console.warn('Warning! Gemini API key is not set, job description and resume matching will not be available');
 }
+
+checkOllamaAvailablility();
 
 // Validate API key configuration
 if (!JSEARCH_API_KEY) {
@@ -119,16 +123,36 @@ async function generateJobDescriptionSummary(description) {
         return null;
     }
 
-    if(!geminiModel) return null;
+    if(!ollamaAvailable) return null;
 
     try {
         const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
         if (!cleanDescription) return null;
         const prompt = `Summarize this job description in ONE concise paragraph (maximum 200 words). Focus on key responsibilities, required skills, and benefits. Keep it professional and informative: ${cleanDescription.substring(0,5000)}`;
-        const result = await geminiModel.generateContent(prompt);
-        const response = await result.response;
-        const summary = response.text().trim();
+        
+        const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+            method: 'POST', 
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: OLLAMA_MODEL, 
+                prompt: prompt,
+                stream: false, 
+                options: {
+                    temperature: 0.7,
+                    max_tokens: 300
+                }
+            })
+        });
+        if (!response.ok){
+            throw new Error(`Ollama API error: ${response.status} ${response.statusText}`)
+        }
+
+        const data = await response.json();
+        const summary = data.response ? data.response.trim() : null;
         return summary || null;
+
     } catch (err) {
         console.error('Error generating job description summary:', err.message);
         return null;
@@ -170,7 +194,7 @@ async function upsertJobListing(db, row){
         const existingJob = await new Promise((resolve, reject) => {
             db.get('SELECT description_summary FROM job_listings WHERE job_id = ?', [row.job_id], (err, result) => {
                 if(err) return reject(err);
-                resolve(resolve);
+                resolve(result);
             });
         }).catch(() => null);
         if (!existingJob || !existingJob.description_summary) {
