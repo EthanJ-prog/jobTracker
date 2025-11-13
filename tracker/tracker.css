@@ -418,8 +418,13 @@ main {
     transition: color 0.3s ease;
 }
 
-.nav-link:hover {
-    color: #5C6BC0;
+/* Active nav link (highlight when on this page) */
+.nav-link.active {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white !important;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
 }
 
 /* Input wrapper for job creation forms */
