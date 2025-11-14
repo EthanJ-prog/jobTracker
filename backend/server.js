@@ -125,10 +125,13 @@ async function generateJobDescriptionSummary(description) {
 
     if(!ollamaAvailable) return null;
 
+    const startTime = Date.now();
     try {
         const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
         if (!cleanDescription) return null;
-        const prompt = `Summarize this job description in ONE concise paragraph (maximum 200 words). Focus on key responsibilities, required skills, and benefits. Keep it professional and informative: ${cleanDescription.substring(0,5000)}`;
+        // Limit to 1500 chars for faster processing
+        const truncatedDescription = cleanDescription.substring(0, 1500);
+        const prompt = `Summarize this job description in one paragraph (100 words or less):\n\n${truncatedDescription}`;
         
         const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
             method: 'POST',
@@ -138,24 +141,25 @@ async function generateJobDescriptionSummary(description) {
             body: JSON.stringify({
                 model: OLLAMA_MODEL,
                 prompt: prompt,
-                stream: false,
-                options: {
-                    temperature: 0.7,
-                    max_tokens: 300
-                }
+                stream: false
             })
         });
 
         if (!response.ok) {
-            throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+            throw new Error(`Ollama API returned ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
         const summary = data.response ? data.response.trim() : null;
+        
+        const elapsed = Date.now() - startTime;
+        console.log(`✓ Ollama summary: ${(elapsed/1000).toFixed(1)}s (${summary ? summary.length : 0} chars)`);
+        
         return summary || null;
 
     } catch (err) {
-        console.error('Error generating job description summary:', err.message);
+        const elapsed = Date.now() - startTime;
+        console.error(`✗ Ollama error after ${(elapsed/1000).toFixed(1)}s: ${err.message}`);
         return null;
     }
 }
@@ -189,6 +193,7 @@ function mapJSearchJobToDB(job){
  * @returns {Promise<number>} Number of affected rows
  */
 async function upsertJobListing(db, row){
+    const startTime = Date.now();
     const expiration = calculateJobExpiration(row.posted_date, new Date().toISOString());
     let descriptionSummary = null;
     if(row.description){
@@ -198,6 +203,7 @@ async function upsertJobListing(db, row){
                 resolve(result);
             });
         }).catch(() => null);
+        
         if (!existingJob || !existingJob.description_summary) {
             descriptionSummary = await generateJobDescriptionSummary(row.description);
         } else {
@@ -252,7 +258,12 @@ async function upsertJobListing(db, row){
                 expiration.expiresAt
             ], 
             function(err) {
-                if(err) return reject(err);
+                if(err) {
+                    console.error(`✗ Failed to save job "${row.title}": ${err.message}`);
+                    return reject(err);
+                }
+                const elapsed = Date.now() - startTime;
+                console.log(`✓ Saved: ${row.title} at ${row.company} (${(elapsed/1000).toFixed(1)}s)`);
                 resolve(this.changes);
             }
         );
@@ -264,12 +275,15 @@ async function upsertJobListing(db, row){
  * GET /api/jobs/search?query=term&page=1&country=us&date_posted=all
  */
 app.get('/api/jobs/search', async (req, res) => {
+    const startTime = Date.now();
     try{
         // Extract and validate query parameters
         const query = (req.query.query || '').toString();
         const page = parseInt(req.query.page, 10) || 1;
         const country = (req.query.country || 'us').toString();
         const date_posted = (req.query.date_posted || 'all').toString();
+        
+        console.log(`\n🔍 Search: "${query}" (page ${page}, ${country})`);
         
         // Validate required parameters
         if(!query) {
@@ -283,6 +297,7 @@ app.get('/api/jobs/search', async (req, res) => {
         const url = `${JSEARCH_BASE_URL}/search?query=${encodeURIComponent(query)}&page=${page}&num_pages=1&country=${encodeURIComponent(country)}&date_posted=${encodeURIComponent(date_posted)}`;
 
         // Make request to JSearch API
+        const apiStartTime = Date.now();
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -293,31 +308,47 @@ app.get('/api/jobs/search', async (req, res) => {
 
         // Handle API errors
         if (!response.ok) {
-            const text = await response.text()
-            console.error('JSearch error:', response.status, text);
+            const text = await response.text();
+            console.error(`✗ JSearch API error: ${response.status} - ${text.substring(0, 100)}`);
             return res.status(502).json({error: 'Failed to fetch jobs from JSearch'});
         }
+
+        const apiTime = Date.now() - apiStartTime;
+        console.log(`  → JSearch API: ${(apiTime/1000).toFixed(1)}s`);
 
         // Parse response and extract job data
         const data = await response.json();
         const jobs = Array.isArray(data.data) ? data.data : [];
 
+        if (jobs.length === 0) {
+            console.log(`  → No jobs found`);
+            return res.json({count: 0, jobs: []});
+        }
+
+        console.log(`  → Processing ${jobs.length} jobs...`);
+        
         // Store each job in database
+        let processedCount = 0;
         for (const job of jobs) {
             const row = mapJSearchJobToDB(job);
             if(!row.job_id) continue; // Skip jobs without valid ID
             try{
+                processedCount++;
                 await upsertJobListing(db, row);
             } catch (e) {
-                console.error('Failed to upsert job', row.job_id, e.message);
+                console.error(`✗ Failed to save job: ${e.message}`);
             }
         }
+        
+        const elapsed = Date.now() - startTime;
+        console.log(`✓ Complete: ${processedCount} jobs in ${(elapsed/1000).toFixed(1)}s\n`);
         
         // Return mapped job data to client
         const result = jobs.map(mapJSearchJobToDB);
         res.json({count: result.length, jobs: result});
     }catch (err){
-        console.error('Error in /api/jobs/search:', err);
+        const elapsed = Date.now() - startTime;
+        console.error(`✗ Search error after ${(elapsed/1000).toFixed(1)}s: ${err.message}`);
         res.status(500).json({error: 'Internal server error'});
     }
 });
@@ -519,6 +550,7 @@ app.delete('/jobs/:id', (req, res) =>{
 }); 
 
 app.post('/api/jobs/summarize-description', async(req, res) => {
+    const startTime = Date.now();
     try {
         const {description} = req.body;
         if (!description || typeof description !== 'string') {
@@ -528,35 +560,14 @@ app.post('/api/jobs/summarize-description', async(req, res) => {
             return res.status(500).json({error: 'Ollama is not available. Make sure Ollama is running and the model is installed.'});
         }
 
-        const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-        const prompt = `Summarize this job description in ONE concise paragraph (maximum 200 words). Focus on key responsibilities, required skills, and benefits. Keep it professional and informative: ${cleanDescription.substring(0,5000)}`;
-        
-        const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: OLLAMA_MODEL,
-                prompt: prompt,
-                stream: false,
-                options: {
-                    temperature: 0.7,
-                    max_tokens: 300
-                }
-            })
-        });
+        const summary = await generateJobDescriptionSummary(description);
+        const elapsed = Date.now() - startTime;
+        console.log(`✓ Summary endpoint: ${(elapsed/1000).toFixed(1)}s`);
 
-        if (!response.ok) {
-            throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        const summary = data.response ? data.response.trim() : '';
-
-        res.json({summary: summary});
+        res.json({summary: summary || ''});
     } catch (err){
-        console.error('Error summarizing description:', err);
+        const elapsed = Date.now() - startTime;
+        console.error(`✗ Summary endpoint error after ${(elapsed/1000).toFixed(1)}s: ${err.message}`);
         res.status(500).json({error: 'Internal server error: ' + err.message});
     }
 });

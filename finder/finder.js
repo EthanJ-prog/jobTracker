@@ -199,7 +199,9 @@ function createJobCard(job) {
   });
 
   if(job.description) {
-    loadJobDescriptionSummary(card, job.description);
+    if (!job.description_summary) {
+      loadJobDescriptionSummary(card, job.description);
+    }
   } else {
     const descElement = card.querySelector('.job-description-text');
     if (descElement) {
