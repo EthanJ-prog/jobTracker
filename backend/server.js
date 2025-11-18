@@ -6,6 +6,9 @@ const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const fetch = require('node-fetch');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 
 // Initialize Express application
 const app = express();
@@ -14,6 +17,11 @@ const PORT = process.env.PORT || 3000;
 // Configure middleware
 app.use(cors()); // Enable CORS for cross-origin requests
 app.use(express.json()); // Parse JSON request bodies
+
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {fileSize: 10 * 1024 * 1024}
+});
 
 // Initialize SQLite database connection
 const db = new sqlite3.Database('jobs.db', (err) => {

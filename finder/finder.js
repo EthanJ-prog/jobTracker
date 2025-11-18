@@ -483,7 +483,74 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     initializeJobDetailOverlay();
+    initializeResumeUpload();
 });
+
+function initializeResumeUpload() {
+  const dropZone = document.getElementById('dropZone');
+  const resumeFile = document.getElementById('resumeFile');
+
+  if (!dropZone || !resumeFile) return;
+
+  resumeFile.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleResumeUpload(file);
+  });
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleResumeUpload(file);
+    }
+  });
+
+}
+
+async function handleResumeUpload(file) {
+  const files = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]
+
+  if (!files.includes(file.type)) {
+    alert("Wrong file type, please use a different file");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('resume', file);
+
+  try {
+    const response = await fetch(`${API_BASE}/api/resume/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload resume');
+    }
+
+    const result = await response.json();
+    console.log('Resume uploaded and parsed: ', result);
+    alert('Resume uploaded successfully');
+  } catch (err) {
+    console.error('Error uploading resume', err);
+    alert('Failed to upload resume. Please try again');
+  }
+
+}
 
 function openJobDetailOverlay(job) {
   const overlay = document.getElementById('job-detail-overlay');
