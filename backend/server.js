@@ -20,7 +20,16 @@ app.use(express.json()); // Parse JSON request bodies
 
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: {fileSize: 10 * 1024 * 1024}
+    limits: {fileSize: 10 * 1024 * 1024
+    }, 
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type, only pdf and docx allowed'));
+        }
+    }
 });
 
 // Initialize SQLite database connection
@@ -422,6 +431,21 @@ db.run(`
     )
 `);
 
+db.run(`
+    CREATE TABLE IF NOT EXISTS resumes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT UNIQUE NOT NULL,
+        file_type TEXT NOT NULL,
+        raw_text TEXT,
+        skills TEXT,
+        experience TEXT,
+        education TEXT,
+        contact_info TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
 /**
  * Legacy endpoint to fetch jobs from old jobs table
  * GET /jobs
@@ -578,6 +602,100 @@ app.post('/api/jobs/summarize-description', async(req, res) => {
         console.error(`✗ Summary endpoint error after ${(elapsed/1000).toFixed(1)}s: ${err.message}`);
         res.status(500).json({error: 'Internal server error: ' + err.message});
     }
+});
+
+async function parseResume(fileBuffer, mimetype) {
+    try {
+        if (mimetype === 'application/pdf') {
+            const parser = new pdfParse.PDFParse({ data: fileBuffer });
+            const result = await parser.getText();
+            return result.text;
+        } else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const result = await mammoth.extractRawText({buffer: fileBuffer});
+            return result.value;
+        } else {
+            throw new Error('Unsupported file type, only pdf or docx are allowed');
+        }
+    } catch (err) {
+        console.error('Error parsing resumes', err);
+        throw new Error('Unable to parse resume, please pass in file type', err);
+    }
+}
+
+// Will work on this in the future 
+function extractResumeData(text){
+    return null
+}
+
+app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
+    const startTime = Date.now();
+    try {
+        if (!req.file){
+            return res.status(400).json({error: 'No file uploaded'});
+        }
+        const {originalname, mimetype, buffer} = req.file;
+        console.log(`\n Uploading resume: ${originalname} (${mimetype})`);
+        const rawText = await parseResume(buffer, mimetype);
+        if (!rawText || rawText.trim().length === 0){
+            return res.status(400).json({error: 'Could not extract text from resume file'});
+        }
+
+        const fileType = mimetype === 'application/pdf' ? 'pdf' : 'docx';
+        db.run(
+            `INSERT OR REPLACE INTO resumes (filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
+            VALUES (?, ?, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)`,
+            [originalname, fileType, rawText],
+            function(err){
+                if (err) {
+                    console.error('Error saving resume:', err);
+                    return res.status(500).json({err: 'Failed to save resume to database'});
+                }
+                const elapsed = Date.now() - startTime;
+                console.log(`Resume was saved: ${originalname} (${(elapsed/1000).toFixed(1)}s)`)
+
+                res.json({
+                    message: 'Resume uploaded and parsed succesfully',
+                    id: this.lastID,
+                    filename: originalname,
+                    text_length: rawText.length
+                });
+            }
+        );
+    } catch (err) {
+        const elapsed = Date.now() - startTime;
+        console.error(`Resume upload error after (${(elapsed/1000).toFixed(1)}s: ${err.message})`);
+        res.status(500).json({error: 'Failed to process resume: ' + err.message});
+
+    }
+});
+
+app.get('/api/resume', (req, res) => {
+    db.get('SELECT * FROM resumes ORDER BY updated_at DESC LIMIT 1', [, (err, row)])
+    if (err) {
+        console.error('Error fetching resumes', err);
+        return res.status(500).json({Error: 'Failed to fetch resume'});
+    }
+
+    if (!row) {
+        console.error('No resume found in database');
+        return res.status(404).json({Error: 'Resume not found'});
+    }
+
+    const resume = {
+        id: row.id, 
+        filename: row.filename,
+        file_type: row.file_type,
+        raw_text: row.raw_text,
+        skills: row.skills ? row.skills.split(', ') : [],
+        experience: row.experience,
+        education: row.education,
+        contact_info: row.contact_info ? JSON.parse(row.contact_info) : null,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+    };
+
+    res.json(resume);
+
 });
 
 /**

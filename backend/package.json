@@ -15,7 +15,10 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
+    "mammoth": "^1.11.0",
+    "multer": "^2.0.2",
     "node-fetch": "^2.7.0",
+    "pdf-parse": "^2.4.5",
     "sqlite3": "^5.1.7"
   }
 }
