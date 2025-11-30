@@ -596,15 +596,17 @@ main {
     text-decoration: none;
     color: #333;
     font-weight: 500;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid transparent;
 }
 
 /* Active nav link (highlight when on this page) */
 .nav-link.active {
     background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white !important;
-    padding: 8px 12px;
-    border-radius: 8px;
+    border: 2px solid transparent;
     box-shadow: var(--shadow-sm);
 }
 
