@@ -65,7 +65,7 @@ def ingest_queries(
             
             try:
                 # Make API request with timeout
-                response = requests.get(url, timeout=30)
+                response = requests.get(url, timeout=600)
                 if response.status_code != 200:
                     print(f"HTTP {response.status_code}: {response.text[:200]}") 
                     continue

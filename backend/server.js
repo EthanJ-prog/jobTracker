@@ -137,15 +137,15 @@ function calculateJobExpiration(postedDate, createdAt) {
 
 async function generateJobDescriptionSummary(description) {
     if(!description || typeof description !== 'string' || !description.trim()){
-        return null;
+        return {summary: null, elapsed: 0};
     }
 
-    if(!ollamaAvailable) return null;
+    if(!ollamaAvailable) return {summary: null, elapsed: 0};    
 
     const startTime = Date.now();
     try {
         const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-        if (!cleanDescription) return null;
+        if (!cleanDescription) return {summary: null, elapsed: 0};
         // Limit to 1500 chars for faster processing
         const truncatedDescription = cleanDescription.substring(0, 1500);
         const prompt = `Summarize this job description in one paragraph (100 words or less):\n\n${truncatedDescription}`;
@@ -170,14 +170,12 @@ async function generateJobDescriptionSummary(description) {
         const summary = data.response ? data.response.trim() : null;
         
         const elapsed = Date.now() - startTime;
-        console.log(`✓ Ollama summary: ${(elapsed/1000).toFixed(1)}s (${summary ? summary.length : 0} chars)`);
         
-        return summary || null;
+        return {summary: summary || null, elapsed: elapsed / 1000};
 
     } catch (err) {
         const elapsed = Date.now() - startTime;
-        console.error(`✗ Ollama error after ${(elapsed/1000).toFixed(1)}s: ${err.message}`);
-        return null;
+        return {summary: null, elapsed: elapsed / 1000};
     }
 }
 
@@ -210,9 +208,9 @@ function mapJSearchJobToDB(job){
  * @returns {Promise<number>} Number of affected rows
  */
 async function upsertJobListing(db, row){
-    const startTime = Date.now();
     const expiration = calculateJobExpiration(row.posted_date, new Date().toISOString());
     let descriptionSummary = null;
+    let ollamaTime = 0;
     if(row.description){
         const existingJob = await new Promise((resolve, reject) => {
             db.get('SELECT description_summary FROM job_listings WHERE job_id = ?', [row.job_id], (err, result) => {
@@ -222,7 +220,9 @@ async function upsertJobListing(db, row){
         }).catch(() => null);
         
         if (!existingJob || !existingJob.description_summary) {
-            descriptionSummary = await generateJobDescriptionSummary(row.description);
+            const result = await generateJobDescriptionSummary(row.description);
+            descriptionSummary = result.summary;
+            ollamaTime = result.elapsed;
         } else {
             descriptionSummary = existingJob.description_summary;
         }
@@ -276,12 +276,9 @@ async function upsertJobListing(db, row){
             ], 
             function(err) {
                 if(err) {
-                    console.error(`✗ Failed to save job "${row.title}": ${err.message}`);
                     return reject(err);
                 }
-                const elapsed = Date.now() - startTime;
-                console.log(`✓ Saved: ${row.title} at ${row.company} (${(elapsed/1000).toFixed(1)}s)`);
-                resolve(this.changes);
+                resolve({changes: this.changes, ollamaTime: ollamaTime});
             }
         );
     });
@@ -300,8 +297,6 @@ app.get('/api/jobs/search', async (req, res) => {
         const country = (req.query.country || 'us').toString();
         const date_posted = (req.query.date_posted || 'all').toString();
         
-        console.log(`\n🔍 Search: "${query}" (page ${page}, ${country})`);
-        
         // Validate required parameters
         if(!query) {
             return res.status(400).json({error: 'Missing query parameter: query'});
@@ -314,7 +309,6 @@ app.get('/api/jobs/search', async (req, res) => {
         const url = `${JSEARCH_BASE_URL}/search?query=${encodeURIComponent(query)}&page=${page}&num_pages=1&country=${encodeURIComponent(country)}&date_posted=${encodeURIComponent(date_posted)}`;
 
         // Make request to JSearch API
-        const apiStartTime = Date.now();
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -330,35 +324,34 @@ app.get('/api/jobs/search', async (req, res) => {
             return res.status(502).json({error: 'Failed to fetch jobs from JSearch'});
         }
 
-        const apiTime = Date.now() - apiStartTime;
-        console.log(`  → JSearch API: ${(apiTime/1000).toFixed(1)}s`);
-
         // Parse response and extract job data
         const data = await response.json();
         const jobs = Array.isArray(data.data) ? data.data : [];
 
         if (jobs.length === 0) {
-            console.log(`  → No jobs found`);
             return res.json({count: 0, jobs: []});
         }
-
-        console.log(`  → Processing ${jobs.length} jobs...`);
         
         // Store each job in database
-        let processedCount = 0;
+        const ollamaTime = [];
         for (const job of jobs) {
             const row = mapJSearchJobToDB(job);
             if(!row.job_id) continue; // Skip jobs without valid ID
             try{
-                processedCount++;
-                await upsertJobListing(db, row);
+                const result = await upsertJobListing(db, row);
+                if(result.ollamaTime > 0) {
+                    ollamaTime.push(result.ollamaTime);
+                    console.log(`Ollama: ${result.ollamaTime.toFixed(1)}s`);
+                }
             } catch (e) {
-                console.error(`✗ Failed to save job: ${e.message}`);
+                
             }
         }
-        
-        const elapsed = Date.now() - startTime;
-        console.log(`✓ Complete: ${processedCount} jobs in ${(elapsed/1000).toFixed(1)}s\n`);
+
+        if(ollamaTime.length > 0){
+            const averageTime = ollamaTime.reduce((a,b) => a + b, 0) / ollamaTime.length;
+            console.log(`Average Ollama time: ${averageTime.toFixed(1)}s (${ollamaTime.length} summaries) `);
+        }
         
         // Return mapped job data to client
         const result = jobs.map(mapJSearchJobToDB);
