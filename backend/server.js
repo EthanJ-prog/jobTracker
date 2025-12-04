@@ -197,7 +197,6 @@ function mapJSearchJobToDB(job){
         posted_date: job.job_posted_at_datetime_utc || job.job_posted_at_timestamp || null,
         salary_min: job.job_min_salary || null,
         salary_max: job.job_max_salary || null,
-        salary_currency: job.job_salary_currency || null,
     };
 }
 
@@ -233,9 +232,9 @@ async function upsertJobListing(db, row){
         const sql = `
             INSERT INTO job_listings (
                 job_id, title, company, location, employment_type, description, description_summary, 
-                apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency,
+                apply_link, is_remote, posted_date, salary_min, salary_max,
                 status, expiration_method, expires_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 title = excluded.title,
                 company = excluded.company,
@@ -248,7 +247,6 @@ async function upsertJobListing(db, row){
                 posted_date = excluded.posted_date,
                 salary_min = excluded.salary_min,
                 salary_max = excluded.salary_max,
-                salary_currency = excluded.salary_currency,
                 expiration_method = excluded.expiration_method,
                 expires_at = excluded.expires_at
         `;
@@ -269,7 +267,6 @@ async function upsertJobListing(db, row){
                 row.posted_date,
                 row.salary_min,
                 row.salary_max,
-                row.salary_currency,
                 'active', // Default status for new jobs
                 expiration.expirationMethod,
                 expiration.expiresAt
@@ -384,7 +381,7 @@ app.get('/api/jobs', (req, res) =>{
     }
     
     // Construct SQL query with search and pagination - include new columns
-    const sql = `SELECT id, job_id, title, company, location, employment_type, description, description_summary, apply_link, is_remote, posted_date, salary_min, salary_max, salary_currency, status, expiration_method, expires_at, created_at
+    const sql = `SELECT id, job_id, title, company, location, employment_type, description, description_summary, apply_link, is_remote, posted_date, salary_min, salary_max, status, expiration_method, expires_at, created_at
                  FROM job_listings ${whereClause}
                  ORDER BY created_at DESC
                  LIMIT ? OFFSET ?`;
@@ -416,7 +413,6 @@ db.run(`
         posted_date TEXT,
         salary_min INTEGER,
         salary_max INTEGER,
-        salary_currency TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         status TEXT DEFAULT 'active',
         expiration_method TEXT DEFAULT 'posted_date',

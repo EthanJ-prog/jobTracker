@@ -621,12 +621,7 @@ main {
 .tab-navigation {
     display: flex;
     justify-content: center;
-    gap: 10px;
-    padding: 12px; /* Reduced padding */
-    background: rgba(255, 255, 255, 0.7);
-    margin: 10px 0; /* Reduced margins */
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(92, 107, 192, 0.08);
+
 }
 
 /* Individual tab button styling */

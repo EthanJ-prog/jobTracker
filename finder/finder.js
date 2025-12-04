@@ -126,18 +126,11 @@ function createJobCard(job) {
   const employmentType = formatValue(job.employment_type || job.type, 'Not specified');
   
   // Format salary with currency symbol and commas
-  const formatSalary = (min, max, currency) => {
+  const formatSalary = (min, max) => {
     if (!min && !max) return 'Salary not available';
     
-    const currencySymbols = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'CAD': 'C$',
-      'AUD': 'A$'
-    };
     
-    const symbol = currencySymbols[currency] || '$';
+    const symbol = '$';
     const formatNumber = (num) => num ? num.toLocaleString() : '';
     
     if (min && max) {
@@ -150,7 +143,7 @@ function createJobCard(job) {
     return 'Salary not available';
   };
   
-  const salaryText = formatSalary(job.salary_min, job.salary_max, job.salary_currency);
+  const salaryText = formatSalary(job.salary_min, job.salary_max);
   
   // Create job card HTML structure with all details (consistent order)
   card.innerHTML = `
@@ -574,18 +567,12 @@ function openJobDetailOverlay(job) {
   const salaryElement = document.getElementById('overlay-salary');
   
   // Format salary with currency symbol and commas (same as job card)
-  const formatSalary = (min, max, currency) => {
+  const formatSalary = (min, max) => {
     if (!min && !max) return 'Salary not available';
     
-    const currencySymbols = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'CAD': 'C$',
-      'AUD': 'A$'
-    };
     
-    const symbol = currencySymbols[currency] || '$';
+    
+    const symbol = '$';
     const formatNumber = (num) => num ? num.toLocaleString() : '';
     
     if (min && max) {
@@ -598,7 +585,7 @@ function openJobDetailOverlay(job) {
     return 'Salary not available';
   };
   
-  const salaryText = formatSalary(job.salary_min, job.salary_max, job.salary_currency);
+  const salaryText = formatSalary(job.salary_min, job.salary_max);
   salaryElement.textContent = salaryText;
   salaryContainer.style.display = 'block';
   
