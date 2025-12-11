@@ -197,10 +197,27 @@ main {
     font-weight: 600;
 }
 
+.job-listings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
 /* Section heading styling */
 .job-listings-section h2 {
     font-size: 28px;
-    margin-bottom: 24px;
+    margin: 0;
+    color: #333;
+}
+
+.total-jobs-display{
+    font-size: 14px;
+    color: #666;
+}
+
+.total-jobs-value{
+    font-weight: 600;
     color: #333;
 }
 
@@ -629,6 +646,7 @@ main {
     padding: 12px 24px;
     background: white;
     border: 2px solid var(--primary);
+    margin: 3px 3px ;
     color: var(--primary);
     border-radius: 8px;
     cursor: pointer;

@@ -71,9 +71,8 @@ if (!JSEARCH_API_KEY) {
     console.warn('Warning: JSEARCH_API_KEY is not set. Job search functionality will be disabled.');
 }
 
-// Create legacy jobs table for backward compatibility
 db.run(`
-    CREATE TABLE IF NOT EXISTS jobs (
+    CREATE TABLE IF NOT EXISTS saved_jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         company TEXT,
@@ -146,9 +145,26 @@ async function generateJobDescriptionSummary(description) {
     try {
         const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
         if (!cleanDescription) return {summary: null, elapsed: 0};
-        // Limit to 1500 chars for faster processing
-        const truncatedDescription = cleanDescription.substring(0, 1500);
-        const prompt = `Summarize this job description in one paragraph (100 words or less):\n\n${truncatedDescription}`;
+
+        const prompt = `You are an expert job description analyst. Create a concise, professional summary of the following job posting. 
+        
+        INSTRUCTIONS: 
+        - Write a single, well structured paragraph (50-100 words)
+        - Focus on the most important aspects: role purpose, key responsibilities, essential requriments, and notable benefits
+        - Use clear, professional language suitable for job seekers
+        - Avoid redundancy and generic phrases 
+        - Prioritize specfic techincal skills, qualifications, and responsibilities over vague descriptions,
+        - If salary/compensation is mentioned, include it
+        - If remote work options are specified, mention them 
+        - Maintain a neutral, infromative tone 
+
+        OUTPUT FORMAT: 
+        Write only the summary paragraph. Do not include headers, bullet points, or formatting marks. The summary should flow naturally as a single paragraph.
+
+        Job Description:
+        ${cleanDescription}
+        
+        `;
         
         const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
             method: 'POST',
@@ -436,13 +452,12 @@ db.run(`
 `);
 
 /**
- * Legacy endpoint to fetch jobs from old jobs table
  * GET /jobs
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 app.get('/jobs', (req, res) => {
-    db.all('SELECT * FROM jobs', [], (err, rows) => {
+    db.all('SELECT * FROM saved_jobs', [], (err, rows) => {
         if (err) {
             console.error('Error fetching jobs:', err.message);
             return res.status(500).json({error: 'Failed to fetch jobs'});
@@ -517,14 +532,13 @@ app.post('/api/jobs/mark-expired', (req, res) => {
 });
 
 /**
- * Create a new job entry in the legacy jobs table
  * POST /jobs
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
 app.post('/jobs', (req, res) => {
     const {title, company, date, link, notes, status} = req.body;
-    const query = 'INSERT INTO jobs (title, company, date, link, notes, status) VALUES (?, ?, ?, ?, ?, ?)';
+    const query = 'INSERT INTO saved_jobs (title, company, date, link, notes, status) VALUES (?, ?, ?, ?, ?, ?)';
     db.run(query, [title, company, date, link, notes, status || 'saved'], function (err) {
         if (err) {
             console.error('Error putting jobs:', err.message);
@@ -543,7 +557,7 @@ app.post('/jobs', (req, res) => {
 app.put('/jobs/:id', (req, res) =>{
     const jobId = req.params.id;
     const {title, company, date, link, notes, status} = req.body;
-    const query = 'UPDATE jobs SET title = ?, company = ?, date = ?, link = ?, notes = ?, status = ? WHERE id = ?';
+    const query = 'UPDATE saved_jobs SET title = ?, company = ?, date = ?, link = ?, notes = ?, status = ? WHERE id = ?';
     db.run(query, [title, company, date, link, notes, status || 'saved', jobId], function(err) {
         if (err) {
             console.error('Error updating jobs:', err.message);
@@ -561,7 +575,7 @@ app.put('/jobs/:id', (req, res) =>{
  */
 app.delete('/jobs/:id', (req, res) =>{
     const jobId = req.params.id;
-    db.run('DELETE FROM jobs WHERE id = ?', [jobId], function(err){
+    db.run('DELETE FROM saved_jobs WHERE id = ?', [jobId], function(err){
          if (err) {
             console.error('Error deleting jobs:', err.message);
             return res.status(500).json({error: 'Failed to delete job'});

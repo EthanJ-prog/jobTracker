@@ -126,7 +126,13 @@
         <!-- Job listings tab (active by default) -->
         <div id="jobs-tab" class="tab-pane active">
           <section class="job-listings-section">
-            <h2>Job Listings</h2>
+            <div class="job-listings-header">
+              <h2>Job Listings</h2>
+              <div class="total-jobs-display">
+                <span class="total-jobs-label">Total Jobs:</span>
+                <span class="total-jobs-value" id="total-jobs-count">...</span>
+              </div>
+            </div>
 
             <!-- Dynamic job cards container -->
             <div class="job-listings-container"></div>

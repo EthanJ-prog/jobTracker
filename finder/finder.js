@@ -79,6 +79,8 @@ function displayJobs(jobs) {
         <p>Try adjusting your search or filters</p>
       </div>
     `;
+
+    updateTotalJobsDisplay();
     return;
   }
 
@@ -87,6 +89,8 @@ function displayJobs(jobs) {
     const jobCard = createJobCard(job);
     container.appendChild(jobCard);
   });
+
+  updateTotalJobsDisplay();
 }
 
 /**
@@ -308,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log("Loaded job finder");
   setupSearch();
   wirePaginationButtons();
+  updateTotalJobsDisplay();
   updateDbCountLabel('');
   fetchJobs('');
   const pageCtrls = document.querySelector('.pagination-controls');
@@ -365,20 +370,17 @@ function updatePaginationControls() {
 
   if (!prevBtn || !nextBtn || !pageInfo) return;
 
-  // Calculate display range
-  const startIndex = (currentPage - 1) * PAGE_SIZE + 1;
-  const endIndex = startIndex + lastPageCount - 1;
+  const totalPages = (typeof totalJobsCount === 'number' && totalJobsCount > 0) 
+  ? Math.ceil(totalJobsCount / PAGE_SIZE) 
+  : currentPage;
 
-  const rangeText = `${startIndex}\u2013${Math.max(startIndex, endIndex)}`;
+  const pageText = `Page ${currentPage} of ${totalPages}`;
 
-  // Update page info with range and total count
-  pageInfo.innerHTML = (typeof totalJobsCount === 'number')
-    ? `<span class="page-range">${rangeText}</span> / <span class="page-total">${totalJobsCount}</span>`
-    : `<span class="page-range">${rangeText}</span>`;
+  pageInfo.innerHTML = pageText;
 
-  // Enable/disable pagination buttons
   prevBtn.disabled = currentPage <= 1;
-  nextBtn.disabled = lastPageCount < PAGE_SIZE;
+
+  nextBtn.disabled = lastPageCount < PAGE_SIZE || currentPage >= totalPages;
 }
 
 /**
@@ -397,9 +399,20 @@ async function updateDbCountLabel(query) {
     if (typeof data.total === 'number') {
       totalJobsCount = data.total;
       updatePaginationControls();
+      updateTotalJobsDisplay();
     }
   } catch (e) {
     // Silently handle errors for count updates
+  }
+}
+
+function updateTotalJobsDisplay() {
+  const totalJobsElement = document.getElementById('total-jobs-count');
+  if (!totalJobsElement) return;
+  if (typeof totalJobsCount === 'number') {
+    totalJobsElement.textContent = totalJobsCount.toLocaleString();
+  } else {
+    totalJobsElement.textContent = '...';
   }
 }
 
