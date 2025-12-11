@@ -186,7 +186,14 @@ function createJobCard(job) {
     // Save job to tracker and remove from finder
     await saveJobToTracker(job);
     card.remove();
+
+    if(typeof totalJobsCount === 'number' && totalJobsCount > 0) {
+      totalJobsCount = Math.max(totalJobsCount - 1, 0);
+    }
     
+    updateTotalJobsDisplay();
+    updatePaginationControls();
+
     console.log('Job saved and removed from finder:', job.title);
   });
   
@@ -318,6 +325,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const pageCtrls = document.querySelector('.pagination-controls');
   if(pageCtrls){
     pageCtrls.style.display = 'flex';
+  }
+
+  if (localStorage.getItem('finderCountNeedsUpdate') === true) {
+    if (typeof totalJobsCount === 'number') {
+      totalJobsCount += 1;
+    } else {
+      updateDbCountLabel(currentQuery);
+    }
+    updateTotalJobsDisplay();
+    updatePaginationControls();
+    localStorage.removeItem('finderCountNeedsUpdate');
   }
 
   // highlight nav link for current page
@@ -632,6 +650,14 @@ function openJobDetailOverlay(job) {
       document.querySelectorAll('.job-card').forEach(card => {
         if (card.querySelector('.job-title').textContent === job.title) card.remove();
       });
+
+      if(typeof totalJobsCount === 'number' && totalJobsCount > 0) {
+        totalJobsCount = Math.max(totalJobsCount - 1, 0);
+      } 
+      
+      updateTotalJobsDisplay();
+      updatePaginationControls();
+
     } catch (error) {
       alert('Failed to save job. Please try again.');
     }

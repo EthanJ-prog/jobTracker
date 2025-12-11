@@ -136,6 +136,9 @@ function createJobCard(job) {
       method: 'DELETE'
      });
      card.remove();
+     if (job.status === 'saved'){
+      localStorage.setItem('finderCountNeedsUpdate', 'true');
+     } 
      console.log(`${job.id} was successfully deleted`);
     } catch (error) {
       console.error('Failed to delete job:', error);
@@ -214,22 +217,29 @@ function createJobCard(job) {
 }
 
 // Set up drag and drop functionality for all column containers
-document.querySelectorAll('.column-content').forEach(container => {
+document.querySelectorAll('.column').forEach(column => {
   // Handle drag over events to allow dropping
-  container.addEventListener('dragover', event => {
+  const container = column.querySelector('.column-content');
+
+  column.addEventListener('dragover', event => {
     event.preventDefault();
+    event.stopPropagation();
     container.classList.add('drag-over');
   });
 
   // Remove drag over styling when leaving drop zone
-  container.addEventListener('dragleave', () => {
-    container.classList.remove('drag-over');
+  column.addEventListener('dragleave', (event) => {
+    if (!column.contains(event.relatedTarget)){
+      container.classList.remove('drag-over');
+    }
   });
 
   // Handle drop events to move jobs between columns
-  container.addEventListener('drop', async () => {
+  column.addEventListener('drop', async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     container.classList.remove('drag-over');
-    const targetColumn = container.closest('.column');
+    const targetColumn = column;
     const targetColumnId = targetColumn.id;
 
     // Validate drop operation
