@@ -4,48 +4,107 @@ let allJobs = [];
 // API configuration constants
 const API_BASE = 'http://localhost:3000';
 const PAGE_SIZE = 8; // Number of jobs to display per page
-const REQUEST_SIZE = PAGE_SIZE * 2; // Request more jobs to account for saved jobs filtering
+const REQUEST_SIZE = PAGE_SIZE * 5; // Request 5x more jobs to account for saved jobs filtering (40 jobs)
 
 // Pagination and search state
 let currentPage = 1;
 let lastPageCount = 0;
 let currentQuery = '';
 let totalJobsCount = null;
+let isSavingJob = false; // Flag to prevent refetch during save operation
+let preventCountRefetch = false; // Flag to prevent count refetch after manual save
 
 /**
  * Fetches jobs from the API with search and pagination
  * Filters out jobs that are already saved to avoid duplicates
+ * Uses a smart fetching strategy to ensure all jobs are accessible even after saving
  * @param {string} query - Search query string
  * @param {number} page - Page number for pagination
  */
 async function fetchJobs(query = '', page = 1) {
   showLoadingMessage();
   try {
-    // Build API query parameters
-    const queryParam = query 
-      ? `?q=${encodeURIComponent(query)}&limit=${REQUEST_SIZE}&offset=${(page-1)*PAGE_SIZE}` 
-      : `?limit=${REQUEST_SIZE}&offset=${(page-1)*PAGE_SIZE}`;
-
-    // Fetch jobs from API
-    const response = await fetch(`${API_BASE}/api/jobs${queryParam}`);
-    if (!response.ok) {
-      throw new Error(`API error ${response.status}`);
-    }
-
-    const data = await response.json();
-    const allJobsFromAPI = Array.isArray(data.jobs) ? data.jobs : [];
-
-    // Get saved jobs to filter out duplicates
+    // Get saved jobs first to know what to filter
     const savedJobs = await getSavedJobs();
-    const unsavedJobs = allJobsFromAPI.filter(job => {
-      return !savedJobs.some(savedJob => 
-        savedJob.title === job.title && 
-        savedJob.company === job.company
-      );
-    });
+    console.log(`Fetching page ${page}, saved jobs count: ${savedJobs.length}`);
+    
+    // Calculate how many unsaved jobs we need to skip to get to the current page
+    const targetOffset = (page - 1) * PAGE_SIZE;
+    let allUnsavedJobs = [];
+    let databaseOffset = 0;
+    const maxFetchAttempts = 20; // Increased safety limit
+    let fetchAttempts = 0;
+    let hasMoreData = true;
+    
+    // Keep fetching batches until we have enough unsaved jobs for the current page OR we've exhausted the database
+    while ((allUnsavedJobs.length < targetOffset + PAGE_SIZE) && hasMoreData && fetchAttempts < maxFetchAttempts) {
+      fetchAttempts++;
+      
+      // Build API query parameters - fetch a batch starting from current database offset
+      const queryParam = query 
+        ? `?q=${encodeURIComponent(query)}&limit=${REQUEST_SIZE}&offset=${databaseOffset}` 
+        : `?limit=${REQUEST_SIZE}&offset=${databaseOffset}`;
 
-    // Display only the requested page size
-    const toDisplay = unsavedJobs.slice(0, PAGE_SIZE);
+      console.log(`Fetch attempt ${fetchAttempts}: offset=${databaseOffset}, limit=${REQUEST_SIZE}`);
+
+      // Fetch jobs from API
+      const response = await fetch(`${API_BASE}/api/jobs${queryParam}`);
+      if (!response.ok) {
+        throw new Error(`API error ${response.status}`);
+      }
+
+      const data = await response.json();
+      const batchJobs = Array.isArray(data.jobs) ? data.jobs : [];
+      console.log(`  Received ${batchJobs.length} jobs from database`);
+      
+      // If we got no jobs, we've reached the end
+      if (batchJobs.length === 0) {
+        console.log('  No more jobs in database, stopping');
+        hasMoreData = false;
+        break;
+      }
+      
+      // Filter out saved jobs from this batch
+      // Use case-insensitive comparison and trim whitespace for better matching
+      const unsavedBatch = batchJobs.filter(job => {
+        const jobTitle = (job.title || '').trim().toLowerCase();
+        const jobCompany = (job.company || '').trim().toLowerCase();
+        
+        const isSaved = savedJobs.some(savedJob => {
+          const savedTitle = (savedJob.title || '').trim().toLowerCase();
+          const savedCompany = (savedJob.company || '').trim().toLowerCase();
+          return savedTitle === jobTitle && savedCompany === jobCompany;
+        });
+        
+        return !isSaved;
+      });
+      
+      console.log(`  After filtering saved jobs: ${unsavedBatch.length} unsaved jobs in this batch`);
+      
+      // Add unsaved jobs to our collection
+      allUnsavedJobs = allUnsavedJobs.concat(unsavedBatch);
+      console.log(`  Total unsaved jobs collected so far: ${allUnsavedJobs.length}`);
+      
+      // Move database offset forward for next batch
+      databaseOffset += REQUEST_SIZE;
+      
+      // If we got fewer jobs than REQUEST_SIZE, we've reached the end of database
+      if (batchJobs.length < REQUEST_SIZE) {
+        console.log('  Reached end of database (got fewer than REQUEST_SIZE)');
+        hasMoreData = false;
+        break;
+      }
+    }
+    
+    console.log(`Finished fetching: ${allUnsavedJobs.length} total unsaved jobs available`);
+    
+    // Extract the jobs for the current page
+    const startIndex = targetOffset;
+    const endIndex = startIndex + PAGE_SIZE;
+    const toDisplay = allUnsavedJobs.slice(startIndex, endIndex);
+    
+    console.log(`Page ${page}: Showing jobs ${startIndex} to ${endIndex} (${toDisplay.length} jobs)`);
+    
     allJobs = toDisplay;
     displayJobs(toDisplay);
 
@@ -55,7 +114,6 @@ async function fetchJobs(query = '', page = 1) {
     lastPageCount = toDisplay.length;
     updatePaginationControls();
     updateDbCountLabel(query);
-    console.log(`loaded ${allJobsFromAPI.length} jobs, showing ${unsavedJobs.length} unsaved jobs for query: ${query || '(all)'}`);
   } catch (error) {
     console.error('Failed to load job:', error);
     showErrorMessage(error.message);
@@ -180,22 +238,63 @@ function createJobCard(job) {
   const starButton = card.querySelector('.star-button');
   
   starButton.addEventListener('click', async (e) => {
+    // Safari-specific: prevent all default behaviors and propagation
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation();
     
-    // Save job to tracker and remove from finder
-    await saveJobToTracker(job);
-    card.remove();
-
-    if(typeof totalJobsCount === 'number' && totalJobsCount > 0) {
-      totalJobsCount = Math.max(totalJobsCount - 1, 0);
+    // Prevent multiple simultaneous saves
+    if (isSavingJob) {
+      return false;
     }
+    isSavingJob = true;
     
-    updateTotalJobsDisplay();
-    updatePaginationControls();
+    try {
+      // Prevent count refetch while we're updating
+      preventCountRefetch = true;
+      
+      // Save job to tracker
+      await saveJobToTracker(job);
+      
+      // Store the current count before removing card
+      const previousCount = typeof totalJobsCount === 'number' ? totalJobsCount : null;
+      
+      // Remove card from finder
+      card.remove();
 
-    console.log('Job saved and removed from finder:', job.title);
-  });
+      // Update local count immediately (don't refetch from database to avoid reset)
+      if(previousCount !== null && previousCount > 0) {
+        totalJobsCount = Math.max(previousCount - 1, 0);
+        // Persist to sessionStorage to survive page reloads (Safari bfcache)
+        sessionStorage.setItem('finderTotalJobsCount', totalJobsCount.toString());
+        sessionStorage.setItem('finderCountTimestamp', Date.now().toString());
+      }
+      
+      // Update UI immediately without any async database calls
+      updateTotalJobsDisplay();
+      updatePaginationControls();
+
+      console.log('Job saved and removed from finder:', job.title);
+      console.log('Updated count:', totalJobsCount, '(prevented refetch, saved to sessionStorage)');
+      
+      // Keep preventCountRefetch true to prevent any automatic refetches
+      // Reset it after a short delay in case something tries to refetch
+      setTimeout(() => {
+        preventCountRefetch = false;
+        console.log('Count refetch prevention cleared');
+      }, 2000);
+      
+      // Return false to prevent any default behavior (Safari-specific)
+      return false;
+    } catch (error) {
+      console.error('Failed to save job:', error);
+      alert('Failed to save job. Please try again.');
+      // Don't remove card if save failed
+      return false;
+    } finally {
+      isSavingJob = false;
+    }
+  }, false); // Use capture phase false for Safari compatibility
   
   card.addEventListener('click', (e) => {
     if (e.target.closest('button')) return;
@@ -317,25 +416,69 @@ async function saveJobToTracker(job) {
 // Initialize the job finder when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   console.log("Loaded job finder");
+  
+  // Check for saved count in sessionStorage (to persist count after page reload)
+  const savedCount = sessionStorage.getItem('finderTotalJobsCount');
+  const savedTimestamp = sessionStorage.getItem('finderCountTimestamp');
+  let restoredFromSession = false;
+  
+  if (savedCount && savedTimestamp) {
+    const age = Date.now() - parseInt(savedTimestamp);
+    if (age < 5 * 60 * 1000) { // Only use if less than 5 minutes old
+      totalJobsCount = parseInt(savedCount);
+      restoredFromSession = true;
+      // IMPORTANT: Set flag to prevent the database from overwriting our saved count
+      preventCountRefetch = true;
+      console.log('Restored count from sessionStorage on load:', totalJobsCount);
+    } else {
+      // Clear old sessionStorage
+      sessionStorage.removeItem('finderTotalJobsCount');
+      sessionStorage.removeItem('finderCountTimestamp');
+    }
+  }
+  
   setupSearch();
   wirePaginationButtons();
   updateTotalJobsDisplay();
-  updateDbCountLabel('');
+  
+  // Only fetch count from database if we didn't restore from sessionStorage
+  if (!restoredFromSession) {
+    updateDbCountLabel('');
+  }
+  
   fetchJobs('');
+  
+  // Clear the preventCountRefetch flag after initial load completes
+  // This allows future searches to get fresh counts from the database
+  if (restoredFromSession) {
+    setTimeout(() => {
+      preventCountRefetch = false;
+      // Clear sessionStorage after successful page load to prevent stale data
+      sessionStorage.removeItem('finderTotalJobsCount');
+      sessionStorage.removeItem('finderCountTimestamp');
+      console.log('Cleared preventCountRefetch flag and sessionStorage after initial load');
+    }, 3000); // Wait 3 seconds for initial load to complete
+  }
+  
   const pageCtrls = document.querySelector('.pagination-controls');
   if(pageCtrls){
     pageCtrls.style.display = 'flex';
   }
 
-  if (localStorage.getItem('finderCountNeedsUpdate') === true) {
+  // Check if we need to increment count (job was deleted from tracker's Saved column)
+  if (localStorage.getItem('finderCountNeedsUpdate') === 'true') {
     if (typeof totalJobsCount === 'number') {
       totalJobsCount += 1;
+      // Update sessionStorage as well
+      sessionStorage.setItem('finderTotalJobsCount', totalJobsCount.toString());
+      sessionStorage.setItem('finderCountTimestamp', Date.now().toString());
     } else {
       updateDbCountLabel(currentQuery);
     }
     updateTotalJobsDisplay();
     updatePaginationControls();
     localStorage.removeItem('finderCountNeedsUpdate');
+    console.log('Incremented count after job was removed from Saved:', totalJobsCount);
   }
 
   // highlight nav link for current page
@@ -354,6 +497,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
 
+});
+
+// Safari-specific: Handle page restoration from cache (bfcache)
+window.addEventListener('pageshow', (event) => {
+  // If page was restored from cache, restore count from sessionStorage
+  if (event.persisted) {
+    const savedCount = sessionStorage.getItem('finderTotalJobsCount');
+    const savedTimestamp = sessionStorage.getItem('finderCountTimestamp');
+    
+    // Only restore if it was saved recently (within last 5 minutes)
+    if (savedCount && savedTimestamp) {
+      const age = Date.now() - parseInt(savedTimestamp);
+      if (age < 5 * 60 * 1000) { // 5 minutes
+        totalJobsCount = parseInt(savedCount);
+        updateTotalJobsDisplay();
+        updatePaginationControls();
+        preventCountRefetch = true;
+        console.log('Restored count from sessionStorage after page restore:', totalJobsCount);
+        
+        // Clear the flag after a bit
+        setTimeout(() => {
+          preventCountRefetch = false;
+        }, 1000);
+        return;
+      }
+    }
+    
+    if (preventCountRefetch) {
+      console.log('Page restored from cache - preventing count refetch');
+      return;
+    }
+  }
 });
 
 /**
@@ -398,15 +573,24 @@ function updatePaginationControls() {
 
   prevBtn.disabled = currentPage <= 1;
 
-  nextBtn.disabled = lastPageCount < PAGE_SIZE || currentPage >= totalPages;
+  // Only disable Next if we're at or past the last page
+  // Don't use lastPageCount since client-side filtering can make it unreliable
+  nextBtn.disabled = currentPage >= totalPages;
 }
 
 /**
  * Updates the total job count from the database
+ * The database count now accurately subtracts saved jobs
  * Used for pagination display
  * @param {string} query - Search query to get count for
  */
 async function updateDbCountLabel(query) {
+  // Don't refetch if we're preventing it (e.g., right after manual save for instant feedback)
+  if (preventCountRefetch) {
+    console.log('Skipping count refetch - preventCountRefetch flag is set');
+    return;
+  }
+  
   try {
     const queryParam = query ? `?q=${encodeURIComponent(query)}` : '';
     const response = await fetch(`${API_BASE}/api/jobs/count${queryParam}`);
@@ -416,8 +600,12 @@ async function updateDbCountLabel(query) {
 
     if (typeof data.total === 'number') {
       totalJobsCount = data.total;
+      // Clear sessionStorage since we now have the accurate count from database
+      sessionStorage.removeItem('finderTotalJobsCount');
+      sessionStorage.removeItem('finderCountTimestamp');
       updatePaginationControls();
       updateTotalJobsDisplay();
+      console.log('Updated count from database:', totalJobsCount);
     }
   } catch (e) {
     // Silently handle errors for count updates
@@ -645,21 +833,40 @@ function openJobDetailOverlay(job) {
   
   document.getElementById('overlay-save-button').onclick = async () => {
     try {
+      // Prevent count refetch while we're updating
+      preventCountRefetch = true;
+      
       await saveJobToTracker(job);
       closeJobDetailOverlay();
       document.querySelectorAll('.job-card').forEach(card => {
         if (card.querySelector('.job-title').textContent === job.title) card.remove();
       });
 
-      if(typeof totalJobsCount === 'number' && totalJobsCount > 0) {
-        totalJobsCount = Math.max(totalJobsCount - 1, 0);
+      // Store the current count before decrementing
+      const previousCount = typeof totalJobsCount === 'number' ? totalJobsCount : null;
+      
+      if(previousCount !== null && previousCount > 0) {
+        totalJobsCount = Math.max(previousCount - 1, 0);
+        // Persist to sessionStorage to survive page reloads
+        sessionStorage.setItem('finderTotalJobsCount', totalJobsCount.toString());
+        sessionStorage.setItem('finderCountTimestamp', Date.now().toString());
       } 
       
       updateTotalJobsDisplay();
       updatePaginationControls();
+      
+      console.log('Job saved from overlay:', job.title);
+      console.log('Updated count:', totalJobsCount, '(saved to sessionStorage)');
+      
+      // Reset the flag after a delay
+      setTimeout(() => {
+        preventCountRefetch = false;
+        console.log('Count refetch prevention cleared');
+      }, 2000);
 
     } catch (error) {
       alert('Failed to save job. Please try again.');
+      preventCountRefetch = false;
     }
   };
   

@@ -468,6 +468,7 @@ app.get('/jobs', (req, res) => {
 
 /**
  * Get total count of job listings with optional search filter
+ * Subtracts saved jobs to give accurate count of displayable jobs
  * GET /api/jobs/count?q=search
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -475,18 +476,29 @@ app.get('/jobs', (req, res) => {
 app.get('/api/jobs/count', (req, res) => {
     const query = (req.query.q || '').toString().trim();
 
-    // Build search parameters
+    // Build search parameters for job_listings
     const params = [];
-    let whereClause = '';
+    let whereClause = "WHERE jl.status = 'active'";
 
     if (query) {
-        whereClause = `WHERE title LIKE ? OR company LIKE ? OR location LIKE ?`;
+        whereClause += ` AND (jl.title LIKE ? OR jl.company LIKE ? OR jl.location LIKE ?)`;
         const likeQuery = `%${query}%`;
         params.push(likeQuery, likeQuery, likeQuery);
     }
 
-    // Execute count query
-    const countSQL = `SELECT COUNT(*) as total FROM job_listings ${whereClause}`;
+    // Count job_listings that don't have a matching saved_job (by title and company)
+    // This gives accurate count of jobs that will actually be displayed
+    const countSQL = `
+        SELECT COUNT(*) as total 
+        FROM job_listings jl
+        ${whereClause}
+        AND NOT EXISTS (
+            SELECT 1 FROM saved_jobs sj 
+            WHERE sj.title = jl.title 
+            AND sj.company = jl.company
+            AND sj.status = 'saved'
+        )
+    `;
 
     db.get(countSQL, params, (err, row) => {
         if (err) {
