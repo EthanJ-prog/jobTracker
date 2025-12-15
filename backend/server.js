@@ -385,6 +385,12 @@ app.get('/api/jobs', (req, res) =>{
     const query = (req.query.q || '').toString().trim();
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100); // Cap at 100
     const offset = (parseInt(req.query.offset, 10) || 0); 
+
+    const employmentType = (req.query.employment_type || '').toString().trim();
+    const isRemote = (req.query.is_remote === 'true' || req.query.is_remote === 1);
+    const location = (req.query.location || '').toString().trim();
+    const minSalary = (parseInt(req.query.salary_min, 10) || null);
+    const datePosted = (req.query.posted_date || '').toString().trim();
     
     // Build dynamic WHERE clause for search - only show active jobs
     const params = [];
@@ -394,6 +400,36 @@ app.get('/api/jobs', (req, res) =>{
         whereClause += ` AND (title LIKE ? OR company LIKE ? OR location LIKE ?)`;
         const likeQuery = `%${query}%`;
         params.push(likeQuery, likeQuery, likeQuery);
+    }
+
+    if(employmentType) {
+        let searchPattern = '';
+        if(employmentType === 'full_time') {
+            searchPattern = '%Full-time%';
+        } else if (employmentType ==='part_time') {
+            searchPattern = '%Part-time%';
+        } else if (employmentType === 'contract') {
+            searchPattern = '%Contractor%';
+        } else if(employmentType === 'internship') {
+            searchPattern = '%Intern%';
+        } else {
+            searchPattern = `%${employmentType}%`;
+        }
+        whereClause += `AND employment_type IS NOT NULL AND employment_type LIKE ?`;
+        params.push(searchPattern);
+    }
+
+    if (isRemote) {
+        whereClause += `AND is_remote = 1`;
+    }
+
+    if (location){
+        whereClause += `AND location LIKE ?`;
+        params.push(`%${location}%`);
+    }
+
+    if (minSalary && minSalary > 0) {
+        whereClause += `AND (salary_min IS NOT NULL AND salary_min >= ? OR salary_max IS NOT NULL AND salary_max >= ?)`;
     }
     
     // Construct SQL query with search and pagination - include new columns

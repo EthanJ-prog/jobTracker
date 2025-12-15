@@ -75,17 +75,17 @@ main {
 /* Kanban board container with glassmorphism effect */
 .board {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
-  gap: 32px;
-  flex-wrap: nowrap;
-  padding: 24px 32px;
+  gap: 24px;
+  flex-wrap: wrap; /* allow columns to wrap to new rows */
+  padding: 16px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-  max-width: 1800px; /* Increased from 1500px */
+  max-width: 1800px;
   width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden; /* avoid horizontal cropping; allow wrapping instead */
 }
 
 /* Individual kanban column styling */
@@ -93,10 +93,11 @@ main {
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  padding: 28px;
-  width: 380px; /* Increased from 300px */
-  min-width: 380px; /* Increased from 300px */
-  min-height: 600px; /* Increased from 400px */
+  padding: 20px;
+  flex: 1 1 320px; /* allow column to grow/shrink, base width 320px */
+  max-width: 420px; /* cap column width */
+  min-width: 260px; /* allow smaller widths on narrow viewports */
+  min-height: 420px;
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -124,14 +125,15 @@ main {
   color: #212121;
   margin: 12px 0;
   border-radius: 14px;
-  padding: 24px;
+  padding: 18px;
   border: 1px solid #e0e4ec;
   box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 360px; /* Increased from 260px */
-  overflow-y: visible; /* Changed from auto to prevent scrolling */
+  height: auto; /* let content determine height */
+  max-height: 520px; /* cap to avoid excessively tall cards */
+  overflow: auto; /* enable internal scroll if content exceeds max-height */
 }
 
 /* Job card title styling with bottom border */
@@ -577,5 +579,41 @@ main {
         height: 340px;
         padding: 20px;
     }
+}
+
+/* Mobile / small screens: stack columns vertically for better readability */
+@media (max-width: 900px) {
+  main {
+    padding: 12px;
+  }
+
+  .board {
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px;
+    align-items: stretch;
+    overflow-x: hidden;
+  }
+
+  .column {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 16px;
+    min-height: auto;
+  }
+
+  .job-card {
+    max-height: none;
+    height: auto;
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .nav-links {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
 }
 
