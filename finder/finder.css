@@ -117,20 +117,13 @@ main {
     white-space: nowrap;
 }
 
-/* Filter button hamburger style */
+/* Filter toggle button with gradient background */
 .filter-button {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
-    position: absolute;
-    width: 30px;
-    height: 24px;
-    padding: 8px;
+    padding: 10px 16px;
     background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 16px;
     cursor: pointer;
     transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
@@ -314,66 +307,41 @@ main {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* Filter panel dropdown */
+/* Filter panel container (hidden by default) */
 .filter-panel {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    width: 320px;
     display: none;
     flex-direction: column;
-    gap: 16px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(92, 107, 192, 0.12);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(92, 107, 192, 0.1);
-    z-index: 1000;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 15px;
+    margin: 10px auto;
+    max-width: 800px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(92, 107, 192, 0.08);
     animation: fadeIn 0.3s ease;
-}
-
-/* Filter panel slide down animation */
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 /* Filter panel label styling */
 .filter-panel label {
     font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #333;
 }
 
 /* Filter input and select styling */
 .filter-panel input,
 .filter-panel select {
-    padding: 12px 16px;
-    border: 2px solid #e0e7ff;
-    border-radius: 8px;
-    font-size: 16px;
-    background: white;
-    transition: all 0.2s ease;
-    color: var(--text-primary);
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    width: 100%;
 }
 
 /* Filter inputs focus state */
 .filter-panel input:focus,
 .filter-panel select:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 4px rgba(92, 107, 192, 0.15);
+    box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.2);
     outline: none;
-    background: #f8fafc;
 }
 
 /* Apply filters button styling */
@@ -729,71 +697,33 @@ main {
 
 /* Individual filter group container */
 .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    margin-bottom: 15px;
+    width: 100%;
 }
 
 /* Filter action buttons container */
 .filter-actions {
     display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    margin-top: 8px;
-    padding-top: 20px;
-    border-top: 1px solid #e0e7ff;
+    gap: 10px;
+    margin-top: 15px;
 }
 
 /* Clear filters button styling */
 .clear-filters {
-    background: #f1f5f9;
-    color: #64748b;
-    border: 2px solid #e2e8f0;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
+    background: #e0e0e0;
+    color: #333;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
     cursor: pointer;
+    font-size: 14px;
     transition: all 0.2s ease;
-    min-width: 120px;
 }
 
-/* Checkbox styling */
-.filter-panel input[type="checkbox"] {
-    width: auto;
-    margin-right: 8px;
-    accent-color: var(--primary);
-}
-
-/* Checkbox label styling */
-.filter-panel label:has(input[type="checkbox"]) {
-    display: flex;
-    align-items: center;
-    text-transform: none;
-    font-weight: 500;
-    cursor: pointer;
-    margin-bottom: 0;
-}
-
-/* Responsive filter panel */
-@media (max-width: 640px) {
-    .filter-panel {
-        right: 16px;
-        width: calc(100vw - 32px);
-        padding: 16px;
-        gap: 16px;
-    }
-
-    .filter-actions {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .apply-filters,
-    .clear-filters {
-        width: 100%;
-        min-width: auto;
-    }
+/* Clear filters button hover effect */
+.clear-filters:hover {
+    background: #d0d0d0;
+    transform: translateY(-2px);
 }
 
 /* Star button for saving jobs (positioned in top-right of job card) */

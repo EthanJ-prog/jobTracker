@@ -64,58 +64,58 @@
       <!-- Search input and filter toggle -->
       <div class="search-bar-container">
         <input type="text" id="search-input" placeholder="Search jobs..." />
-        <button class="filter-button" onclick="toggleFilters()">Filter</button>
+        <button class="filter-button" onclick="toggleFilters()">Filters</button>
+      </div>
 
-        <!-- Advanced filter panel (hidden by default) -->
-        <div class="filter-panel" id="filter-panel">
-          <!-- Job type filter dropdown -->
-          <div class="filter-group">
-              <label for="jobType">Job Type:</label>
-              <select id="jobType" name="jobType">
-                  <option value="">All Types</option>
-                  <option value="full_time">Full-time</option>
-                  <option value="part_time">Part-time</option>
-                  <option value="contract">Contract</option>
-                  <option value="internship">Internship</option>
-              </select>
-          </div>
-
-          <div class="filter-group">
-            <label for="remote">
-              <input type="checkbox" id="remote" name="remote">
-              Remote Only
-            </label>
-          </div>
-
-          <!-- Location filter input -->
-          <div class="filter-group">
-              <label for="location">Location:</label>
-              <input type="text" id="location" name="location" placeholder="City, State, or Country">
-          </div>
-
-          <!-- Salary filter input -->
-          <div class="filter-group">
-              <label for="salary">Minimum Salary:</label>
-              <input type="number" id="salary" name="salary" placeholder="Minimum yearly salary (in dollars)">
-          </div>
-
-          <div class="filter-group">
-            <label for="datePosted">Date Posted:</label>
-            <select id="datePosted" name="datePosted">
-              <option value="">All Time</option>
-              <option value="24H">Last Day</option>
-              <option value="7D">Last Week</option>
-              <option value="30D">Last Month</option>
+      <!-- Advanced filter panel (hidden by default) -->
+      <div class="filter-panel" id="filter-panel">
+        <!-- Job type filter dropdown -->
+        <div class="filter-group">
+            <label for="jobType">Job Type:</label>
+            <select id="jobType" name="jobType">
+                <option value="">All Types</option>
+                <option value="full_time">Full-time</option>
+                <option value="part_time">Part-time</option>
+                <option value="contract">Contract</option>
+                <option value="internship">Internship</option>
             </select>
-          </div>
+        </div>
 
-          <!-- Filter action buttons -->
-          <div class="filter-actions">
-              <button class="apply-filters" id="applyFilters">Apply Filters</button>
-              <button class="clear-filters" id="clearFilters">Clear All</button>
-          </div>
-      </div>
-      </div>
+        <div class="filter-group">
+          <label for="remote">
+            <input type="checkbox" id="remote" name="remote">
+            Remote Only
+          </label>
+        </div>
+
+        <!-- Location filter input -->
+        <div class="filter-group">
+            <label for="location">Location:</label>
+            <input type="text" id="location" name="location" placeholder="City, State, or Country">
+        </div>
+
+        <!-- Salary filter input -->
+        <div class="filter-group">
+            <label for="salary">Minimum Salary:</label>
+            <input type="number" id="salary" name="salary" placeholder="Minimum yearly salary (in dollars)">
+        </div>
+
+        <div class="filter-group">
+          <label for="datePosted">Date Posted:</label>
+          <select id="datePosted" name="datePosted">
+            <option value="">All Time</option>
+            <option value="24H">Last Day</option>
+            <option value="7D">Last Week</option>
+            <option value="30D">Last Month</option>
+          </select>
+        </div>
+
+        <!-- Filter action buttons -->
+        <div class="filter-actions">
+            <button class="apply-filters" id="applyFilters">Apply Filters</button>
+            <button class="clear-filters" id="clearFilters">Clear All</button>
+        </div>
+    </div>
     </section>
 
     <!-- Tabbed interface section -->
