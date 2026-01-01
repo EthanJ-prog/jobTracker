@@ -387,7 +387,7 @@ app.get('/api/jobs', (req, res) =>{
     const offset = (parseInt(req.query.offset, 10) || 0); 
 
     const employmentType = (req.query.employment_type || '').toString().trim();
-    const isRemote = (req.query.is_remote === 'true' || req.query.is_remote === 1);
+    const isRemote = (req.query.is_remote === 'true' || req.query.is_remote === '1' || req.query.is_remote === 1);
     const location = (req.query.location || '').toString().trim();
     const minSalary = (parseInt(req.query.salary_min, 10) || null);
     const datePosted = (req.query.posted_date || '').toString().trim();
@@ -430,6 +430,7 @@ app.get('/api/jobs', (req, res) =>{
 
     if (minSalary && minSalary > 0) {
         whereClause += ` AND (salary_min IS NOT NULL AND salary_min >= ? OR salary_max IS NOT NULL AND salary_max >= ?)`;
+        params.push(minSalary, minSalary);
     }
     
     if (datePosted){
@@ -529,10 +530,10 @@ app.get('/jobs', (req, res) => {
 app.get('/api/jobs/count', (req, res) => {
     const query = (req.query.q || '').toString().trim();
     const employmentType = (req.query.employment_type || '').toString().trim(); 
-    const isRemote = (req.query.isRemote === 'true' || req.query.isRemote === 1);
+    const isRemote = (req.query.isRemote === 'true' || req.query.isRemote === '1' || req.query.isRemote === 1);
     const location = (req.query.location || '').toString().trim();
-    const minSalary = (parseInt(req.query.salary_min, 10) || null)
-    const datePosted = (req.query.datePosted || '').toString().trim();
+    const minSalary = (parseInt(req.query.salary_min, 10) || null);
+    const datePosted = (req.query.posted_date || req.query.datePosted || '').toString().trim();
 
     // Build search parameters for job_listings
     const params = [];
@@ -571,7 +572,9 @@ app.get('/api/jobs/count', (req, res) => {
     }
 
     if (minSalary && minSalary > 0) {
-        whereClause += ` AND (jl.salary_min IS NOT NULL AND salary_min >= ? OR jl.salary_max IS NOT NULL AND jl.salary_max >= ?)`;
+        whereClause += ` AND (jl.salary_min IS NOT NULL AND jl.salary_min >= ? OR jl.salary_max IS NOT NULL AND jl.salary_max >= ?)`;
+        
+        params.push(minSalary, minSalary);
     }
     
     if (datePosted){
@@ -791,7 +794,9 @@ app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
 });
 
 app.get('/api/resume', (req, res) => {
-    db.get('SELECT * FROM resumes ORDER BY updated_at DESC LIMIT 1', [, (err, row)])
+    db.get('SELECT * FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, row) => {
+
+    
     if (err) {
         console.error('Error fetching resumes', err);
         return res.status(500).json({Error: 'Failed to fetch resume'});
@@ -816,7 +821,7 @@ app.get('/api/resume', (req, res) => {
     };
 
     res.json(resume);
-
+    });
 });
 
 /**

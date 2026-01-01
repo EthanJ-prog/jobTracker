@@ -1,3 +1,5 @@
+const { clear } = require("console");
+
 // Global state variables for job management
 let allJobs = [];
 
@@ -14,7 +16,7 @@ let totalJobsCount = null;
 let isSavingJob = false; // Flag to prevent refetch during save operation
 let preventCountRefetch = false; // Flag to prevent count refetch after manual save
 let currentFilters = {
-  employmenttype: '',
+  employment_type: '',
   is_remote: false,
   location: '',
   salary_min: '',
@@ -53,33 +55,26 @@ async function fetchJobs(query = '', page = 1, filters = null) {
       params.append('limit', REQUEST_SIZE);
       params.append('offset', databaseOffset);
 
-      if (activeFilters.employment_type) params.append('employment_type', activeFilters.employment_type) {
+      if (activeFilters.employment_type) params.append('employment_type', activeFilters.employment_type);
 
-      }
+      if (activeFilters.is_remote) params.append('is_remote', activeFilters.is_remote);
 
-      if (activeFilters.is_remote) params.append('employment_type', activeFilters.is_remote) {
+      if (activeFilters.location) params.append('location', activeFilters.location);
 
-      }
+      if (activeFilters.salary_min) params.append('salary_min', activeFilters.salary_min);
 
-      if (activeFilters.location) params.append('employment_type', activeFilters.location) {
-
-      }
-
-      if (activeFilters.salary_min) params.append('employment_type', activeFilters.salary_min) {
-
-      }
-
-      if (activeFilters.posted_date) params.append('employment_type', activeFilters.posted_date) {
-        
-      }
-
+      if (activeFilters.posted_date) params.append('posted_date', activeFilters.posted_date);
 
       // // Build API query parameters - fetch a batch starting from current database offset
       // const queryParam = query 
       //   ? `?q=${encodeURIComponent(query)}&limit=${REQUEST_SIZE}&offset=${databaseOffset}` 
       //   : `?limit=${REQUEST_SIZE}&offset=${databaseOffset}`;
-
+      
       console.log(`Fetch attempt ${fetchAttempts}: offset=${databaseOffset}, limit=${REQUEST_SIZE}`);
+
+      const queryParam = params.toString() ? `?${params.toString()}` : '';
+
+      
 
       // Fetch jobs from API
       const response = await fetch(`${API_BASE}/api/jobs${queryParam}`);
@@ -147,7 +142,7 @@ async function fetchJobs(query = '', page = 1, filters = null) {
     currentQuery = query;
     lastPageCount = toDisplay.length;
     updatePaginationControls();
-    updateDbCountLabel(query);
+    updateDbCountLabel(query, activeFilters);
   } catch (error) {
     console.error('Failed to load job:', error);
     showErrorMessage(error.message);
@@ -477,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Only fetch count from database if we didn't restore from sessionStorage
   if (!restoredFromSession) {
-    updateDbCountLabel('');
+    updateDbCountLabel('', currentFilters);
   }
   
   fetchJobs('');
@@ -507,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sessionStorage.setItem('finderTotalJobsCount', totalJobsCount.toString());
       sessionStorage.setItem('finderCountTimestamp', Date.now().toString());
     } else {
-      updateDbCountLabel(currentQuery);
+      updateDbCountLabel(currentQuery, currentFilters);
     }
     updateTotalJobsDisplay();
     updatePaginationControls();
@@ -618,7 +613,7 @@ function updatePaginationControls() {
  * Used for pagination display
  * @param {string} query - Search query to get count for
  */
-async function updateDbCountLabel(query) {
+async function updateDbCountLabel(query, filters = null) {
   // Don't refetch if we're preventing it (e.g., right after manual save for instant feedback)
   if (preventCountRefetch) {
     console.log('Skipping count refetch - preventCountRefetch flag is set');
@@ -626,7 +621,22 @@ async function updateDbCountLabel(query) {
   }
   
   try {
-    const queryParam = query ? `?q=${encodeURIComponent(query)}` : '';
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+
+    const activeFilters = filters || currentFilters;
+
+    if (activeFilters.employment_type) params.append('employment_type', activeFilters.employment_type);
+
+    if (activeFilters.is_remote) params.append('is_remote', activeFilters.is_remote);
+
+    if (activeFilters.location) params.append('location', activeFilters.location);
+
+    if (activeFilters.salary_min) params.append('salary_min', activeFilters.salary_min);
+
+    if (activeFilters.posted_date) params.append('posted_date', activeFilters.posted_date);
+
+
     const response = await fetch(`${API_BASE}/api/jobs/count${queryParam}`);
     if (!response.ok) return;
 
@@ -729,8 +739,63 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     initializeJobDetailOverlay();
+    initializeFilters();
     initializeResumeUpload();
 });
+
+function initializeFilters() {
+  const applyFiltersBtn = document.getElementById('applyFilters');
+  const clearFiltersBtn = document.getElementById('clearFilters');
+
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', () => {
+      const jobTypeSelect = document.getElementById('jobType');
+      const remoteCheckbox = document.getElementById('remote');
+      const locationInput = document.getElementById('location');
+      const salaryInput = document.getElementById('salary');
+      const datePostedSelect = document.getElementById('datePosted');
+
+      currentFilters.employment_type = jobTypeSelect ? jobTypeSelect.value : '';
+      currentFilters.is_remote = remoteCheckbox ? remoteCheckbox.checked : 'false';
+      currentFilters.location = locationInput ? locationInput.value.trim() : '';
+      currentFilters.salary_min = salaryInput ? salaryInput.value.trim() : '';
+      currentFilters.posted_date = datePostedSelect ? datePostedSelect.value : '';
+
+
+      fetchJobs('current_query', 1, currentFilters);
+      const filterPanel = document.getElementById('filter-panel');
+      if (filterPanel) filterPanel.style.display = 'none';
+    });
+  }
+
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', () => {
+      const jobTypeSelect = document.getElementById('jobType');
+      const remoteCheckbox = document.getElementById('remote');
+      const locationInput = document.getElementById('location');
+      const salaryInput = document.getElementById('salary');
+      const datePostedSelect = document.getElementById('datePosted');
+
+      if (jobTypeSelect) jobTypeSelect.value = '';
+      if (remoteCheckbox) remoteCheckbox.checked = 'false';
+      if (locationInput) locationInput.value = '';
+      if (salaryInput) salaryInput.value = '';
+      if (datePostedSelect) datePostedSelect.value = '';
+
+      currentFilters = {
+        employment_type: '',
+        is_remote: false,
+        location: '',
+        salary_min: '',
+        posted_date: ''
+      };
+
+      fetchJobs('current_query', 1, currentFilters);
+      const filterPanel = document.getElementById('filter-panel');
+      if (filterPanel) filterPanel.style.display = 'none';
+    });
+  }
+}
 
 function initializeResumeUpload() {
   const dropZone = document.getElementById('dropZone');
