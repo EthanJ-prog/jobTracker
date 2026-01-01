@@ -415,23 +415,40 @@ app.get('/api/jobs', (req, res) =>{
         } else {
             searchPattern = `%${employmentType}%`;
         }
-        whereClause += `AND employment_type IS NOT NULL AND employment_type LIKE ?`;
+        whereClause += ` AND employment_type IS NOT NULL AND employment_type LIKE ?`;
         params.push(searchPattern);
     }
 
     if (isRemote) {
-        whereClause += `AND is_remote = 1`;
+        whereClause += ` AND is_remote = 1`;
     }
 
     if (location){
-        whereClause += `AND location LIKE ?`;
+        whereClause += ` AND location LIKE ?`;
         params.push(`%${location}%`);
     }
 
     if (minSalary && minSalary > 0) {
-        whereClause += `AND (salary_min IS NOT NULL AND salary_min >= ? OR salary_max IS NOT NULL AND salary_max >= ?)`;
+        whereClause += ` AND (salary_min IS NOT NULL AND salary_min >= ? OR salary_max IS NOT NULL AND salary_max >= ?)`;
     }
     
+    if (datePosted){
+        const now = new Date();
+        let cutOffDate = null;
+        if (datePosted === '24H') {
+            cutOffDate = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+        } else if (datePosted === '7D') {
+            cutOffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        } else if (datePosted === '30D') {
+            cutOffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        }
+
+        if (cutOffDate) {
+            whereClause += ` AND posted_date >= ?`;
+            params.push(cutOffDate.toISOString());
+        } 
+    }
+
     // Construct SQL query with search and pagination - include new columns
     const sql = `SELECT id, job_id, title, company, location, employment_type, description, description_summary, apply_link, is_remote, posted_date, salary_min, salary_max, status, expiration_method, expires_at, created_at
                  FROM job_listings ${whereClause}
@@ -511,6 +528,11 @@ app.get('/jobs', (req, res) => {
  */
 app.get('/api/jobs/count', (req, res) => {
     const query = (req.query.q || '').toString().trim();
+    const employmentType = (req.query.employment_type || '').toString().trim(); 
+    const isRemote = (req.query.isRemote === 'true' || req.query.isRemote === 1);
+    const location = (req.query.location || '').toString().trim();
+    const minSalary = (parseInt(req.query.salary_min, 10) || null)
+    const datePosted = (req.query.datePosted || '').toString().trim();
 
     // Build search parameters for job_listings
     const params = [];
@@ -521,6 +543,54 @@ app.get('/api/jobs/count', (req, res) => {
         const likeQuery = `%${query}%`;
         params.push(likeQuery, likeQuery, likeQuery);
     }
+
+    if(employmentType) {
+        let searchPattern = '';
+        if(employmentType === 'full_time') {
+            searchPattern = '%Full-time%';
+        } else if (employmentType ==='part_time') {
+            searchPattern = '%Part-time%';
+        } else if (employmentType === 'contract') {
+            searchPattern = '%Contractor%';
+        } else if(employmentType === 'internship') {
+            searchPattern = '%Intern%';
+        } else {
+            searchPattern = `%${employmentType}%`;
+        }
+        whereClause += ` AND jl.employment_type IS NOT NULL AND jl.employment_type LIKE ?`;
+        params.push(searchPattern);
+    }
+
+    if (isRemote) {
+        whereClause += ` AND jl.is_remote = 1`;
+    }
+
+    if (location){
+        whereClause += ` AND jl.location LIKE ?`;
+        params.push(`%${location}%`);
+    }
+
+    if (minSalary && minSalary > 0) {
+        whereClause += ` AND (jl.salary_min IS NOT NULL AND salary_min >= ? OR jl.salary_max IS NOT NULL AND jl.salary_max >= ?)`;
+    }
+    
+    if (datePosted){
+        const now = new Date();
+        let cutOffDate = null;
+        if (datePosted === '24H') {
+            cutOffDate = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+        } else if (datePosted === '7D') {
+            cutOffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        } else if (datePosted === '30D') {
+            cutOffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        }
+
+        if (cutOffDate) {
+            whereClause += ` AND jl.posted_date >= ?`;
+            params.push(cutOffDate.toISOString());
+        } 
+    }
+
 
     // Count job_listings that don't have a matching saved_job (by title and company)
     // This gives accurate count of jobs that will actually be displayed

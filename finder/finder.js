@@ -13,6 +13,13 @@ let currentQuery = '';
 let totalJobsCount = null;
 let isSavingJob = false; // Flag to prevent refetch during save operation
 let preventCountRefetch = false; // Flag to prevent count refetch after manual save
+let currentFilters = {
+  employmenttype: '',
+  is_remote: false,
+  location: '',
+  salary_min: '',
+  posted_date: ''
+};
 
 /**
  * Fetches jobs from the API with search and pagination
@@ -21,7 +28,8 @@ let preventCountRefetch = false; // Flag to prevent count refetch after manual s
  * @param {string} query - Search query string
  * @param {number} page - Page number for pagination
  */
-async function fetchJobs(query = '', page = 1) {
+async function fetchJobs(query = '', page = 1, filters = null) {
+  const activeFilters = filters || currentFilters;
   showLoadingMessage();
   try {
     // Get saved jobs first to know what to filter
@@ -40,10 +48,36 @@ async function fetchJobs(query = '', page = 1) {
     while ((allUnsavedJobs.length < targetOffset + PAGE_SIZE) && hasMoreData && fetchAttempts < maxFetchAttempts) {
       fetchAttempts++;
       
-      // Build API query parameters - fetch a batch starting from current database offset
-      const queryParam = query 
-        ? `?q=${encodeURIComponent(query)}&limit=${REQUEST_SIZE}&offset=${databaseOffset}` 
-        : `?limit=${REQUEST_SIZE}&offset=${databaseOffset}`;
+      const params = new URLSearchParams();
+      if (query) params.append('q', query);
+      params.append('limit', REQUEST_SIZE);
+      params.append('offset', databaseOffset);
+
+      if (activeFilters.employment_type) params.append('employment_type', activeFilters.employment_type) {
+
+      }
+
+      if (activeFilters.is_remote) params.append('employment_type', activeFilters.is_remote) {
+
+      }
+
+      if (activeFilters.location) params.append('employment_type', activeFilters.location) {
+
+      }
+
+      if (activeFilters.salary_min) params.append('employment_type', activeFilters.salary_min) {
+
+      }
+
+      if (activeFilters.posted_date) params.append('employment_type', activeFilters.posted_date) {
+        
+      }
+
+
+      // // Build API query parameters - fetch a batch starting from current database offset
+      // const queryParam = query 
+      //   ? `?q=${encodeURIComponent(query)}&limit=${REQUEST_SIZE}&offset=${databaseOffset}` 
+      //   : `?limit=${REQUEST_SIZE}&offset=${databaseOffset}`;
 
       console.log(`Fetch attempt ${fetchAttempts}: offset=${databaseOffset}, limit=${REQUEST_SIZE}`);
 
