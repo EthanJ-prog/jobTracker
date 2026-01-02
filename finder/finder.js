@@ -1,5 +1,3 @@
-const { clear } = require("console");
-
 // Global state variables for job management
 let allJobs = [];
 
@@ -636,6 +634,7 @@ async function updateDbCountLabel(query, filters = null) {
 
     if (activeFilters.posted_date) params.append('posted_date', activeFilters.posted_date);
 
+    const queryParam = params.toString() ? `?${params.toString()}` : '';
 
     const response = await fetch(`${API_BASE}/api/jobs/count${queryParam}`);
     if (!response.ok) return;
