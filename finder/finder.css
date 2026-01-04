@@ -311,37 +311,79 @@ main {
 .filter-panel {
     display: none;
     flex-direction: column;
-    gap: 10px;
-    background: rgba(255, 255, 255, 0.7);
-    padding: 15px;
-    margin: 10px auto;
-    max-width: 800px;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(92, 107, 192, 0.08);
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 24px;
+    margin: 20px auto;
+    max-width: 900px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(92, 107, 192, 0.15);
     animation: fadeIn 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(92, 107, 192, 0.1);
+}
+
+/* Filter panel header */
+.filter-panel::before {
+    content: "Advanced Filters";
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* Filter group container */
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 /* Filter panel label styling */
 .filter-panel label {
     font-size: 14px;
-    color: #333;
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 4px;
 }
 
 /* Filter input and select styling */
 .filter-panel input,
 .filter-panel select {
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    padding: 12px 16px;
+    border: 2px solid #e0e7ff;
+    border-radius: 8px;
     width: 100%;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: white;
+    transition: all 0.2s ease;
+}
+
+/* Custom checkbox styling */
+.filter-panel input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+    accent-color: var(--primary);
+    transform: scale(1.2);
+}
+
+/* Checkbox label styling */
+.filter-panel label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 500;
 }
 
 /* Filter inputs focus state */
 .filter-panel input:focus,
 .filter-panel select:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.2);
     outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(92, 107, 192, 0.15);
+    background: #f8f9ff;
 }
 
 /* Apply filters button styling */
@@ -349,18 +391,20 @@ main {
     background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
-    cursor: pointer;
+    padding: 12px 20px;
+    border-radius: 8px;
     font-size: 14px;
-    transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
 }
 
 /* Apply filters button hover effect */
 .apply-filters:hover {
     background: linear-gradient(135deg, #4a59a8, #0060a1);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
 
 /* Fade in animation for filter panel */
@@ -704,26 +748,31 @@ main {
 /* Filter action buttons container */
 .filter-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 15px;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: center;
 }
 
 /* Clear filters button styling */
 .clear-filters {
-    background: #e0e0e0;
-    color: #333;
-    border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
+    background: #f5f5f5;
+    color: #666;
+    border: 2px solid #e0e0e0;
+    padding: 12px 20px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
+    font-weight: 500;
     transition: all 0.2s ease;
+    min-width: 120px;
 }
 
 /* Clear filters button hover effect */
 .clear-filters:hover {
-    background: #d0d0d0;
+    background: #e0e0e0;
+    border-color: #ccc;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 /* Star button for saving jobs (positioned in top-right of job card) */

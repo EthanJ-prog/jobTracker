@@ -755,13 +755,13 @@ function initializeFilters() {
       const datePostedSelect = document.getElementById('datePosted');
 
       currentFilters.employment_type = jobTypeSelect ? jobTypeSelect.value : '';
-      currentFilters.is_remote = remoteCheckbox ? remoteCheckbox.checked : 'false';
+      currentFilters.is_remote = remoteCheckbox ? remoteCheckbox.checked : false;
       currentFilters.location = locationInput ? locationInput.value.trim() : '';
       currentFilters.salary_min = salaryInput ? salaryInput.value.trim() : '';
       currentFilters.posted_date = datePostedSelect ? datePostedSelect.value : '';
 
 
-      fetchJobs('current_query', 1, currentFilters);
+      fetchJobs(currentQuery, 1, currentFilters);
       const filterPanel = document.getElementById('filter-panel');
       if (filterPanel) filterPanel.style.display = 'none';
     });
@@ -776,7 +776,7 @@ function initializeFilters() {
       const datePostedSelect = document.getElementById('datePosted');
 
       if (jobTypeSelect) jobTypeSelect.value = '';
-      if (remoteCheckbox) remoteCheckbox.checked = 'false';
+      if (remoteCheckbox) remoteCheckbox.checked = false;
       if (locationInput) locationInput.value = '';
       if (salaryInput) salaryInput.value = '';
       if (datePostedSelect) datePostedSelect.value = '';
@@ -789,7 +789,7 @@ function initializeFilters() {
         posted_date: ''
       };
 
-      fetchJobs('current_query', 1, currentFilters);
+      fetchJobs(currentQuery, 1, currentFilters);
       const filterPanel = document.getElementById('filter-panel');
       if (filterPanel) filterPanel.style.display = 'none';
     });
