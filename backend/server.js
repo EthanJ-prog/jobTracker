@@ -49,6 +49,123 @@ const JSEARCH_BASE_URL = process.env.JSEARCH_BASE_URL || 'https://jsearch.p.rapi
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 
+const PROGRAMMING_LANGUAGES = [
+    'javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'php', 'swift',
+    'kotlin', 'go', 'rust', 'typescript', 'scala', 'r', 'matlab', 'perl',
+    'objective-c', 'dart', 'lua', 'haskell', 'sql', 'html', 'css', 'bash',
+    'powershell', 'assembly', 'vba', 'groovy', 'elixir', 'clojure', 'f#'
+];
+
+const FRAMEWORKS_AND_LIBRARIES = [
+    'react', 'angular', 'vue', 'node', 'express', 'django', 'flask', 'spring',
+    'rails', 'laravel', 'asp.net', '.net', 'jquery', 'bootstrap', 'tailwind',
+    'next.js', 'nuxt', 'gatsby', 'svelte', 'ember', 'backbone', 'redux',
+    'graphql', 'rest', 'fastapi', 'nestjs', 'electron', 'react native',
+    'flutter', 'xamarin', 'unity', 'unreal', 'tensorflow', 'pytorch', 'keras',
+    'scikit-learn', 'pandas', 'numpy', 'matplotlib', 'opencv', 'spark'
+];
+
+const TOOLS_AND_PLATFORMS = [
+    'git', 'github', 'gitlab', 'bitbucket', 'docker', 'kubernetes', 'aws',
+    'azure', 'gcp', 'firebase', 'heroku', 'vercel', 'netlify', 'jenkins',
+    'travis', 'circleci', 'terraform', 'ansible', 'puppet', 'chef', 'nginx',
+    'apache', 'linux', 'unix', 'windows server', 'macos', 'mongodb', 'mysql',
+    'postgresql', 'redis', 'elasticsearch', 'kafka', 'rabbitmq', 'dynamodb',
+    'oracle', 'sql server', 'sqlite', 'cassandra', 'neo4j', 'graphql',
+    'postman', 'swagger', 'jira', 'confluence', 'slack', 'figma', 'sketch',
+    'photoshop', 'illustrator', 'webpack', 'vite', 'babel', 'eslint', 'npm',
+    'yarn', 'pip', 'maven', 'gradle', 'cmake', 'make'
+];
+
+const SOFT_SKILLS_AND_CONCEPTS = [
+    'agile', 'scrum', 'kanban', 'ci/cd', 'devops', 'microservices', 'api',
+    'rest api', 'testing', 'unit testing', 'integration testing', 'tdd',
+    'bdd', 'debugging', 'problem solving', 'communication', 'teamwork',
+    'leadership', 'project management', 'code review', 'documentation',
+    'mentoring', 'collaboration', 'time management', 'critical thinking',
+    'machine learning', 'deep learning', 'data analysis', 'data science',
+    'artificial intelligence', 'nlp', 'computer vision', 'cloud computing',
+    'cybersecurity', 'networking', 'database design', 'system design',
+    'algorithms', 'data structures', 'object oriented', 'functional programming'
+];
+
+const EDUCATION_KEYWORDS = [
+    'bachelor', 'master', 'phd', 'doctorate', 'associate', 'degree',
+    'computer science', 'software engineering', 'information technology',
+    'electrical engineering', 'mathematics', 'physics', 'data science',
+    'bootcamp', 'certification', 'certified', 'university', 'college'
+];
+
+const EXPERIENCE_KEYWORDS = [
+    'junior', 'senior', 'lead', 'principal', 'staff', 'entry level',
+    'mid level', 'experienced', 'manager', 'director', 'architect',
+    'intern', 'internship', 'fresher', 'graduate', 'years experience',
+    '1 year', '2 years', '3 years', '4 years', '5 years', '6 years',
+    '7 years', '8 years', '9 years', '10 years', '1+ years', '2+ years',
+    '3+ years', '4+ years', '5+ years', '6+ years', '7+ years', '8+ years'
+];
+
+function normalizeText(text) {
+    if (!text || typeof text !== 'string') {
+        return '';
+    }
+
+    return text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s\+\#\.]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function escapeRegex(str) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function extractKeywords(text, keywordList) {
+    const normalizedText = normalizeText(text);
+    const foundKeywords = [];
+    for (const keyword of keywordList){
+        const keywordLower = keyword.toLowerCase();
+        const pattern = new RegExp(`\\b${escapeRegex(keywordLower)}\\b`, 'i');
+        if (pattern.test(normalizedText)){
+            foundKeywords.push(keyword);
+        }
+    }
+    return foundKeywords;
+}
+
+function extractAllSkills(text) {
+    const languages = extractKeywords(text, PROGRAMMING_LANGUAGES);
+    const framworks = extractKeywords(text, FRAMEWORKS_AND_LIBRARIES);
+    const tools = extractKeywords(text, TOOLS_AND_PLATFORMS);
+    const softSkills = extractKeywords(text, SOFT_SKILLS_AND_CONCEPTS);
+    const education = extractKeywords(text, EDUCATION_KEYWORDS);
+    const experience = extractKeywords(text, EXPERIENCE_KEYWORDS);
+
+    const technical = [...new Set([...languages, ...frameworks, ...tools])];
+
+    return {
+        technical,
+        languages,
+        frameworks,
+        tools,
+        softSkills,
+        education,
+        experience,
+        all: [...new Set([...technical, ...softSkills, ...education, ...experience])]
+    };
+}
+
+function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
+    const fullJobText = `${jobTitle} ${jobDesc}`;
+    const resumeSkills = extractAllSkills(resumeText);
+    const jobSkills = extractAllSkills(jobDesc);
+
+    const matchedTechnical = jobSkills.technical.filter(skill => 
+        resumeSkills.technical.includes(skill)
+    );
+}
+
 let ollamaAvailable = false;
 async function checkOllamaAvailability() {
     try {
@@ -530,7 +647,7 @@ app.get('/jobs', (req, res) => {
 app.get('/api/jobs/count', (req, res) => {
     const query = (req.query.q || '').toString().trim();
     const employmentType = (req.query.employment_type || '').toString().trim(); 
-    const isRemote = (req.query.isRemote === 'true' || req.query.isRemote === '1' || req.query.isRemote === 1);
+    const isRemote = (req.query.is_remote === 'true' || req.query.is_remote === '1' || req.query.is_remote === 1);
     const location = (req.query.location || '').toString().trim();
     const minSalary = (parseInt(req.query.salary_min, 10) || null);
     const datePosted = (req.query.posted_date || req.query.datePosted || '').toString().trim();
