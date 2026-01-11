@@ -164,6 +164,79 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
     const matchedTechnical = jobSkills.technical.filter(skill => 
         resumeSkills.technical.includes(skill)
     );
+
+    const technicalScore = jobSkills.technical.length > 0 
+    ? (matchedTechnical.length / jobSkills.technical.length) * 100
+    : 100;
+
+    const matchedSoftSkills = jobSkills.softSkills.filter(skill => 
+        resumeSkills.softSkills.includes(skill)
+    );
+
+    const softSkillsScore = jobSkills.softSkills.length > 0
+    ? (matchedSoftSkills.length / jobSkills.softSkills.length) * 100
+    : 100;
+
+        const matchedExp = jobSkills.experience.filter(skill => 
+        resumeSkills.experience.includes(skill)
+    );
+
+    const experienceScore = jobSkills.experience.length > 0
+        ? (matchedExp.length / jobSkills.experience.length) * 100
+        : 100;
+
+    const matchedEducation = jobSkills.education.filter(skill => 
+        resumeSkills.education.includes(skill)
+    );
+
+    const educationScore = jobSkills.education.length > 0
+    ? (matchedEducation.length / jobSkills.education.length) * 100
+    : 100;
+
+    const finalScore = Math.round(
+        (technicalScore * .1) + 
+        (softSkillsScore * .2) + 
+        (experienceScore * .4) + 
+        (educationScore * .3)
+    );
+
+    const missingTechnical = jobSkills.technical.filter(skill => 
+        !resumeSkills.technical.includes(skill)
+    );
+
+    const missingSoftSkills = jobSkills.softSkills.filter(skill => 
+        !resumeSkills.softSkills.includes(skill)
+    );
+
+    return {
+        score: finalScore,
+
+        breakdown: {
+            techincal: Math.round(techincalScore),
+            softSkills: Math.round(softSkillsScore),
+            experience: Math.round(experienceScore),
+            education: Math.round(educationScore)
+        },
+
+        matchedSkills: {
+            techincal: matchedTechnical,
+            softSkills: matchedSoftSkills,
+            experience: matchedExp,
+            education: matchedEducation
+        },
+
+        missingSkills: {
+            technical: missingTechnical,
+            softSkills: missingSoftSkills
+        },
+
+        summary: {
+            totalJobRequirments: jobSkills.all.length,
+            totalMatched: matchedTechnical.length + matchedEducation.length +
+                        matchedExp.length + matchedSoftSkills.length,
+            resumeSkillsCount: resumeSkills.all.length
+        }
+    };
 }
 
 let ollamaAvailable = false;
@@ -621,6 +694,71 @@ db.run(`
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
 `);
+
+db.run(`
+    CREATE TABLE IF NOT EXISTS job_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        resume_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
+        matched_score INTEGER NOT NULL,
+        breakdown_json TEXT,
+        matched_skills_json TEXT,
+        missing_skills_json TEXT,
+        calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (resume_id) REFERENCES resumes(id),
+        FOREIGN KEY (job_id) REFERENCES job_listings(id),
+        UNIQUE(resume_id, job_id)
+    )
+`);
+
+app.get('api/jobs/:id/match', (req, res) => {
+    const jobId = parseInt(req.params.id, 10);
+
+    if (isNaN(jobId)){
+        return res.status(400).json({ error: 'Invalid job ID'}); 
+    }
+
+    db.get('SELECT id FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, resume) => {
+        if (err) {
+            console.error('Error fetching resumes', err);
+            return res.status(500).json({ error: 'Database error' });
+
+        } 
+
+        if (!resume) {
+            console.error('Could not find resume', err);
+            return res.json({ hasResume: false, match: null});
+        }
+
+        db.get(
+            `SELECT match_score, breakdown_json, matched_skills_json, missing_skills_json 
+            FROM job_matches
+            WHERE resume_id = ? AND job_id = ?`,
+            [resume.id, jobId],
+            (err, match) => {
+                if (err) {
+                    console.error('Error fetching matches', err);
+                    return res.status(500).json({ error: 'Database error' });
+                }
+                
+                if (!match) {
+                    console.error('Could not find matches', err);
+                    return res.json({ hasResume: true, match: null});
+                }
+
+                res.json({
+                    hasResume: true,
+                    match: {
+                        score: match.match_score, 
+                        breakdown: JSON.parse(match.breakdown_json || '{}'),
+                        matchedSkills: JSON.parse(match.matched_skills_json || '{}'),
+                        missingSkills: JSON.parse(match.missing_skills_json || '{}')
+                    }
+                });
+            }
+        );
+    });
+});
 
 /**
  * GET /jobs

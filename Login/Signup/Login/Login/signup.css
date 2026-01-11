@@ -1,0 +1,182 @@
+/* Color Variables (aligned with home.css for consistency) */
+:root {
+    --primary: #5C6BC0;
+    --primary-dark: #3949ab;
+    --primary-light: #7986cb;
+    --accent: #007acc;
+    --text-primary: #212121;
+    --text-secondary: #555;
+    --background: #f4f6f8;
+    --surface: #ffffff;
+    --border-radius: 8px;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --transition: all 0.2s ease;
+}
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: linear-gradient(135deg, var(--background) 0%, #e4e8f0 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+.container {
+    background: var(--surface);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    max-width: 450px;
+    transition: var(--transition);
+}
+
+.container:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.tabs {
+    display: flex;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    transition: var(--transition);
+}
+
+.tab-button:hover {
+    background: rgba(92, 107, 192, 0.1);
+    color: var(--primary);
+}
+
+.tab-button.active {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.tab-content h2 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--primary);
+    font-size: 1.5rem;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.2);
+}
+
+input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-weight: normal;
+}
+
+#2fa-code {
+    margin-bottom: 1rem;
+}
+
+button[type="submit"] {
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+
+button[type="submit"]:hover {
+    background: linear-gradient(135deg, var(--primary-dark), #0060a1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .container {
+        padding: 1.5rem;
+        max-width: 100%;
+        margin: 1rem;
+    }
+
+    .tab-content h2 {
+        font-size: 1.25rem;
+    }
+
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+        padding: 0.625rem;
+    }
+
+    button[type="submit"] {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}

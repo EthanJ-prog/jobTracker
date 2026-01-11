@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up / Login</title>
+    <link rel="stylesheet" href="signup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('login')">Login</button>
+            <button class="tab-button" onclick="showTab('signup')">Sign Up</button>
+        </div>
+        
+        <div id="login" class="tab-content active">
+            <h2>Login</h2>
+            <form>
+                <label for="login-email">Email:</label>
+                <input type="email" id="login-email" required>
+                
+                <label for="login-password">Password:</label>
+                <input type="password" id="login-password" required>
+                
+                <button type="submit">Login</button>
+            </form>
+        </div>
+        
+        <div id="signup" class="tab-content">
+            <h2>Sign Up</h2>
+            <form>
+                <label for="signup-email">Email:</label>
+                <input type="email" id="signup-email" required>
+                
+                <label for="signup-password">Password:</label>
+                <input type="password" id="signup-password" required>
+                
+                <label for="signup-confirm-password">Confirm Password:</label>
+                <input type="password" id="signup-confirm-password" required>
+                
+                <label>
+                    <input type="checkbox" id="enable-2fa" onchange="toggle2FA()"> Enable Two-Factor Authentication (2FA)
+                </label>
+                
+                <div id="2fa-code" style="display: none;">
+                    <label for="verification-code">Verification Code (from authenticator app):</label>
+                    <input type="text" id="verification-code" placeholder="Enter 6-digit code">
+                </div>
+                
+                <button type="submit">Sign Up</button>
+            </form>
+        </div>
+    </div>
+    <script src="signup.js"></script>
+</body>
+</html>
