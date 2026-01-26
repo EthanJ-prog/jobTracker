@@ -43,7 +43,7 @@
                 </label>
                 
                 <div id="2fa-code" style="display: none;">
-                    <label for="verification-code">Verification Code (from authenticator app):</label>
+                    <label for="verification-code">Verification Code (from Mailgun):</label>
                     <input type="text" id="verification-code" placeholder="Enter 6-digit code">
                 </div>
                 
@@ -51,6 +51,10 @@
             </form>
         </div>
     </div>
+    
+    <!-- Toast notification container -->
+    <div class="toast-container" id="toast-container"></div>
+    
     <script src="signup.js"></script>
 </body>
 </html>

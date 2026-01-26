@@ -487,6 +487,21 @@ async function upsertJobListing(db, row){
     });
 }
 
+// app.post('/api/auth/signup', async (req, res) => {
+//     // Signup logic here
+//
+// });
+
+// app.post('/api/auth/login', async (req, res) => {
+//     // Login logic here
+
+// });
+
+// app.post('/api/auth/2fa/verify', async (req, res) => {
+//     // 2FA verification logic here
+//
+// });
+
 /**
  * Search for jobs using JSearch API and store results in database
  * GET /api/jobs/search?query=term&page=1&country=us&date_posted=all
@@ -711,7 +726,17 @@ db.run(`
     )
 `);
 
-app.get('api/jobs/:id/match', (req, res) => {
+db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        two_factor_enabled BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
+app.get('/api/jobs/:id/match', (req, res) => {
     const jobId = parseInt(req.params.id, 10);
 
     if (isNaN(jobId)){
@@ -757,6 +782,49 @@ app.get('api/jobs/:id/match', (req, res) => {
                 });
             }
         );
+    });
+});
+
+app.get('/api/matches', (req, res) => {
+    db.get('SELECT id FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, resume) => {
+       if (err) {
+        console.error('Error fetching resume:', err);
+        return result.status(500).json({Error: 'Database error'});
+       } 
+
+       if (!resume){
+        return res.json({
+            hasResume: false,
+            matches: {}
+        });
+       }
+
+       db.all(
+            `SELECT job_id, match_score, breakdown_json, matched_skills_json, missing_skills_json 
+            FROM job_matches
+            WHERE resume_id = ?`,
+            [resume.id], 
+            (err, rows) => {
+                if (err) {
+                    console.error('Error fetching matches:', err);
+                    return result.status(500).json({Error: 'Database error'});
+                }
+                const matchesMap = {};
+                for (const row of rows){
+                    matchesMap[row.job_id] = {
+                        score: row.match_score,
+                        breakdown: JSON.parse(row.breakdown_json || '{}'),
+                        matchedSkills: JSON.parse(row.matched_skills_json || '{}'),
+                        missingSkills: JSON.parse(row.missing_skills_json || '{}')
+                    };
+                }
+                res.json({
+                    hasResume: true,
+                    matches: matchesMap
+                }); 
+            }
+        );
+
     });
 });
 
@@ -1006,6 +1074,8 @@ function extractResumeData(text){
     return null
 }
 
+
+
 app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
     const startTime = Date.now();
     try {
@@ -1024,29 +1094,108 @@ app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
             `INSERT OR REPLACE INTO resumes (filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
             VALUES (?, ?, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)`,
             [originalname, fileType, rawText],
-            function(err){
+            async function(err){
                 if (err) {
                     console.error('Error saving resume:', err);
                     return res.status(500).json({err: 'Failed to save resume to database'});
                 }
+
+                const resumeID = this.lastID;
+
                 const elapsed = Date.now() - startTime;
                 console.log(`Resume was saved: ${originalname} (${(elapsed/1000).toFixed(1)}s)`)
 
-                res.json({
-                    message: 'Resume uploaded and parsed succesfully',
-                    id: this.lastID,
-                    filename: originalname,
-                    text_length: rawText.length
-                });
+                console.log('Starting match calculation for active jobs');
+
+                try {
+                    const matchStats = await calculateAllMatches(resumeID, rawText);
+                    console.log(`Match calculation complete: ${matchStats.jobsProcessed} jobs processed`);
+                    res.json({
+                        message: 'Resume uploaded and parsed successfully',
+                        id: resumeID,
+                        filename: originalname,
+                        text_length: rawText.length,
+                        matchesCalculated: matchStats.jobsProcessed ,
+                        averageScore: matchStats.averageScore
+                    });
+
+                } catch (matchError) {
+                    console.error('Match calculation error: ', matchError);
+                    res.json({
+                        message: 'Resume uploaded successfully, match calculation pending',
+                        id: resumeID,
+                        filename: originalname,
+                        text_length: rawText.length,
+                        matchesCalculated: 0
+                    });
+                }
             }
         );
     } catch (err) {
         const elapsed = Date.now() - startTime;
         console.error(`Resume upload error after (${(elapsed/1000).toFixed(1)}s: ${err.message})`);
         res.status(500).json({error: 'Failed to process resume: ' + err.message});
-
     }
 });
+
+function calculateAllMatches(resumeID, rawText) {
+    return new Promise((resolve, reject) => {
+        db.run('DELETE FROM job_matches WHERE resume_id = ?', [resumeID], (err) =>{
+            if (err) {
+                console.error('Could not delete from job matches:', err);
+                return reject(err);
+            }
+            
+            db.all(
+                `SELECT id, title, description FROM job_listings WHERE status = 'active'`,
+                [],
+                (err, jobs) =>{
+                    if (err) {
+                        console.error('Error fetching jobs from job_listings', err);
+                        return reject(err);
+                    }
+
+                    if (!jobs || jobs.length === 0) {
+                        return resolve({jobsProcessed: 0, averageScore: 0});
+                    }
+
+                    let totalScore = 0;
+                    let jobsProcessed = 0;
+                    let jobsToProcess = jobs.length;
+
+                    for (const job of jobs) {
+                        if (!job.description) {
+                          jobsToProcess--;
+                          continue;
+                        }
+
+                        const matchResult = calculateMatchScore(resumeText, job.description, job.title || '');
+
+                        db.run(
+                            `INSERT OR REPLACE INTO job_matches
+                            (resume_id, job_id, matched_score, breakdown_json, matched_skills_json, missing_skills_json, calculated_at) 
+                            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                            [
+                                resumeID,
+                                job.id,
+                                matchResult.score,
+                                JSON.stringify(matchResult.breakdown),
+                                JSON.stringify(matchResult.matchedSkills),
+                                JSON.stringify(matchResult.missingSkills),
+                            ], 
+                            // NEXT SESSION
+                            (err) => {
+
+                            }
+                        )
+
+                    }
+                }
+
+                )
+        });
+    });
+}
 
 app.get('/api/resume', (req, res) => {
     db.get('SELECT * FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, row) => {
