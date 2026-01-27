@@ -487,6 +487,15 @@ async function upsertJobListing(db, row){
     });
 }
 
+function isStrongPassword(password) {
+    const minLength = 12;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /[0-9]/.test(password);
+    const hasSpecialChars = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChars;
+}
+
 // app.post('/api/auth/signup', async (req, res) => {
 //     // Signup logic here
 //
