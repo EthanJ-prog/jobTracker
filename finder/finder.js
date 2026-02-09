@@ -1,3 +1,5 @@
+const { match } = require("assert");
+
 // Global state variables for job management
 let allJobs = [];
 
@@ -20,6 +22,36 @@ let currentFilters = {
   salary_min: '',
   posted_date: ''
 };
+
+let matchScore = {};
+let hasResume = false;
+
+async function fetchMatchScores() {
+  try{
+    const response = await fetch(`${API_BASE}/api/matches`);
+
+    if (!response.ok) {
+      console.error('Failed to fetch match scores');
+      return;
+    }
+
+    const data = await response.json();
+
+    hasResume = data.hasResume;
+    matchScore = data.matchScore || {};
+    console.log(`Loaded ${Object.keys(matchScores).length} match scores, has resume: ${hasResume}`);
+
+  } catch (err) {
+    console.error('Error fetching match scores: ', err);
+  }
+}
+
+function getMatchScoreColor (score) {
+  if (score >= 80) return '#green';
+  if (score >= 60) return '#green';
+  if (score >= 40) return '#green';
+  return '#green';
+}
 
 /**
  * Fetches jobs from the API with search and pagination
@@ -234,8 +266,32 @@ function createJobCard(job) {
   
   const salaryText = formatSalary(job.salary_min, job.salary_max);
   
+  const matchData = matchScore[job.id];
+  let badgeHTML = '';
+  if (hasResume && matchData) {
+    const matchColor = getMatchScoreColor(matchData.score);
+
+    badgeHTML = `
+      <div class="match-score-badge" style="
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: ${matchColor};
+      color: white;
+      border-radius: 20px;
+      font-weight: bold;
+      z-index: 10;
+      "> 
+      ${matchData.score}% Match
+      </div>
+    `;
+  }
+
+
   // Create job card HTML structure with all details (consistent order)
+  card.style.position = 'relative';
   card.innerHTML = `
+    ${badgeHTML}
     <h3 class="job-title">${formatValue(job.title, 'No title available')}</h3> 
     <div class="job-details">
       <p class="job-company"><strong>Company:</strong> ${formatValue(job.company, 'Company not specified')}</p>
@@ -441,9 +497,10 @@ async function saveJobToTracker(job) {
 }
 
 // Initialize the job finder when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   console.log("Loaded job finder");
-  
+  await fetchMatchScores();
+  console.log('Match scores loaded: ', hasResume ? 'Resume Found' : 'No resume found');
   // Check for saved count in sessionStorage (to persist count after page reload)
   const savedCount = sessionStorage.getItem('finderTotalJobsCount');
   const savedTimestamp = sessionStorage.getItem('finderCountTimestamp');
@@ -828,13 +885,14 @@ function initializeResumeUpload() {
 }
 
 async function handleResumeUpload(file) {
-  const files = [
+
+  const allowedTypes = [
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ]
+  ];
 
-  if (!files.includes(file.type)) {
+  if (!allowedTypes.includes(file.type)) {
     alert("Wrong file type, please use a different file");
     return;
   }
@@ -843,6 +901,15 @@ async function handleResumeUpload(file) {
   formData.append('resume', file);
 
   try {
+    const dropZone = document.getElementById('dropZone');
+    const originalContent = dropZone.innerHTML;
+    dropZone.innerHTML = `
+    <div class="upload-loading" style="text-align: center; padding: 20px;">
+      <p> Uploading and analyzing resume... </p>
+      <p> Calculating match scores for all jobs </p>
+    </div> 
+    `;
+
     const response = await fetch(`${API_BASE}/api/resume/upload`, {
       method: 'POST',
       body: formData,
@@ -855,9 +922,53 @@ async function handleResumeUpload(file) {
     const result = await response.json();
     console.log('Resume uploaded and parsed: ', result);
     alert('Resume uploaded successfully');
+
+    await fetchMatchScores();
+    console.log('Match scores refreshed after upload');
+
+    await fetchJobs(currentQuery, currentPage, currentFilters);
+    console.log('Job listings refreshed after match scores');
+
+    const matchCount = Object.keys(matchScores).length;
+    const avgScore = result.averageScore || 0;
+    
+    dropZone.innerHTML = `
+    <div class="upload-success">
+    <p>Resume Uploaded!</p>
+    </div>
+
+    `;
+
+
+    document.getElementById('uploadNewResume').addEventListener('click', () => {
+      dropZone.innerHTML = originalContent;
+      const newFileInput = document.getElementById('resumeFile');
+
+      if (newFileInput) {
+        newFileInput.addEventListener('change', (e) => {
+        const newFile = e.target.files[0];
+        if (newFile) handleResumeUpload(newFile);
+
+        });
+
+      }
+
+    });
+    alert(`Resume uploaded succesfully! Matched against ${matchCount} jobs with an average score of ${averageScore}%.`);
+
   } catch (err) {
     console.error('Error uploading resume', err);
     alert('Failed to upload resume. Please try again');
+
+    const dropZone = document.getElementById('dropZone');
+    console.error('Error matching jobs', err);
+    dropZone.innerHTML = `<div class="file-input-container"`;
+    // come back to this 
+    document.getElementById('resumeFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleResumeUpload(file);
+    });
+
   }
 
 }
@@ -910,6 +1021,23 @@ function openJobDetailOverlay(job) {
   const remoteContainer = document.getElementById('overlay-remote-container');
   document.getElementById('overlay-remote').textContent = job.is_remote ? 'Yes' : 'No';
   remoteContainer.style.display = 'block';
+
+  const matchSection = document.getElementById('overly-matched-section');
+  const matchData = matchScores[job.id];
+
+  if (hasResume && matchData) {
+    matchSection.style.display = 'block';
+
+    const scoreColor = getMatchScoreColor(matchData.score);
+
+    const scoreElement = document.getElementById('overlay-match-score');
+    scoreElement.textContent = `${matchData.score}%`;
+    scoreElement.style.color = scoreColor;
+    //COME BACK AND ADD HTML
+    const progressBar = document.getElementById('overlay-progress-bar');
+    progressBar.style.width = `${matchData.score}%`;
+    progressBar.style.background = scoreColor;
+  }
   
   const desc = job.description ? 
     job.description

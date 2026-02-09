@@ -9,6 +9,8 @@ const fetch = require('node-fetch');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
+const bcrypt = require('bcrypt');
+const twoFactorCodes = new Map();
 
 // Initialize Express application
 const app = express();
@@ -105,6 +107,11 @@ const EXPERIENCE_KEYWORDS = [
     '3+ years', '4+ years', '5+ years', '6+ years', '7+ years', '8+ years'
 ];
 
+/**
+ * Normalizes text by converting to lowercase and removing special characters
+ * @param {string} text - The text to normalize
+ * @returns {string} Normalized text with consistent spacing
+ */
 function normalizeText(text) {
     if (!text || typeof text !== 'string') {
         return '';
@@ -117,10 +124,21 @@ function normalizeText(text) {
         .trim();
 }
 
+/**
+ * Escapes special regex characters in a string
+ * @param {string} str - The string to escape
+ * @returns {string} The escaped string safe for regex patterns
+ */
 function escapeRegex(str) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Extracts matching keywords from text using a provided keyword list
+ * @param {string} text - The text to search for keywords
+ * @param {Array<string>} keywordList - List of keywords to match
+ * @returns {Array<string>} Array of found keywords from the text
+ */
 function extractKeywords(text, keywordList) {
     const normalizedText = normalizeText(text);
     const foundKeywords = [];
@@ -156,6 +174,14 @@ function extractAllSkills(text) {
     };
 }
 
+/**
+ * Calculates a match score between a resume and job description
+ * Evaluates technical skills (10%), soft skills (20%), experience (40%), and education (30%)
+ * @param {string} resumeText - The resume text content
+ * @param {string} jobDesc - The job description text
+ * @param {string} jobTitle - Optional job title to include in analysis
+ * @returns {Object} Match score and detailed breakdown of matched/missing skills
+ */
 function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
     const fullJobText = `${jobTitle} ${jobDesc}`;
     const resumeSkills = extractAllSkills(resumeText);
@@ -212,14 +238,14 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
         score: finalScore,
 
         breakdown: {
-            techincal: Math.round(techincalScore),
+            technical: Math.round(technicalScore),
             softSkills: Math.round(softSkillsScore),
             experience: Math.round(experienceScore),
             education: Math.round(educationScore)
         },
 
         matchedSkills: {
-            techincal: matchedTechnical,
+            technical: matchedTechnical,
             softSkills: matchedSoftSkills,
             experience: matchedExp,
             education: matchedEducation
@@ -231,7 +257,7 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
         },
 
         summary: {
-            totalJobRequirments: jobSkills.all.length,
+            totalJobRequirements: jobSkills.all.length,
             totalMatched: matchedTechnical.length + matchedEducation.length +
                         matchedExp.length + matchedSoftSkills.length,
             resumeSkillsCount: resumeSkills.all.length
@@ -240,6 +266,11 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
 }
 
 let ollamaAvailable = false;
+
+/**
+ * Checks if Ollama AI service is available at the configured URL
+ * Updates ollamaAvailable flag based on connection status
+ */
 async function checkOllamaAvailability() {
     try {
         const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
@@ -324,6 +355,12 @@ function calculateJobExpiration(postedDate, createdAt) {
     };
 }
 
+/**
+ * Generates a summary of a job description using Ollama AI model
+ * Returns null if Ollama is unavailable or the description is empty
+ * @param {string} description - The job description to summarize
+ * @returns {Promise<Object>} Object with summary text and elapsed time in seconds
+ */
 async function generateJobDescriptionSummary(description) {
     if(!description || typeof description !== 'string' || !description.trim()){
         return {summary: null, elapsed: 0};
@@ -346,7 +383,7 @@ async function generateJobDescriptionSummary(description) {
         - Prioritize specfic techincal skills, qualifications, and responsibilities over vague descriptions,
         - If salary/compensation is mentioned, include it
         - If remote work options are specified, mention them 
-        - Maintain a neutral, infromative tone 
+        - Maintain a neutral, informative tone 
 
         OUTPUT FORMAT: 
         Write only the summary paragraph. Do not include headers, bullet points, or formatting marks. The summary should flow naturally as a single paragraph.
@@ -487,6 +524,12 @@ async function upsertJobListing(db, row){
     });
 }
 
+/**
+ * Checks if a password meets strong security requirements
+ * Requires: 12+ characters, uppercase, lowercase, numbers, and special characters
+ * @param {string} password - The password to validate
+ * @returns {boolean} True if password meets all requirements
+ */
 function isStrongPassword(password) {
     const minLength = 12;
     const hasUpperCase = /[A-Z]/.test(password);
@@ -496,20 +539,152 @@ function isStrongPassword(password) {
     return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChars;
 }
 
-// app.post('/api/auth/signup', async (req, res) => {
-//     // Signup logic here
-//
-// });
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-// app.post('/api/auth/login', async (req, res) => {
-//     // Login logic here
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
 
-// });
+    if (password.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters' });
+    }
 
-// app.post('/api/auth/2fa/verify', async (req, res) => {
-//     // 2FA verification logic here
-//
-// });
+    // Hash password
+    const saltRounds = 12;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Insert user
+    const query = `
+      INSERT INTO users (email, password_hash)
+      VALUES (?, ?)
+    `;
+
+    db.run(query, [email, passwordHash], function (err) {
+      if (err) {
+        if (err.message.includes('UNIQUE')) {
+          return res.status(409).json({ error: 'Email already in use' });
+        }
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.status(201).json({
+        message: 'User created successfully',
+        userId: this.lastID
+      });
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    // Look up user in DB
+    db.get(
+      `SELECT id, password_hash, two_factor_enabled FROM users WHERE email = ?`,
+      [email],
+      async (err, user) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        // User not found
+        if (!user) {
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Compare password with bcrypt
+        const passwordMatch = await bcrypt.compare(
+          password,
+          user.password_hash
+        );
+
+        if (!passwordMatch) {
+          return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // If user has 2FA enabled
+        if (user.two_factor_enabled) {
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+          twoFactorCodes.set(user.id, {
+            code,
+            expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+          });
+
+          // In real app email the code here
+          console.log(`2FA code for ${email}: ${code}`);
+
+          return res.status(200).json({
+            message: '2FA required',
+            twoFactorRequired: true,
+            userId: user.id
+          });
+        }
+
+        // Login success (no 2FA)
+        res.status(200).json({
+          message: 'Login successful',
+          authenticated: true
+        });
+      }
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+
+app.post('/api/auth/2fa/verify', async (req, res) => {
+  try {
+    const { userId, code } = req.body;
+
+    if (!userId || !code) {
+      return res.status(400).json({ error: 'Missing userId or code' });
+    }
+
+    const stored = twoFactorCodes.get(userId);
+
+    if (!stored) {
+      return res.status(400).json({ error: 'No 2FA request found' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      twoFactorCodes.delete(userId);
+      return res.status(401).json({ error: 'Verification code expired' });
+    }
+
+    if (stored.code !== code) {
+      return res.status(401).json({ error: 'Invalid verification code' });
+    }
+
+    twoFactorCodes.delete(userId);
+
+    res.status(200).json({
+      message: '2FA verification successful',
+      authenticated: true
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 /**
  * Search for jobs using JSearch API and store results in database
@@ -1060,6 +1235,13 @@ app.post('/api/jobs/summarize-description', async(req, res) => {
     }
 });
 
+/**
+ * Parses resume content from PDF or DOCX files
+ * @param {Buffer} fileBuffer - The file buffer content
+ * @param {string} mimetype - The MIME type of the file (pdf or docx)
+ * @returns {Promise<string>} Extracted text content from the resume
+ * @throws {Error} If file type is unsupported or parsing fails
+ */
 async function parseResume(fileBuffer, mimetype) {
     try {
         if (mimetype === 'application/pdf') {
@@ -1074,13 +1256,23 @@ async function parseResume(fileBuffer, mimetype) {
         }
     } catch (err) {
         console.error('Error parsing resumes', err);
-        throw new Error('Unable to parse resume, please pass in file type', err);
+        throw new Error('Unable to parse resume, please verify file type: ' + err.message);
     }
 }
 
-// Will work on this in the future 
+/**
+ * Extracts structured data from resume text (contact info, skills, experience, education)
+ * TODO: Implement comprehensive resume data extraction to populate resume fields
+ * @param {string} text - Raw resume text
+ * @returns {Object|null} Structured resume data or null if not implemented
+ */
 function extractResumeData(text){
-    return null
+    // TODO: Parse resume text to extract:
+    // - Contact information (email, phone, linkedin)
+    // - Skills section
+    // - Work experience
+    // - Education
+    return null;
 }
 
 
@@ -1147,14 +1339,23 @@ app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
     }
 });
 
+/**
+ * Calculates match scores between a resume and all active job listings
+ * Clears previous matches and recalculates scores for the uploaded resume
+ * @param {number} resumeID - The ID of the uploaded resume
+ * @param {string} rawText - The raw text content of the resume
+ * @returns {Promise<Object>} Object containing jobsProcessed count and averageScore
+ */
 function calculateAllMatches(resumeID, rawText) {
     return new Promise((resolve, reject) => {
+        // Clear previous matches for this resume
         db.run('DELETE FROM job_matches WHERE resume_id = ?', [resumeID], (err) =>{
             if (err) {
-                console.error('Could not delete from job matches:', err);
+                console.error('Could not delete previous job matches:', err);
                 return reject(err);
             }
             
+            // Fetch all active job listings
             db.all(
                 `SELECT id, title, description FROM job_listings WHERE status = 'active'`,
                 [],
@@ -1172,14 +1373,17 @@ function calculateAllMatches(resumeID, rawText) {
                     let jobsProcessed = 0;
                     let jobsToProcess = jobs.length;
 
+                    // Calculate matches for each job
                     for (const job of jobs) {
                         if (!job.description) {
                           jobsToProcess--;
                           continue;
                         }
 
-                        const matchResult = calculateMatchScore(resumeText, job.description, job.title || '');
+                        // Calculate match score between resume and job
+                        const matchResult = calculateMatchScore(rawText, job.description, job.title || '');
 
+                        // Store match result in database
                         db.run(
                             `INSERT OR REPLACE INTO job_matches
                             (resume_id, job_id, matched_score, breakdown_json, matched_skills_json, missing_skills_json, calculated_at) 
@@ -1192,16 +1396,35 @@ function calculateAllMatches(resumeID, rawText) {
                                 JSON.stringify(matchResult.matchedSkills),
                                 JSON.stringify(matchResult.missingSkills),
                             ], 
-                            // NEXT SESSION
                             (err) => {
+                                if (err) {
+                                    console.error(`Error saving match for job ${job.id}: `, err);
+                                }
 
+                                totalScore += matchResult.score;
+                                jobsProcessed++;
+
+                                // Resolve when all jobs have been processed
+                                if (jobsProcessed === jobsToProcess) {
+                                    const averageScore = jobsProcessed > 0 ? Math.round(totalScore / jobsProcessed) : 0; 
+                                    resolve({
+                                        jobsProcessed,
+                                        averageScore
+                                    });
+                                }
                             }
-                        )
+                        );
+                    }
 
+                    // Handle edge case where there are no jobs with descriptions
+                    if (jobsToProcess === 0) {
+                        resolve({
+                            jobsProcessed: 0,
+                            averageScore: 0
+                        });
                     }
                 }
-
-                )
+            );
         });
     });
 }
