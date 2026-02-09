@@ -154,7 +154,7 @@ function extractKeywords(text, keywordList) {
 
 function extractAllSkills(text) {
     const languages = extractKeywords(text, PROGRAMMING_LANGUAGES);
-    const framworks = extractKeywords(text, FRAMEWORKS_AND_LIBRARIES);
+    const frameworks = extractKeywords(text, FRAMEWORKS_AND_LIBRARIES);
     const tools = extractKeywords(text, TOOLS_AND_PLATFORMS);
     const softSkills = extractKeywords(text, SOFT_SKILLS_AND_CONCEPTS);
     const education = extractKeywords(text, EDUCATION_KEYWORDS);
@@ -940,7 +940,7 @@ app.get('/api/jobs/:id/match', (req, res) => {
         }
 
         db.get(
-            `SELECT match_score, breakdown_json, matched_skills_json, missing_skills_json 
+            `SELECT matched_score, breakdown_json, matched_skills_json, missing_skills_json 
             FROM job_matches
             WHERE resume_id = ? AND job_id = ?`,
             [resume.id, jobId],
@@ -958,7 +958,7 @@ app.get('/api/jobs/:id/match', (req, res) => {
                 res.json({
                     hasResume: true,
                     match: {
-                        score: match.match_score, 
+                        score: match.matched_score, 
                         breakdown: JSON.parse(match.breakdown_json || '{}'),
                         matchedSkills: JSON.parse(match.matched_skills_json || '{}'),
                         missingSkills: JSON.parse(match.missing_skills_json || '{}')
@@ -973,7 +973,7 @@ app.get('/api/matches', (req, res) => {
     db.get('SELECT id FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, resume) => {
        if (err) {
         console.error('Error fetching resume:', err);
-        return result.status(500).json({Error: 'Database error'});
+        return res.status(500).json({Error: 'Database error'});
        } 
 
        if (!resume){
@@ -984,19 +984,19 @@ app.get('/api/matches', (req, res) => {
        }
 
        db.all(
-            `SELECT job_id, match_score, breakdown_json, matched_skills_json, missing_skills_json 
+            `SELECT job_id, matched_score, breakdown_json, matched_skills_json, missing_skills_json 
             FROM job_matches
             WHERE resume_id = ?`,
             [resume.id], 
             (err, rows) => {
                 if (err) {
                     console.error('Error fetching matches:', err);
-                    return result.status(500).json({Error: 'Database error'});
+                    return res.status(500).json({Error: 'Database error'});
                 }
                 const matchesMap = {};
                 for (const row of rows){
                     matchesMap[row.job_id] = {
-                        score: row.match_score,
+                        score: row.matched_score,
                         breakdown: JSON.parse(row.breakdown_json || '{}'),
                         matchedSkills: JSON.parse(row.matched_skills_json || '{}'),
                         missingSkills: JSON.parse(row.missing_skills_json || '{}')

@@ -1,5 +1,3 @@
-const { match } = require("assert");
-
 // Global state variables for job management
 let allJobs = [];
 
@@ -38,19 +36,19 @@ async function fetchMatchScores() {
     const data = await response.json();
 
     hasResume = data.hasResume;
-    matchScore = data.matchScore || {};
-    console.log(`Loaded ${Object.keys(matchScores).length} match scores, has resume: ${hasResume}`);
+    matchScore = data.matches || {};
+    console.log(`Loaded ${Object.keys(matchScore).length} match scores, has resume: ${hasResume}`);
 
   } catch (err) {
     console.error('Error fetching match scores: ', err);
   }
 }
 
-function getMatchScoreColor (score) {
-  if (score >= 80) return '#green';
-  if (score >= 60) return '#green';
-  if (score >= 40) return '#green';
-  return '#green';
+function getMatchScoreColor(score) {
+  if (score >= 80) return 'rgb(0, 255, 0)';
+  if (score >= 60) return 'rgb(250, 250, 0)';
+  if (score >= 40) return '#ff0000';
+  return '#ff0000';
 }
 
 /**
@@ -929,7 +927,7 @@ async function handleResumeUpload(file) {
     await fetchJobs(currentQuery, currentPage, currentFilters);
     console.log('Job listings refreshed after match scores');
 
-    const matchCount = Object.keys(matchScores).length;
+    const matchCount = Object.keys(matchScore).length;
     const avgScore = result.averageScore || 0;
     
     dropZone.innerHTML = `
@@ -1022,10 +1020,10 @@ function openJobDetailOverlay(job) {
   document.getElementById('overlay-remote').textContent = job.is_remote ? 'Yes' : 'No';
   remoteContainer.style.display = 'block';
 
-  const matchSection = document.getElementById('overly-matched-section');
-  const matchData = matchScores[job.id];
+  const matchSection = document.getElementById('overlay-matched-section');
+  const matchData = matchScore[job.id];
 
-  if (hasResume && matchData) {
+  if (hasResume && matchData && matchSection) {
     matchSection.style.display = 'block';
 
     const scoreColor = getMatchScoreColor(matchData.score);
