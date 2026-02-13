@@ -1030,7 +1030,7 @@ function openJobDetailOverlay(job) {
     const breakdown = matchData.breakdown || {};
 
     const techScore = document.getElementById('overlay-technical-score');
-    techScore.textContent = `${breakdown.techincal || 0}`;
+    techScore.textContent = `${breakdown.technical || 0}`;
     techScore.style.color = getMatchScoreColor(breakdown.technical);
 
     const softScore = document.getElementById('overlay-softSkills-score');
@@ -1049,7 +1049,7 @@ function openJobDetailOverlay(job) {
     const matchedSkills = matchData.matchedSkills || {};
     
     const allMatchedSkills = [
-      ...(matchedSkills.techincal || []),
+      ...(matchedSkills.technical || []),
       ...(matchedSkills.softSkills || [])
     ];
 
@@ -1058,7 +1058,7 @@ function openJobDetailOverlay(job) {
       .map(skill => `<span class="skill-tag">${skill}</span>`)
       .join('');
     } else{
-      matchedSkillsContainer.innerHTML = '<span class="no-skills-message">No matching skills found </span>';
+      matchedSkillsContainer.innerHTML = '<span class="no-skills-message">No matching skills found</span>';
     }
 
     const missingSkillsContainer = document.getElementById('overlay-missing-skills');
@@ -1078,7 +1078,7 @@ function openJobDetailOverlay(job) {
         .join('');
 
       if (moreCount > 0){
-        html += `<span class=skill-tag" style="background: rgb(255, 255, 255); color: rgb(83, 83, 83);">+${moreCount} more </span>`;
+        html += `<span class="skill-tag" style="background: rgb(255, 255, 255); color: rgb(83, 83, 83);">+${moreCount} more </span>`;
       } 
 
       missingSkillsContainer.innerHTML = html;
@@ -1087,7 +1087,7 @@ function openJobDetailOverlay(job) {
       missingSkillsContainer.innerHTML = '<span class ="no-skills-message"> Great! No key skills missing</span>';
     }
   } else {
-    matchSection.style.display = 'none';
+    if(matchSection) matchSection.style.display = 'none';
   }
   
   const desc = job.description ? 
@@ -1122,7 +1122,7 @@ function openJobDetailOverlay(job) {
       // Store the current count before decrementing
       const previousCount = typeof totalJobsCount === 'number' ? totalJobsCount : null;
       
-      if(previousCount !== null && previousCount > 0) {
+      if (previousCount !== null && previousCount > 0) {
         totalJobsCount = Math.max(previousCount - 1, 0);
         // Persist to sessionStorage to survive page reloads
         sessionStorage.setItem('finderTotalJobsCount', totalJobsCount.toString());

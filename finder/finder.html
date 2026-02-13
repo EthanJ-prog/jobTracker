@@ -220,7 +220,7 @@
             <button id="next-page" disabled>Next</button>
           </div>
           
-          <!-- Job detail overlay modal -->
+          <!-- Job detail overlay model -->
           <div id="job-detail-overlay" class="job-overlay">
 
             <!-- Main content container -->
@@ -257,6 +257,51 @@
                   </div>
                 </div>
 
+
+                <div id = "overlay-match-section" class="overlay-match-section">
+                  <div class="match-header">
+                    <h3>Resume Match Analysis</h3>
+                    <div class="match-score-display">
+                      <span id="overlay-match-score" class="match-score-value">0%</span>
+                      <div class="match-bar-container">
+                        <div id="overlay-match-bar" class="match-bar-fill"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="match-breakdown">
+                    <div class="breakdown-item">
+                      <span class="breakdown-label">Techincal Skills</span>
+                      <span id="overlay-techincal-score" class="breakdown-value">0%</span>
+                    </div>
+
+                    <div class="breakdown-item">
+                      <span class="breakdown-label">Soft Skills</span>
+                      <span id="overlay-softSkills-score" class="breakdown-value">0%</span>
+                    </div>
+
+                    <div class="breakdown-item">
+                      <span class="breakdown-label">Experience</span>
+                      <span id="overlay-experience-score" class="breakdown-value">0%</span>
+                    </div>  
+
+                    <div class="breakdown-item">
+                      <span class="breakdown-label">Education</span>
+                      <span id="overlay-education-score" class="breakdown-value">0%</span>
+                    </div>
+                  </div>
+
+                  <div class="skills-section matched-skills">
+                    <h4>Matched Skills</h4>
+                    <div id="overlay-match-skills" class="skills-tags"></div>
+                  </div>
+
+                  <div class="skills-section missing-skills">
+                    <h4>Missing Skills</h4>
+                    <div id="overlay-missing-skills" class="skills-tags"></div>
+                  </div>
+
+                </div>
                   <div class="job-overlay-description">
                     <h3>Job Description</h3>
                     <div id="overlay-description"></div>
