@@ -45,10 +45,10 @@ async function fetchMatchScores() {
 }
 
 function getMatchScoreColor(score) {
-  if (score >= 80) return 'rgb(0, 255, 0)';
-  if (score >= 60) return 'rgb(250, 250, 0)';
-  if (score >= 40) return '#ff0000';
-  return '#ff0000';
+  if (score >= 80) return '#22c55e';  // Green for 80-100%
+  if (score >= 60) return '#eab308';  // Yellow for 60-79%
+  if (score >= 40) return '#f97316';  // Orange for 40-59%
+  return '#ef4444';                   // Red for below 40%
 }
 
 /**
@@ -270,17 +270,8 @@ function createJobCard(job) {
     const matchColor = getMatchScoreColor(matchData.score);
 
     badgeHTML = `
-      <div class="match-score-badge" style="
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: ${matchColor};
-      color: white;
-      border-radius: 20px;
-      font-weight: bold;
-      z-index: 10;
-      "> 
-      ${matchData.score}% Match
+      <div class="match-score-badge" style="background: ${matchColor};">
+        ${matchData.score}% Match
       </div>
     `;
   }
@@ -1031,10 +1022,72 @@ function openJobDetailOverlay(job) {
     const scoreElement = document.getElementById('overlay-match-score');
     scoreElement.textContent = `${matchData.score}%`;
     scoreElement.style.color = scoreColor;
-    //COME BACK AND ADD HTML
-    const progressBar = document.getElementById('overlay-progress-bar');
-    progressBar.style.width = `${matchData.score}%`;
-    progressBar.style.background = scoreColor;
+    
+    const matchBar = document.getElementById('overlay-match-bar');
+    matchBar.style.width = `${matchData.score}%`;
+    matchBar.style.background = scoreColor;
+
+    const breakdown = matchData.breakdown || {};
+
+    const techScore = document.getElementById('overlay-technical-score');
+    techScore.textContent = `${breakdown.techincal || 0}`;
+    techScore.style.color = getMatchScoreColor(breakdown.technical);
+
+    const softScore = document.getElementById('overlay-softSkills-score');
+    softScore.textContent = `${breakdown.softSkills || 0}`;
+    softScore.style.color = getMatchScoreColor(breakdown.softSkills);
+
+    const educationScore = document.getElementById('overlay-education-score');
+    educationScore.textContent = `${breakdown.education || 0}`;
+    educationScore.style.color = getMatchScoreColor(breakdown.education);
+
+    const expScore = document.getElementById('overlay-experience-score');
+    expScore.textContent = `${breakdown.experience || 0}`;
+    expScore.style.color = getMatchScoreColor(breakdown.experience);
+
+    const matchedSkillsContainer = document.getElementById('overlay-matched-skills');
+    const matchedSkills = matchData.matchedSkills || {};
+    
+    const allMatchedSkills = [
+      ...(matchedSkills.techincal || []),
+      ...(matchedSkills.softSkills || [])
+    ];
+
+    if (allMatchedSkills.length > 0){
+      matchedSkillsContainer.innerHTML = allMatchedSkills
+      .map(skill => `<span class="skill-tag">${skill}</span>`)
+      .join('');
+    } else{
+      matchedSkillsContainer.innerHTML = '<span class="no-skills-message">No matching skills found </span>';
+    }
+
+    const missingSkillsContainer = document.getElementById('overlay-missing-skills');
+    const missingSkills = matchData.missingSkills || {};
+
+    const allMissingSkills = [
+      ...(missingSkills.technical || []),
+      ...(missingSkills.softSkills || [])
+    ];
+
+    if (allMissingSkills.length > 0) {
+      const displaySkills = allMissingSkills.slice(0, 10);
+      const moreCount = allMissingSkills.length - displaySkills.length;
+
+      let html = displaySkills
+        .map(skill => `<span class="skill-tag">${skill}</span>`)
+        .join('');
+
+      if (moreCount > 0){
+        html += `<span class=skill-tag" style="background: rgb(255, 255, 255); color: rgb(83, 83, 83);">+${moreCount} more </span>`;
+      } 
+
+      missingSkillsContainer.innerHTML = html;
+
+    } else{
+      missingSkillsContainer.innerHTML = '<span class ="no-skills-message"> Great! No key skills missing</span>';
+    }
+  } else {
+    matchSection.style.display = 'none';
   }
   
   const desc = job.description ? 
