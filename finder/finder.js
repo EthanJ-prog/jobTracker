@@ -923,11 +923,11 @@ async function handleResumeUpload(file) {
     
     dropZone.innerHTML = `
     <div class="upload-success">
-    <p>Resume Uploaded!</p>
+      <p>Resume Uploaded!</p>
+      <p>Matched against ${matchCount} jobs, Average Score: ${avgScore}%</p>
+      <button type="button" id="uploadNewResume" class="button"> Upload different resume</button>
     </div>
-
     `;
-
 
     document.getElementById('uploadNewResume').addEventListener('click', () => {
       dropZone.innerHTML = originalContent;
@@ -943,7 +943,7 @@ async function handleResumeUpload(file) {
       }
 
     });
-    alert(`Resume uploaded succesfully! Matched against ${matchCount} jobs with an average score of ${averageScore}%.`);
+    alert(`Resume uploaded succesfully! Matched against ${matchCount} jobs with an average score of ${avgScore}%.`);
 
   } catch (err) {
     console.error('Error uploading resume', err);
@@ -951,8 +951,17 @@ async function handleResumeUpload(file) {
 
     const dropZone = document.getElementById('dropZone');
     console.error('Error matching jobs', err);
-    dropZone.innerHTML = `<div class="file-input-container"`;
-    // come back to this 
+    dropZone.innerHTML = `
+      <div class="file-input-container">
+        <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+        <div class="upload-trigger">
+          <span class="upload-icon">ADD ICON HERE</span>
+          <span>Drop your resume here or click to upload</span>
+        </div>
+        <p class="file-types">Supported formats: PDF, DOC, DOCX</p>
+      </div>
+      `;
+
     document.getElementById('resumeFile').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) handleResumeUpload(file);
@@ -1011,7 +1020,7 @@ function openJobDetailOverlay(job) {
   document.getElementById('overlay-remote').textContent = job.is_remote ? 'Yes' : 'No';
   remoteContainer.style.display = 'block';
 
-  const matchSection = document.getElementById('overlay-matched-section');
+  const matchSection = document.getElementById('overlay-match-section');
   const matchData = matchScore[job.id];
 
   if (hasResume && matchData && matchSection) {
