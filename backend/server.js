@@ -518,6 +518,17 @@ async function upsertJobListing(db, row){
                 if(err) {
                     return reject(err);
                 }
+
+                db.get(
+                    'SELECT id FROM job_listings WHERE job_id = ?', 
+                    [row.job_id],
+                    (lookupErr, jobRow) => {
+                        if (!lookupErr && jobRow) {
+                            recalculateMatches(jobRow.id, row.title, row.description);
+                        }
+                    }
+                );
+
                 resolve({changes: this.changes, ollamaTime: ollamaTime});
             }
         );
@@ -1427,6 +1438,51 @@ function calculateAllMatches(resumeID, rawText) {
             );
         });
     });
+}
+
+function recalculateMatches(jobID, jobTitle, jobDesc) {
+    if (!jobDesc) {
+        console.log("Skipping job, missing description", jobID);    
+        return;
+    }
+
+    db.get('SELECT id, raw_text FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, resume) => {
+        if (err) {
+            console.err('Error fetching resumes for match recalculation', err);
+            return;
+        }
+
+        if (!resume || !resume.rawText) {
+            console.log('Resume not found');
+            return;
+        }
+
+        const matchResult = calculateMatchScore(resume.raw_text, jobDesc, jobTitle || '');
+        
+        db.run(
+            `INSERT or REPLACE INTO job_matches
+            (resume_id, job_id, match_score, breakdown_json, matched_skills_json, missing_skills_json, calculated_at)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [
+                resume.id,
+                jobID,
+                matchResult.score,
+                JSON.stringify(matchResult.breakdown),
+                JSON.stringify(matchResult.matchedSkills),
+                JSON.stringify(matchResult.missingSkills)
+            ],
+            (err) =>{
+                if (err){
+                    console.error(`Error saving match for job ${jobID}: `, err);
+                } else {
+                    console.log(`Match score recalculated for ${jobID}`, matchResult.score);
+                }
+
+            }
+        );
+    });
+
+
 }
 
 app.get('/api/resume', (req, res) => {
