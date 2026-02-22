@@ -63,7 +63,7 @@
     <section class="board">
       <!-- Search input and filter toggle -->
       <div class="search-bar-container">
-        <input type="text" id="search-input" placeholder="Search jobs..." />
+        <input type="text" id="search-input" placeholder="Search jobs..." aria-label="Search jobs" />
         <button class="filter-button" onclick="toggleFilters()">Filters</button>
       </div>
 
@@ -140,8 +140,13 @@
               </div>
             </div>
 
-            <!-- Dynamic job cards container -->
-            <div class="job-listings-container"></div>
+            <!-- Dynamic job cards container (placeholder shown when JS disabled) -->
+            <div class="job-listings-container">
+              <div class="loading-message card" role="status">
+                <h3>Loading jobs...</h3>
+                <p>If nothing appears, try refreshing the page or check your connection.</p>
+              </div>
+            </div>
           </section>
         </div>
 
@@ -203,9 +208,13 @@
           <section class="map-section">
             <h2>Job Locations</h2>
             <!-- Map container for visualizing job locations -->
-            <div id="map">
-              <!-- Map will be rendered here -->
-               
+            <div id="map" aria-label="Job locations map">
+              <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;padding:24px;">
+                <div>
+                  <strong>Map view</strong>
+                  <p style="margin:8px 0 0">Interactive job location map will appear here when available.</p>
+                </div>
+              </div>
             </div>
           </section>
         </div>

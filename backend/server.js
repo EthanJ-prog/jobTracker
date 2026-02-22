@@ -10,7 +10,10 @@ const multer = require('multer');
 const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key_change_this';
 const twoFactorCodes = new Map();
+
 
 // Initialize Express application
 const app = express();
@@ -550,44 +553,52 @@ function isStrongPassword(password) {
     return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChars;
 }
 
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+}
+
 app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+        return res.status(400).json({ error: 'Email and password required' });
     }
 
-    if (password.length < 12) {
-      return res.status(400).json({ error: 'Password must be at least 12 characters' });
-    }
+    if (!isStrongPassword(password)) {
+        return res.status(400).json({
+        error: 'Password must be at least 12 characters and include uppercase, lowercase, number, and special character'
+        });
+   }   
+    const passwordHash = await bcrypt.hash(password, 12);
 
-    // Hash password
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    // Insert user
-    const query = `
-      INSERT INTO users (email, password_hash)
-      VALUES (?, ?)
-    `;
-
-    db.run(query, [email, passwordHash], function (err) {
-      if (err) {
-        if (err.message.includes('UNIQUE')) {
-          return res.status(409).json({ error: 'Email already in use' });
+    db.run(
+      `INSERT INTO users (email, password_hash) VALUES (?, ?)`,
+      [email, passwordHash],
+      function (err) {
+        if (err) {
+          if (err.message.includes('UNIQUE')) {
+            return res.status(409).json({ error: 'Email already in use' });
+          }
+          return res.status(500).json({ error: 'Database error' });
         }
-        return res.status(500).json({ error: 'Database error' });
+
+        res.status(201).json({
+          message: 'User created successfully'
+        });
       }
+    );
 
-      res.status(201).json({
-        message: 'User created successfully',
-        userId: this.lastID
-      });
-    });
-
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -597,64 +608,51 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    // Look up user in DB
     db.get(
       `SELECT id, password_hash, two_factor_enabled FROM users WHERE email = ?`,
       [email],
       async (err, user) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: 'Database error' });
-        }
+        if (err) return res.status(500).json({ error: 'Database error' });
+        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-        // User not found
-        if (!user) {
-          return res.status(401).json({ error: 'Invalid credentials' });
-        }
+        const match = await bcrypt.compare(password, user.password_hash);
+        if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
-        // Compare password with bcrypt
-        const passwordMatch = await bcrypt.compare(
-          password,
-          user.password_hash
-        );
-
-        if (!passwordMatch) {
-          return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        // If user has 2FA enabled
         if (user.two_factor_enabled) {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
 
           twoFactorCodes.set(user.id, {
             code,
-            expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
+            expiresAt: Date.now() + 5 * 60 * 1000
           });
 
-          // In real app email the code here
           console.log(`2FA code for ${email}: ${code}`);
 
-          return res.status(200).json({
-            message: '2FA required',
+          return res.json({
             twoFactorRequired: true,
             userId: user.id
           });
         }
 
-        // Login success (no 2FA)
-        res.status(200).json({
-          message: 'Login successful',
-          authenticated: true
+        // No 2FA = Issue JWT
+        const token = jwt.sign(
+          { userId: user.id },
+          JWT_SECRET,
+          { expiresIn: '1h' }
+        );
+
+        res.json({
+          authenticated: true,
+          token
         });
       }
     );
-  } catch (err) {
-    console.error(err);
+
+  } catch {
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -686,15 +684,25 @@ app.post('/api/auth/2fa/verify', async (req, res) => {
 
     twoFactorCodes.delete(userId);
 
-    res.status(200).json({
-      message: '2FA verification successful',
-      authenticated: true
+    // Issue JWT AFTER successful 2FA
+    const token = jwt.sign(
+      { userId },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      authenticated: true,
+      token
     });
 
-  } catch (err) {
-    console.error(err);
+  } catch {
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+app.get('/api/protected', authenticateToken, (req, res) => {
+  res.json({ message: 'Access granted' });
 });
 
 /**
