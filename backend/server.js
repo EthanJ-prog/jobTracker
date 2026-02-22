@@ -11,9 +11,20 @@ const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+// Secret used to sign JWTs. In production this should come from a secure
+// environment variable and be rotated regularly. The fallback is only for
+// local development and must NOT be used in production systems.
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key_change_this';
+
+// In-memory store for short-lived 2FA codes. Keys are user IDs and values
+// contain the code plus an expiration timestamp. This is suitable for small
+// deployments and testing but should be backed by a shared store (Redis)
+// when running multiple server instances.
 const twoFactorCodes = new Map();
 
+const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
+const formData = require('form-data');
 
 // Initialize Express application
 const app = express();
@@ -379,7 +390,7 @@ async function generateJobDescriptionSummary(description) {
         const prompt = `You are an expert job description analyst. Create a concise, professional summary of the following job posting. 
         
         INSTRUCTIONS: 
-        - Write a single, well structured paragraph (50-100 words)
+        - Write a single, well structured paragraph (75 words; one to two concise sentences)
         - Focus on the most important aspects: role purpose, key responsibilities, essential requriments, and notable benefits
         - Use clear, professional language suitable for job seekers
         - Avoid redundancy and generic phrases 
@@ -389,7 +400,7 @@ async function generateJobDescriptionSummary(description) {
         - Maintain a neutral, informative tone 
 
         OUTPUT FORMAT: 
-        Write only the summary paragraph. Do not include headers, bullet points, or formatting marks. The summary should flow naturally as a single paragraph.
+        Write only the summary paragraph (75 words). Do not include headers, bullet points, or formatting marks. Keep it concise and suitable for a short card preview.
 
         Job Description:
         ${cleanDescription}
@@ -538,6 +549,7 @@ async function upsertJobListing(db, row){
     });
 }
 
+
 /**
  * Checks if a password meets strong security requirements
  * Requires: 12+ characters, uppercase, lowercase, numbers, and special characters
@@ -553,54 +565,102 @@ function isStrongPassword(password) {
     return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChars;
 }
 
+// Middleware helper: verifies a Bearer JWT from the Authorization header.
+// On success attaches decoded token payload to `req.user` and calls `next()`.
+// Responds with 401 when no token provided, 403 when token invalid/expired.
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.sendStatus(401);
+    if (!token) return res.sendStatus(401);
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
 }
 
-app.post('/api/auth/signup', async (req, res) => {
-  try {
-    const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password required' });
+async function send2FACodeByEmail(code, email) {
+    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+        return false;
     }
-
-    if (!isStrongPassword(password)) {
-        return res.status(400).json({
-        error: 'Password must be at least 12 characters and include uppercase, lowercase, number, and special character'
+    
+    const form = new FormData();
+    form.append('from', `Pathfinder 2FA <postmaster@${MAILGUN_DOMAIN}>`);
+    form.append('to', email);
+    form.append('subject', 'Pathfinder login code! Do not share');
+    form.append('text', `Your verification code is: ${code}\n\nDo not share this with anyone. It expires in 5 minutes.`);
+    try {
+        const res = await fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
+            method: 'POST',
+            headers: {
+                authorization: 'Basic ' + Buffer.from('api:' + MAILGUN_API_KEY).toString('base64'),
+                ...form.getHeaders()
+            },
+            body: form
         });
-   }   
-    const passwordHash = await bcrypt.hash(password, 12);
 
-    db.run(
-      `INSERT INTO users (email, password_hash) VALUES (?, ?)`,
-      [email, passwordHash],
-      function (err) {
-        if (err) {
-          if (err.message.includes('UNIQUE')) {
-            return res.status(409).json({ error: 'Email already in use' });
-          }
-          return res.status(500).json({ error: 'Database error' });
+        if (!res.ok) {
+            const errText = await res.text();
+            console.error('Mailgun send failed:', res.status, errText);
+            return false;
         }
 
-        res.status(201).json({
-          message: 'User created successfully'
-        });
-      }
-    );
+        return true;
 
-  } catch {
-    res.status(500).json({ error: 'Server error' });
-  }
+    } catch (err) {
+        console.error('Mailgun send error: ', err.message);
+        return false;
+    }
+}
+
+// Sign-up endpoint: validates input, enforces password strength,
+// hashes the password with bcrypt and stores the user in `users` table.
+// Returns 201 on success, 409 if email is already used, and 400/500 for
+// client/server errors respectively.
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Basic input validation
+        if (!email || !password) {
+                return res.status(400).json({ error: 'Email and password required' });
+        }
+
+        // Enforce strong passwords to reduce account compromise risk
+        if (!isStrongPassword(password)) {
+                return res.status(400).json({
+                error: 'Password must be at least 12 characters and include uppercase, lowercase, number, and special character'
+                });
+     }
+
+        // Hash the password before storing. Use a reasonable salt rounds count.
+        const passwordHash = await bcrypt.hash(password, 12);
+
+        db.run(
+            `INSERT INTO users (email, password_hash) VALUES (?, ?)`,
+            [email, passwordHash],
+            function (err) {
+                if (err) {
+                    // Unique constraint violation -> duplicate email
+                    if (err.message.includes('UNIQUE')) {
+                        return res.status(409).json({ error: 'Email already in use' });
+                    }
+                    return res.status(500).json({ error: 'Database error' });
+                }
+
+                // Created successfully
+                res.status(201).json({
+                    message: 'User created successfully'
+                });
+            }
+        );
+
+    } catch {
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
 
@@ -630,7 +690,10 @@ app.post('/api/auth/login', async (req, res) => {
             expiresAt: Date.now() + 5 * 60 * 1000
           });
 
-          console.log(`2FA code for ${email}: ${code}`);
+          const sent = await send2FACodeByEmail(code, email);
+          if (!sent) {
+            return console.log(`2FA code for ${email}: ${code}`);
+          }
 
           return res.json({
             twoFactorRequired: true,
@@ -656,6 +719,14 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// Login endpoint: verifies credentials and handles optional 2FA.
+// Flow:
+// 1) Verify email/password against stored bcrypt hash.
+// 2) If user has 2FA enabled, generate a short-lived code and return
+//    a response indicating 2FA is required (actual delivery of the code
+//    should be done via email/SMS in production).
+// 3) If 2FA not enabled, issue a signed JWT (1 hour expiry).
 
 
 
@@ -701,8 +772,15 @@ app.post('/api/auth/2fa/verify', async (req, res) => {
   }
 });
 
+// 2FA verification endpoint: checks the short-lived code previously
+// generated during login. On successful verification the server issues
+// the same JWT used for normal logins. Codes are deleted after use
+// or when expired to prevent replay attacks.
+
+// Example protected route which requires a valid JWT. The `authenticateToken`
+// middleware validates the token and exposes decoded payload in `req.user`.
 app.get('/api/protected', authenticateToken, (req, res) => {
-  res.json({ message: 'Access granted' });
+    res.json({ message: 'Access granted' });
 });
 
 /**

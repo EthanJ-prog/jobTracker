@@ -239,16 +239,19 @@ main {
 /* Individual job card styling with hover effects */
 .job-card {
     position: relative;
-    min-height: 320px;
+    /* Slightly reduced fixed height to keep cards consistent and reduce blank space */
+    height: 500px;
+    width: 260px;
     background-color: white;
     border-radius: 10px;
-    padding: 16px 20px 80px 50px;
+    padding: 16px 20px 80px 20px;
     box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
     transition: transform 0.18s, box-shadow 0.18s;
     border-color: #FAFAFA;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    overflow: hidden;
 }
 
 /* Job card hover animation with lift and scale effect */
@@ -303,6 +306,15 @@ main {
     font-size: 13px;
     line-height: 1.6;
     font-style: normal;
+}
+
+/* Limit visible description length to reduce blank space and keep cards uniform */
+.job-description-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* show up to 3 lines */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .job-description-text em {
