@@ -73,9 +73,13 @@ async function fetchJobs(query = '', page = 1, filters = null) {
     const maxFetchAttempts = 20; // Increased safety limit
     let fetchAttempts = 0;
     let hasMoreData = true;
+
+    const sortSelect = document.getElementById('sort-select');
+    const requireGlobalFetch = sortSelect && sortSelect.value === 'match-desc';
     
-    // Keep fetching batches until we have enough unsaved jobs for the current page OR we've exhausted the database
-    while ((allUnsavedJobs.length < targetOffset + PAGE_SIZE) && hasMoreData && fetchAttempts < maxFetchAttempts) {
+    // Keep fetching batches until we have enough unsaved jobs for the current
+    // page (unless global fetch is requested) OR we've exhausted the database
+    while ((requireGlobalFetch || allUnsavedJobs.length < targetOffset + PAGE_SIZE) && hasMoreData && fetchAttempts < maxFetchAttempts) {
       fetchAttempts++;
       
       const params = new URLSearchParams();
@@ -153,15 +157,32 @@ async function fetchJobs(query = '', page = 1, filters = null) {
       }
     }
     
-    console.log(`Finished fetching: ${allUnsavedJobs.length} total unsaved jobs available`);
+    console.log(`Finished fetching: ${allUnsavedJobs.length} total unsaved jobs available${requireGlobalFetch ? ' (global fetch/sort active)' : ''}`);
     
+    try {
+      const sortSelect = document.getElementById('sort-select');
+      if (sortSelect && sortSelect.value === 'match-desc') {
+        allUnsavedJobs.sort((a, b) => {
+          const aScore = (matchScore[a.id] && typeof matchScore[a.id].score === 'number')
+            ? matchScore[a.id].score
+            : -1;
+          const bScore = (matchScore[b.id] && typeof matchScore[b.id].score === 'number')
+            ? matchScore[b.id].score
+            : -1;
+          return bScore - aScore;
+        });
+      }
+    } catch (err) {
+      console.warn('Sorting by match score failed:', err);
+    }
+
     // Extract the jobs for the current page
     const startIndex = targetOffset;
     const endIndex = startIndex + PAGE_SIZE;
     const toDisplay = allUnsavedJobs.slice(startIndex, endIndex);
     
     console.log(`Page ${page}: Showing jobs ${startIndex} to ${endIndex} (${toDisplay.length} jobs)`);
-    
+
     allJobs = toDisplay;
     displayJobs(toDisplay);
 
@@ -786,6 +807,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeJobDetailOverlay();
     initializeFilters();
     initializeResumeUpload();
+    // Wire sort control to re-fetch results (go back to page 1 when sorting changes)
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => {
+        fetchJobs(currentQuery, 1, currentFilters);
+      });
+    }
 });
 
 function initializeFilters() {
