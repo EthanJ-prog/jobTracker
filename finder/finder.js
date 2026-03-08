@@ -75,7 +75,9 @@ async function fetchJobs(query = '', page = 1, filters = null) {
     let hasMoreData = true;
 
     const sortSelect = document.getElementById('sort-select');
-    const requireGlobalFetch = sortSelect && sortSelect.value === 'match-desc';
+    const sortValue = sortSelect ? sortSelect.value : '';
+    const requireGlobalFetch = sortValue !== '';
+  
     
     // Keep fetching batches until we have enough unsaved jobs for the current
     // page (unless global fetch is requested) OR we've exhausted the database
@@ -161,7 +163,7 @@ async function fetchJobs(query = '', page = 1, filters = null) {
     
     try {
       const sortSelect = document.getElementById('sort-select');
-      if (sortSelect && sortSelect.value === 'match-desc') {
+      if (sortValue === 'match-desc') {
         allUnsavedJobs.sort((a, b) => {
           const aScore = (matchScore[a.id] && typeof matchScore[a.id].score === 'number')
             ? matchScore[a.id].score
@@ -171,9 +173,30 @@ async function fetchJobs(query = '', page = 1, filters = null) {
             : -1;
           return bScore - aScore;
         });
+      } else if (sortValue === 'match-asce'){
+          allUnsavedJobs.sort((a, b) => {
+          const aScore = (matchScore[a.id] && typeof matchScore[a.id].score === 'number')
+            ? matchScore[a.id].score
+            : -1;
+          const bScore = (matchScore[b.id] && typeof matchScore[b.id].score === 'number')
+            ? matchScore[b.id].score
+            : -1;
+          return aScore - bScore;
+        });
+      } else if (sortValue === 'date-desc' || sortValue === 'date-asce') {
+        allUnsavedJobs.sort((a, b) => {
+        const aHasDate = !!a.posted_date;
+        const bHasDate = !!b.posted_date;
+        if (!aHasDate && !bHasDate) return 0;
+        if (!aHasDate) return 1;
+        if (!bHasDate) return -1;
+        const aTime = new Date(a.posted_date).getTime();
+        const bTime = new Date(b.posted_date).getTime();
+        return sortValue === 'date-desc' ? bTime - aTime : aTime - bTime;
+        });
       }
     } catch (err) {
-      console.warn('Sorting by match score failed:', err);
+      console.warn('Sorting failed:', err);
     }
 
     // Extract the jobs for the current page
