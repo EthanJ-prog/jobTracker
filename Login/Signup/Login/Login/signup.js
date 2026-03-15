@@ -48,17 +48,6 @@ function showToast(message, type = 'info', duration = 5000) {
     }, duration);
 }
 
-// Toggle 2FA code input visibility
-function toggle2FA() {
-    const checkbox = document.getElementById('enable-2fa');
-    const codeDiv = document.getElementById('2fa-code');
-
-    if (checkbox.checked) {
-        codeDiv.style.display = 'block';
-    } else {
-        codeDiv.style.display = 'none';
-    }
-}
 
 // Form validation and submission
 document.addEventListener('DOMContentLoaded', function() {

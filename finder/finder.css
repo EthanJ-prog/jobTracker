@@ -117,6 +117,26 @@ main {
     white-space: nowrap;
 }
 
+/* Sort select dropdown styling */
+#sort-select {
+    padding: 8px 12px;
+    border: 2px solid #e0e7ff;
+    border-radius: 8px;
+    background: white;
+    font-size: 14px;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+/* Sort select focus state */
+#sort-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(92, 107, 192, 0.15);
+}
+
 /* Filter toggle button with gradient background */
 .filter-button {
     padding: 10px 16px;

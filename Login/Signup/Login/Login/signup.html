@@ -21,7 +21,12 @@
                 
                 <label for="login-password">Password:</label>
                 <input type="password" id="login-password" required>
-                
+
+                <div id="2fa-code" style="display: none;">
+                    <label for="verification-code">Enter the 6-digit code sent to your email:</label>
+                    <input type="text" id="verification-code" placeholder="123456" maxlength="6">
+                </div>
+
                 <button type="submit">Login</button>
             </form>
         </div>
@@ -39,13 +44,9 @@
                 <input type="password" id="signup-confirm-password" required>
                 
                 <label>
-                    <input type="checkbox" id="enable-2fa" onchange="toggle2FA()"> Enable Two-Factor Authentication (2FA)
+                    <input type="checkbox" id="enable-2fa">Enable Two-Factor Authentication (2FA)
                 </label>
                 
-                <div id="2fa-code" style="display: none;">
-                    <label for="verification-code">Verification Code (from Mailgun):</label>
-                    <input type="text" id="verification-code" placeholder="Enter 6-digit code">
-                </div>
                 
                 <button type="submit">Sign Up</button>
             </form>

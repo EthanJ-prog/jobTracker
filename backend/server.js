@@ -24,7 +24,7 @@ const twoFactorCodes = new Map();
 
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
 const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
-const formData = require('form-data');
+const FormData = require('form-data');
 
 // Initialize Express application
 const app = express();
@@ -622,7 +622,7 @@ async function send2FACodeByEmail(code, email) {
 // client/server errors respectively.
 app.post('/api/auth/signup', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, twoFactorEnabled} = req.body;
 
         // Basic input validation
         if (!email || !password) {
@@ -638,10 +638,11 @@ app.post('/api/auth/signup', async (req, res) => {
 
         // Hash the password before storing. Use a reasonable salt rounds count.
         const passwordHash = await bcrypt.hash(password, 12);
+        const enable2FA = twoFactorEnabled ? 1 : 0;
 
         db.run(
-            `INSERT INTO users (email, password_hash) VALUES (?, ?)`,
-            [email, passwordHash],
+            `INSERT INTO users (email, password_hash, two_factor_enabled) VALUES (?, ?, ?)`,
+            [email, passwordHash, enable2FA],
             function (err) {
                 if (err) {
                     // Unique constraint violation -> duplicate email
