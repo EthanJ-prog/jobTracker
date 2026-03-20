@@ -640,7 +640,7 @@ async function send2FACodeByEmail(code, email) {
 // client/server errors respectively.
 app.post('/api/auth/signup', authLimiter, async (req, res) => {
     try {
-        const { email, password, twoFactorEnabled} = req.body;
+        const { email, password, twoFactorEnabled, enable2FA} = req.body;
 
         // Basic input validation
         if (!email || !password) {
@@ -656,7 +656,8 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
 
         // Hash the password before storing. Use a reasonable salt rounds count.
         const passwordHash = await bcrypt.hash(password, 12);
-        const enable2FA = twoFactorEnabled ? 1 : 0;
+        const requested2FA = typeof twoFactorEnabled !== 'undefined' ? twoFactorEnabled : enable2FA;
+        const enable2FA = requested2FA ? 1 : 0;
 
         db.run(
             `INSERT INTO users (email, password_hash, two_factor_enabled) VALUES (?, ?, ?)`,
