@@ -24,10 +24,12 @@ async function apiCall(endpoint, options = {}) {
 // Initialize the job tracker when DOM is loaded
 window.addEventListener('DOMContentLoaded', async () => {
   try {
+    setupAuthNav();
+
     // Fetch all jobs from the API
     const jobs = await apiCall('/jobs');
     console.log('Jobs loaded from the server:', jobs);
-    
+
     // Create job cards and place them in appropriate columns
     if (jobs && jobs.length > 0) {
       jobs.forEach(job => {
@@ -57,7 +59,44 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
   })();
+
 });
+
+function setupAuthNav() {
+  const token = localStorage.getItem('token');
+  const loginLink = document.getElementById('nav-login'); 
+  const userWrap = document.getElementById('nav-user-wrap');
+  const signOutButton = document.getElementById('nav-signout');
+  const detailsMenu = document.getElementById('user-menu-details');
+
+  if (token) {
+    if (loginLink) loginLink.style.display = 'none';
+
+    if (userWrap) userWrap.style.display = 'block';
+  
+  } else {
+    if (loginLink) loginLink.style.display = 'inline-flex';
+
+    if (userWrap) userWrap.style.display = 'none';
+
+  }
+
+  if (signOutButton) {
+    signOutButton.addEventListener('click', () => {
+      localStorage.removeItem('token');
+
+      if (detailsMenu) {
+        detailsMenu.removeAttribute('open');
+      }
+      window.location.href = '../Login/Signup/Login/Login/signup.html';
+
+    });
+
+
+  }
+}
+
+
 
 // Global variable to track the currently dragged job and its source column
 let draggedJob = { job: null, sourceColumnId: '' };

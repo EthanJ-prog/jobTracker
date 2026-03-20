@@ -11,6 +11,7 @@ const pdfParse = require('pdf-parse');
 const mammoth = require('mammoth');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 // Secret used to sign JWTs. In production this should come from a secure
 // environment variable and be rotated regularly. The fallback is only for
 // local development and must NOT be used in production systems.
@@ -33,6 +34,23 @@ const PORT = process.env.PORT || 3000;
 // Configure middleware
 app.use(cors()); // Enable CORS for cross-origin requests
 app.use(express.json()); // Parse JSON request bodies
+
+// Rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: 'Too many authentication attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const twoFALimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10, // limit each IP to 10 2FA attempts per windowMs
+  message: 'Too many 2FA attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const upload = multer({
     storage: multer.memoryStorage(),
@@ -620,7 +638,7 @@ async function send2FACodeByEmail(code, email) {
 // hashes the password with bcrypt and stores the user in `users` table.
 // Returns 201 on success, 409 if email is already used, and 400/500 for
 // client/server errors respectively.
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', authLimiter, async (req, res) => {
     try {
         const { email, password, twoFactorEnabled} = req.body;
 
@@ -665,7 +683,7 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -693,7 +711,7 @@ app.post('/api/auth/login', async (req, res) => {
 
           const sent = await send2FACodeByEmail(code, email);
           if (!sent) {
-            console.log(`2FA code for ${email}: ${code}`);
+            return res.status(500).json({ error: 'Failed to send 2FA code. Please try again later.' });
           }
 
           return res.json({
@@ -731,7 +749,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 
-app.post('/api/auth/2fa/verify', async (req, res) => {
+app.post('/api/auth/2fa/verify', twoFALimiter, async (req, res) => {
   try {
     const { userId, code } = req.body;
 
