@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('2fa-code').style.display = 'block';
                     showToast('The authentication code has been sent to your email!', 'info');
                 } else if (res.ok && data.authenticated) {
-                    localStorage.setItem('token', data.value);
+                    localStorage.setItem('token', data.token);
                     showToast('Login successful', 'success');
                     window.location.href = '../../../../home/home.html';
                 } else {
@@ -154,8 +154,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const res = await fetch(API_URL + '/api/auth/signup', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/JSON'},
-                body: JSON.stringify({ email: email, password: password, enable2fa: enable2FA })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, enable2FA })
             });
 
             const data = await res.json();

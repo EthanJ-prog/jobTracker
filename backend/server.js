@@ -23,9 +23,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key_change_this';
 // when running multiple server instances.
 const twoFactorCodes = new Map();
 
-const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
-const FormData = require('form-data');
+const { Resend } = require('resend');
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const RESEND_FROM =
+    process.env.RESEND_FROM || 'Pathfinder 2FA <onboarding@resend.dev>';
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 // Initialize Express application
 const app = express();
@@ -601,35 +603,29 @@ function authenticateToken(req, res, next) {
 
 
 async function send2FACodeByEmail(code, email) {
-    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+    if (!resend) {
         return false;
     }
-    
-    const form = new FormData();
-    form.append('from', `Pathfinder 2FA <postmaster@${MAILGUN_DOMAIN}>`);
-    form.append('to', email);
-    form.append('subject', 'Pathfinder login code! Do not share');
-    form.append('text', `Your verification code is: ${code}\n\nDo not share this with anyone. It expires in 5 minutes.`);
+
+    const text = `Your verification code is: ${code}\n\nDo not share this with anyone. It expires in 5 minutes.`;
+
     try {
-        const res = await fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
-            method: 'POST',
-            headers: {
-                authorization: 'Basic ' + Buffer.from('api:' + MAILGUN_API_KEY).toString('base64'),
-                ...form.getHeaders()
-            },
-            body: form
+        const { error } = await resend.emails.send({
+            from: RESEND_FROM,
+            to: email,
+            subject: 'Pathfinder login code — do not share',
+            text,
+            html: `<p>Your verification code is: <strong>${code}</strong></p><p>Do not share this with anyone. It expires in 5 minutes.</p>`
         });
 
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error('Mailgun send failed:', res.status, errText);
+        if (error) {
+            console.error('Resend send failed:', error);
             return false;
         }
 
         return true;
-
     } catch (err) {
-        console.error('Mailgun send error: ', err.message);
+        console.error('Resend send error:', err.message);
         return false;
     }
 }
@@ -640,7 +636,7 @@ async function send2FACodeByEmail(code, email) {
 // client/server errors respectively.
 app.post('/api/auth/signup', authLimiter, async (req, res) => {
     try {
-        const { email, password, twoFactorEnabled, enable2FA} = req.body;
+        const { email, password, twoFactorEnabled, enable2FA: enable2FARequest } = req.body;
 
         // Basic input validation
         if (!email || !password) {
@@ -656,7 +652,10 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
 
         // Hash the password before storing. Use a reasonable salt rounds count.
         const passwordHash = await bcrypt.hash(password, 12);
-        const requested2FA = typeof twoFactorEnabled !== 'undefined' ? twoFactorEnabled : enable2FA;
+        const requested2FA =
+            typeof twoFactorEnabled !== 'undefined'
+                ? twoFactorEnabled
+                : (enable2FARequest ?? req.body.enable2fa);
         const enable2FA = requested2FA ? 1 : 0;
 
         db.run(
