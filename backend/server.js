@@ -25,8 +25,7 @@ const twoFactorCodes = new Map();
 
 const { Resend } = require('resend');
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM =
-    process.env.RESEND_FROM || 'Pathfinder 2FA <onboarding@resend.dev>';
+const RESEND_FROM = process.env.RESEND_FROM || 'Pathfinder 2FA <onboarding@resend.dev>';
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 // Initialize Express application
@@ -420,7 +419,7 @@ async function generateJobDescriptionSummary(description) {
         - Maintain a neutral, informative tone 
 
         OUTPUT FORMAT: 
-        Write only the summary paragraph (75 words). Do not include headers, bullet points, or formatting marks. Keep it concise and suitable for a short card preview.
+        Write only the summary paragraph (75 words). Do not include headers, bullet points, or formatting marks. Keep it concise and suitable for a short card preview. Do not add any information that is not explicitly stated in the description. Do not include the word "summary" in the output.
 
         Job Description:
         ${cleanDescription}

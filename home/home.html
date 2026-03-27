@@ -14,12 +14,23 @@
             <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
             <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
             <a id="nav-login" href="../Login/Signup/Login/Login/signup.html" class="nav-link">Login / Signup</a>
-            <div id="nav-user-wrap" class="user-nav" style="display: none; position: relative;">
+            <div id="nav-user-wrap" class="user-nav" style="display: none;">
                 <details id="user-menu-details">
-
-                    <summary id="user-profile">&#128100;</summary>
-                    <button id="nav-signout" type="button" class="nav-link">Sign Out</button>
-
+                    <summary id="user-profile" title="User Profile">👤</summary>
+                    <div class="user-menu">
+                        <a href="#" class="user-menu-item" id="nav-profile">
+                            <span class="menu-icon">👤</span>
+                            <span class="menu-text">Profile</span>
+                        </a>
+                        <a href="#" class="user-menu-item" id="nav-settings">
+                            <span class="menu-icon">⚙️</span>
+                            <span class="menu-text">Settings</span>
+                        </a>
+                        <button id="nav-signout" type="button" class="user-menu-item user-menu-signout">
+                            <span class="menu-icon">🚪</span>
+                            <span class="menu-text">Sign Out</span>
+                        </button>
+                    </div>
                 </details>
             </div>
         </div> 

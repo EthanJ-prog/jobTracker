@@ -1,4 +1,4 @@
-// Global state variables for job management
+﻿// Global state variables for job management
 let allJobs = [];
 
 // API configuration constants
@@ -49,6 +49,26 @@ function getMatchScoreColor(score) {
   if (score >= 60) return '#eab308';  // Yellow for 60-79%
   if (score >= 40) return '#f97316';  // Orange for 40-59%
   return '#ef4444';                   // Red for below 40%
+}
+
+/**
+ * Truncate text to specified length with ellipsis
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum character length
+ * @returns {string} Truncated text with ellipsis if needed
+ */
+function truncateText(text, maxLength = 150) {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  
+  const truncated = text.substring(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  
+  if (lastSpace > maxLength - 50) {
+    return truncated.substring(0, lastSpace) + '...';
+  }
+  
+  return truncated + '...';
 }
 
 /**
@@ -335,7 +355,7 @@ function createJobCard(job) {
       <p class="job-added"><strong>Added to DB:</strong> ${formattedCreatedDate}</p>
       <p class="job-salary"><strong>Salary:</strong> ${salaryText}</p>
       <div class="job-description-summary"> 
-        <p class="job-description-text">${job.description_summary ? `<strong>Description: </strong>${job.description_summary}` : '<em>Description summary unavailable</em>'}</p>
+        <p class="job-description-text">${job.description_summary ? `<strong>Description: </strong>${truncateText(job.description_summary, 150)}` : '<em>Description unavailable</em>'}</p>
       </div>
     </div>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
@@ -1268,4 +1288,5 @@ function initializeJobDetailOverlay() {
     }
   });
 }
+
 
