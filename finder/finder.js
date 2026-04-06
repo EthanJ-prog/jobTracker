@@ -1,5 +1,11 @@
 ﻿// Global state variables for job management
 let allJobs = [];
+let jobMap = null;
+let jobMapMarkers = [];
+let mapInitialized = false;
+
+// Map provider configuration 
+const MAP_PROVIDER = 'none';
 
 // API configuration constants
 const API_BASE = 'http://localhost:3000';
@@ -270,6 +276,145 @@ function displayJobs(jobs) {
   });
 
   updateTotalJobsDisplay();
+  // Keep map in sync for the active result set
+  updateJobMap(jobs);
+}
+
+/**
+ * Initializes the job map UI (stub style until provider is enabled)
+ */
+function initializeJobMap() {
+  if (mapInitialized) return;
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+
+  if (MAP_PROVIDER === 'leaflet' && window.L) {
+    try {
+      mapEl.style.height = '400px';
+      mapEl.innerHTML = '';
+      jobMap = L.map('map').setView([20,0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(jobMap);
+      mapInitialized = true;
+      console.info('Leaflet job map initialized');
+    } catch (err) {
+      console.error('Leaflet map initialization failed', err);
+    }
+    return;
+  }
+
+  if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
+    try {
+      mapEl.style.height = '400px';
+      mapEl.innerHTML = '';
+      jobMap = new google.maps.Map(mapEl, {
+        center: { lat: 20, lng: 0 },
+        zoom: 2
+      });
+      mapInitialized = true;
+      console.info('Google Maps job map initialized');
+    } catch (err) {
+      console.error('Google Maps initialization failed', err);
+    }
+    return;
+  }
+
+    console.warn('No map provider enabled or available - job map will not be shown');
+}
+
+function clearJobMapMarkers() {
+  if (!mapInitialized || !jobMap) return;
+
+  if (MAP_PROVIDER === 'leaflet' && window.L) {
+    jobMapMarkers.forEach(marker => jobMap.removeLayer(marker));
+    jobMapMarkers = [];
+    return;
+  }
+
+  if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
+    jobMapMarkers.forEach(marker => marker.setMap(null));
+    jobMapMarkers = [];
+    return;
+  }
+
+  jobMapMarkers = [];
+}
+
+function addJobMapMarker(job, lat, lng) {
+  if (!mapInitialized || !jobMap || typeof lat !== 'number' || typeof lng !== 'number') return;
+
+  const popupText = `${job.title || 'Job'}\n${job.company || ''}\n${job.location || ''}`;
+
+  if (MAP_PROVIDER === 'leaflet' && window.L) {
+    const marker = L.marker([lat, lng]).addTo(jobMap);
+    marker.bindPopup(popupText);
+    jobMapMarkers.push(marker);
+    return;
+  }
+
+  if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
+    const marker = new google.maps.Marker({
+      position: { lat, lng },
+      map: jobMap,
+      title: job.title || 'Job'
+    });
+    const infowindow = new google.maps.InfoWindow({ content: popupText.replace(/\n/g, '<br>') });
+    marker.addListener('click', () => infowindow.open(jobMap, marker));
+    jobMapMarkers.push(marker);
+    return;
+  }
+}
+
+async function geocodeJobLocation(location) {
+  // Stub: provider-specific geocoding should be implemented later.
+  if (!location || !location.trim()) return null;
+
+  console.warn('geocodeJobLocation is a stub; add real geocoding provider in the future.');
+  return null;
+}
+
+async function updateJobMap(jobs) {
+  initializeJobMap();
+  if (!mapInitialized || !jobMap || MAP_PROVIDER === 'none') return;
+
+  clearJobMapMarkers();
+
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    return;
+  }
+
+  const bounds = [];
+
+  for (const job of jobs) {
+    let jobLat = Number(job.latitude);
+    let jobLng = Number(job.longitude);
+
+    if (!jobLat || !jobLng) {
+      const geocoded = await geocodeJobLocation(job.location || job.city || job.region);
+      if (geocoded && geocoded.lat && geocoded.lng) {
+        jobLat = geocoded.lat;
+        jobLng = geocoded.lng;
+      }
+    }
+
+    if (isFinite(jobLat) && isFinite(jobLng)) {
+      addJobMapMarker(job, jobLat, jobLng);
+      bounds.push([jobLat, jobLng]);
+    }
+  }
+
+  if (bounds.length > 0) {
+    if (MAP_PROVIDER === 'leaflet' && window.L) {
+      const leafletBounds = bounds.map(([lat,lng]) => [lat,lng]);
+      jobMap.fitBounds(leafletBounds, { padding: [30, 30] });
+    }
+    if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
+      const googleBounds = new google.maps.LatLngBounds();
+      bounds.forEach(([lat,lng]) => googleBounds.extend({ lat, lng }));
+      jobMap.fitBounds(googleBounds);
+    }
+  }
 }
 
 /**
@@ -519,7 +664,10 @@ function showLoadingMessage() {
  */
 async function getSavedJobs() {
   try {
-    const response = await fetch(`${API_BASE}/jobs`);
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) headers["Authorization"] = 'Bearer ' + token;
+    const response = await fetch(`${API_BASE, { headers }}/jobs`);
     const jobs = await response.json();
     return jobs.filter(job => job.status === 'saved');
   } catch (error) {
@@ -533,6 +681,13 @@ async function getSavedJobs() {
  * @param {Object} job - Job object to save
  */
 async function saveJobToTracker(job) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please sign in to save jobs to the tracker.');
+    window.location.href = '../Login/Signup/Login/Login/signup.html';
+    return;
+  }
+
   const jobData = {
     title: job.title || '',
     company: job.company || '',
@@ -542,9 +697,12 @@ async function saveJobToTracker(job) {
     status: 'saved'
   };
 
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers["Authorization"] = 'Bearer ' + token;
+
   await fetch(`${API_BASE}/jobs`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers, 
     body: JSON.stringify(jobData)
   });
 }
@@ -780,7 +938,12 @@ async function updateDbCountLabel(query, filters = null) {
 
     const queryParam = params.toString() ? `?${params.toString()}` : '';
 
-    const response = await fetch(`${API_BASE}/api/jobs/count${queryParam}`);
+    const token = localStorage.getItem('token');
+    const headers = {};
+
+    if (token) headers["Authorization"] = 'Bearer ' + token;
+
+    const response = await fetch(`${API_BASE}/api/jobs/count${queryParam}`, { headers });
     if (!response.ok) return;
 
     const data = await response.json();
@@ -878,6 +1041,11 @@ document.addEventListener('DOMContentLoaded', () => {
               } else {
                 pageCtrls.style.display = 'none';
               }
+            }
+
+            if (tabID === 'map') {
+              initializeJobMap();
+              updateJobMap(allJobs);
             }
         });
     });

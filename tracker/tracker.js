@@ -8,11 +8,12 @@ const API_BASE = "http://localhost:3000";
  * @returns {Promise<Object>} - Parsed JSON response from the API
  */
 async function apiCall(endpoint, options = {}) {
+  const token = localStorage.getItem('token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers["Authorization"] = 'Bearer ' + token;
   const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json'
-    }, 
-    ...options
+    ...options, 
+    headers: { ...headers, ...(options.headers || {})}
   });
 
   if (!response.ok) {
@@ -25,6 +26,13 @@ async function apiCall(endpoint, options = {}) {
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     setupAuthNav();
+
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      window.location.href = '../Login/Signup/Login/Login/signup.html';
+      return;
+    }
 
     // Fetch all jobs from the API
     const jobs = await apiCall('/jobs');

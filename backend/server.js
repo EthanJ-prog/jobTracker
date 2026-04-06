@@ -333,7 +333,9 @@ db.run(`
         date TEXT,
         link TEXT,
         notes TEXT,
-        status TEXT DEFAULT 'saved'
+        status TEXT DEFAULT 'saved',
+        user_id INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users(id)
     )
 `);
 
@@ -596,6 +598,18 @@ function authenticateToken(req, res, next) {
     jwt.verify(token, JWT_SECRET, (err, user) => {
         if (err) return res.sendStatus(403);
         req.user = user;
+        next();
+    });
+}
+
+function optionalAuthenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return next();
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (!err) req.user = user;
         next();
     });
 }
@@ -1132,8 +1146,11 @@ app.get('/api/matches', (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-app.get('/jobs', (req, res) => {
-    db.all('SELECT * FROM saved_jobs', [], (err, rows) => {
+app.get('/jobs', authenticateToken, (req, res,) => {
+
+    const userId = req.user.userId;
+
+    db.all('SELECT * FROM saved_jobs WHERE user_id = ?', [userId], (err, rows) => {
         if (err) {
             console.error('Error fetching jobs:', err.message);
             return res.status(500).json({error: 'Failed to fetch jobs'});
@@ -1149,7 +1166,7 @@ app.get('/jobs', (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-app.get('/api/jobs/count', (req, res) => {
+app.get('/api/jobs/count', optionalAuthenticateToken, (req, res) => {
     const query = (req.query.q || '').toString().trim();
     const employmentType = (req.query.employment_type || '').toString().trim(); 
     const isRemote = (req.query.is_remote === 'true' || req.query.is_remote === '1' || req.query.is_remote === 1);
@@ -1217,21 +1234,28 @@ app.get('/api/jobs/count', (req, res) => {
     }
 
 
-    // Count job_listings that don't have a matching saved_job (by title and company)
-    // This gives accurate count of jobs that will actually be displayed
+    const savedFilter = 
+        req.user && req.userId 
+            ? `AND NOT EXISTS (
+            SELECT 1 FROM saved_jobs sj
+            WHERE sj.title = jl.title
+            AND sj.company = jl.company
+            AND sj.status = 'saved'
+            AND sj.id = ?
+        )` 
+            : '';
+
+
+    const countParams = req.user && req.userId ? [...params, req.user.userId] : params;
+
     const countSQL = `
         SELECT COUNT(*) as total 
         FROM job_listings jl
         ${whereClause}
-        AND NOT EXISTS (
-            SELECT 1 FROM saved_jobs sj 
-            WHERE sj.title = jl.title 
-            AND sj.company = jl.company
-            AND sj.status = 'saved'
-        )
+        ${savedFilter}
     `;
 
-    db.get(countSQL, params, (err, row) => {
+    db.get(countSQL, countParams, (err, row) => {
         if (err) {
             console.error('Error counting jobs:', err.message);
             return res.status(500).json({error: 'Failed to count jobs'});
@@ -1279,10 +1303,11 @@ app.post('/api/jobs/mark-expired', (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-app.post('/jobs', (req, res) => {
+app.post('/jobs', authenticateToken, (req, res) => {
     const {title, company, date, link, notes, status} = req.body;
-    const query = 'INSERT INTO saved_jobs (title, company, date, link, notes, status) VALUES (?, ?, ?, ?, ?, ?)';
-    db.run(query, [title, company, date, link, notes, status || 'saved'], function (err) {
+    const userId = req.user.userId
+    const query = 'INSERT INTO saved_jobs (title, company, date, link, notes, status, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
+    db.run(query, [title, company, date, link, notes, status || 'saved', userId], function (err) {
         if (err) {
             console.error('Error putting jobs:', err.message);
             return res.status(500).json({error: 'Failed to create job'});
@@ -1297,11 +1322,12 @@ app.post('/jobs', (req, res) => {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-app.put('/jobs/:id', (req, res) =>{
+app.put('/jobs/:id', authenticateToken, (req, res) =>{
+    const userId = req.user.userId;
     const jobId = req.params.id;
     const {title, company, date, link, notes, status} = req.body;
-    const query = 'UPDATE saved_jobs SET title = ?, company = ?, date = ?, link = ?, notes = ?, status = ? WHERE id = ?';
-    db.run(query, [title, company, date, link, notes, status || 'saved', jobId], function(err) {
+    const query = 'UPDATE saved_jobs SET title = ?, company = ?, date = ?, link = ?, notes = ?, status = ? WHERE id = ? AND user_id = ?';
+    db.run(query, [title, company, date, link, notes, status || 'saved', jobId, userId], function(err) {
         if (err) {
             console.error('Error updating jobs:', err.message);
             return res.status(500).json({error: 'Failed to update job'});
@@ -1316,9 +1342,10 @@ app.put('/jobs/:id', (req, res) =>{
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-app.delete('/jobs/:id', (req, res) =>{
+app.delete('/jobs/:id', authenticateToken, (req, res) =>{
+    const userId = req.user.userId;
     const jobId = req.params.id;
-    db.run('DELETE FROM saved_jobs WHERE id = ?', [jobId], function(err){
+    db.run('DELETE FROM saved_jobs WHERE id = ? AND user_id = ?', [jobId, userId], function(err){
          if (err) {
             console.error('Error deleting jobs:', err.message);
             return res.status(500).json({error: 'Failed to delete job'});
