@@ -5,7 +5,8 @@ let jobMapMarkers = [];
 let mapInitialized = false;
 
 // Map provider configuration 
-const MAP_PROVIDER = 'none';
+const MAP_PROVIDER = 'leaflet';
+const GEOCODE_CACHE_KEY = 'finderGeoCache';
 
 // API configuration constants
 const API_BASE = 'http://localhost:3000';
@@ -31,8 +32,18 @@ let matchScore = {};
 let hasResume = false;
 
 async function fetchMatchScores() {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    hasResume = false;
+    matchScore = {};
+    return;
+  }
+
   try{
-    const response = await fetch(`${API_BASE}/api/matches`);
+    const response = await fetch(`${API_BASE}/api/matches`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
 
     if (!response.ok) {
       console.error('Failed to fetch match scores');
@@ -366,11 +377,69 @@ function addJobMapMarker(job, lat, lng) {
   }
 }
 
+function loadGeocodeCache() {
+  try {
+    return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || '{}');
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveGeocodeCache(cache) {
+  try {
+    localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache));
+  } catch (err) {
+    // ignore storage errors
+  }
+}
+
 async function geocodeJobLocation(location) {
-  // Stub: provider-specific geocoding should be implemented later.
   if (!location || !location.trim()) return null;
 
-  console.warn('geocodeJobLocation is a stub; add real geocoding provider in the future.');
+  const normalizedLocation = location.trim().toLowerCase();
+  const cache = loadGeocodeCache();
+  if (cache[normalizedLocation]) {
+    return cache[normalizedLocation];
+  }
+
+  const params = new URLSearchParams({
+    format: 'json',
+    q: location,
+    addressdetails: '0',
+    limit: '1'
+  });
+
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      headers: {
+        'Accept-Language': 'en-US',
+        'User-Agent': 'PathfinderJobFinder/1.0'
+      }
+    });
+
+    if (!response.ok) {
+      console.warn('Geocoding failed for location:', location, response.status);
+      return null;
+    }
+
+    const results = await response.json();
+    if (!Array.isArray(results) || results.length === 0) {
+      return null;
+    }
+
+    const geo = {
+      lat: Number(results[0].lat),
+      lng: Number(results[0].lon)
+    };
+    if (isFinite(geo.lat) && isFinite(geo.lng)) {
+      cache[normalizedLocation] = geo;
+      saveGeocodeCache(cache);
+      return geo;
+    }
+  } catch (err) {
+    console.warn('Geocoding error for location:', location, err);
+  }
+
   return null;
 }
 
@@ -667,7 +736,7 @@ async function getSavedJobs() {
     const token = localStorage.getItem('token');
     const headers = {};
     if (token) headers["Authorization"] = 'Bearer ' + token;
-    const response = await fetch(`${API_BASE, { headers }}/jobs`);
+    const response = await fetch(`${API_BASE}/jobs`, { headers });
     const jobs = await response.json();
     return jobs.filter(job => job.status === 'saved');
   } catch (error) {
@@ -1024,6 +1093,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
+            const tabID = button.dataset.tab;
+
+            if (tabID === 'resume' && !localStorage.getItem('token')) {
+              alert('Please log in to use Resume Match.');
+              window.location.href = '../Login/Signup/Login/Login/signup.html';
+              return;
+            }
+
             // Remove active class from all tabs and panes
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
@@ -1031,7 +1108,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add active class to clicked tab and corresponding pane
             button.classList.add('active');
             
-            const tabID = button.dataset.tab;
             document.getElementById(`${tabID}-tab`).classList.add('active');
 
             const pageCtrls = document.querySelector('.pagination-controls');
@@ -1147,6 +1223,13 @@ function initializeResumeUpload() {
 }
 
 async function handleResumeUpload(file) {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    alert('Please log in to upload a resume.');
+    window.location.href = '../Login/Signup/Login/Login/signup.html';
+    return;
+  }
 
   const allowedTypes = [
     'application/pdf',
@@ -1174,6 +1257,7 @@ async function handleResumeUpload(file) {
 
     const response = await fetch(`${API_BASE}/api/resume/upload`, {
       method: 'POST',
+      headers: { Authorization: 'Bearer ' + token},
       body: formData,
     });
 

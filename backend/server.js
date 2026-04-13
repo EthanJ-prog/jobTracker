@@ -326,6 +326,16 @@ if (!JSEARCH_API_KEY) {
 }
 
 db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        two_factor_enabled BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+`);
+
+db.run(`
     CREATE TABLE IF NOT EXISTS saved_jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
@@ -1011,7 +1021,8 @@ db.run(`
 db.run(`
     CREATE TABLE IF NOT EXISTS resumes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        filename TEXT UNIQUE NOT NULL,
+        user_id INTEGER NOT NULL UNIQUE,
+        filename TEXT NOT NULL,
         file_type TEXT NOT NULL,
         raw_text TEXT,
         skills TEXT,
@@ -1019,7 +1030,8 @@ db.run(`
         education TEXT,
         contact_info TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
     )
 `);
 
@@ -1039,24 +1051,16 @@ db.run(`
     )
 `);
 
-db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        two_factor_enabled BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-`);
 
-app.get('/api/jobs/:id/match', (req, res) => {
+app.get('/api/jobs/:id/match', authenticateToken, (req, res) => {
     const jobId = parseInt(req.params.id, 10);
+    const userId = req.user.userId;
 
     if (isNaN(jobId)){
         return res.status(400).json({ error: 'Invalid job ID'}); 
     }
 
-    db.get('SELECT id FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, resume) => {
+    db.get('SELECT id FROM resumes WHERE users_id = ?', [userId], (err, resume) => {
         if (err) {
             console.error('Error fetching resumes', err);
             return res.status(500).json({ error: 'Database error' });
@@ -1098,8 +1102,10 @@ app.get('/api/jobs/:id/match', (req, res) => {
     });
 });
 
-app.get('/api/matches', (req, res) => {
-    db.get('SELECT id FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, resume) => {
+app.get('/api/matches', authenticateToken, (req, res) => {
+    const userId = req.users.userId;
+
+    db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], (err, resume) => {
        if (err) {
         console.error('Error fetching resume:', err);
         return res.status(500).json({Error: 'Database error'});
@@ -1402,25 +1408,11 @@ async function parseResume(fileBuffer, mimetype) {
     }
 }
 
-/**
- * Extracts structured data from resume text (contact info, skills, experience, education)
- * TODO: Implement comprehensive resume data extraction to populate resume fields
- * @param {string} text - Raw resume text
- * @returns {Object|null} Structured resume data or null if not implemented
- */
-function extractResumeData(text){
-    // TODO: Parse resume text to extract:
-    // - Contact information (email, phone, linkedin)
-    // - Skills section
-    // - Work experience
-    // - Education
-    return null;
-}
 
 
 
-app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
-    const startTime = Date.now();
+app.post('/api/resume/upload', authenticateToken, upload.single('resume'), async (req, res) => {
+    const userId = req.users.userId;
     try {
         if (!req.file){
             return res.status(400).json({error: 'No file uploaded'});
@@ -1434,52 +1426,62 @@ app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
 
         const fileType = mimetype === 'application/pdf' ? 'pdf' : 'docx';
         db.run(
-            `INSERT OR REPLACE INTO resumes (filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
-            VALUES (?, ?, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)`,
-            [originalname, fileType, rawText],
-            async function(err){
+            `INSERT INTO resumes (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
+            VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                filename = excluded.filename,
+                file_type = excluded.file_type,
+                raw_text = excluded.raw_text, 
+                updated_at = CURRENT_TIMESTAMP`,
+            [userId, originalname, fileType, rawText],
+            function(err){
                 if (err) {
                     console.error('Error saving resume:', err);
                     return res.status(500).json({err: 'Failed to save resume to database'});
                 }
-
-                const resumeID = this.lastID;
-
-                const elapsed = Date.now() - startTime;
-                console.log(`Resume was saved: ${originalname} (${(elapsed/1000).toFixed(1)}s)`)
-
-                console.log('Starting match calculation for active jobs');
-
-                try {
-                    const matchStats = await calculateAllMatches(resumeID, rawText);
-                    console.log(`Match calculation complete: ${matchStats.jobsProcessed} jobs processed`);
-                    res.json({
-                        message: 'Resume uploaded and parsed successfully',
-                        id: resumeID,
-                        filename: originalname,
-                        text_length: rawText.length,
-                        matchesCalculated: matchStats.jobsProcessed ,
-                        averageScore: matchStats.averageScore
-                    });
-
-                } catch (matchError) {
-                    console.error('Match calculation error: ', matchError);
-                    res.json({
-                        message: 'Resume uploaded successfully, match calculation pending',
-                        id: resumeID,
-                        filename: originalname,
-                        text_length: rawText.length,
-                        matchesCalculated: 0
-                    });
-                }
+                
+                db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], async(e2, row2) => {
+                    if (e2 || !row2) {
+                        return res.status(500).json({ err: 'Could not resolve resume id after save' });
+                    }
+                    await finishResumeUpload(res, originalname, rawText, row2.id);
+                });
             }
         );
     } catch (err) {
-        const elapsed = Date.now() - startTime;
-        console.error(`Resume upload error after (${(elapsed/1000).toFixed(1)}s: ${err.message})`);
         res.status(500).json({error: 'Failed to process resume: ' + err.message});
-    }
+    };
 });
+
+async function finishResumeUpload(res, originalName, rawText, resumeId) {
+    console.log('Starting match calculation for active jobs');
+
+    try {
+        const matchStats = await calculateAllMatches(resumeId, rawText);
+        console.log(`Match calculation complete: ${matchStats.jobsProcessed} jobs processed`);
+        res.json({
+            message: 'Resume uploaded and parsed successfully',
+            id: resumeId,
+            filename: originalName,
+            text_length: rawText.length,
+            matchesCalculated: matchStats.jobsProcessed,
+            averageScore: matchStats.averageScore
+        });
+
+    } catch (matchError) {
+        console.error('Match calculation error: ', matchError);
+        res.json({
+            message: 'Resume uploaded successfully, match calculation pending',
+            id: resumeId,
+            filename: originalName,
+            text_length: rawText.length,
+            matchesCalculated: 0
+        });
+    }
+}
+
+
+               
 
 /**
  * Calculates match scores between a resume and all active job listings
@@ -1577,49 +1579,59 @@ function recalculateMatches(jobID, jobTitle, jobDesc) {
         return;
     }
 
-    db.get('SELECT id, raw_text FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, resume) => {
+    db.all('SELECT id, raw_text FROM resumes', [], (err, resumes) => {
         if (err) {
-            console.err('Error fetching resumes for match recalculation', err);
+            console.error('Error fetching resumes for match recalculation', err);
             return;
         }
 
-        if (!resume || !resume.rawText) {
+        if (!resumes || resumes.length === 0) {
             console.log('Resume not found');
             return;
         }
 
-        const matchResult = calculateMatchScore(resume.raw_text, jobDesc, jobTitle || '');
-        
-        db.run(
-            `INSERT or REPLACE INTO job_matches
-            (resume_id, job_id, match_score, breakdown_json, matched_skills_json, missing_skills_json, calculated_at)
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-            [
-                resume.id,
-                jobID,
-                matchResult.score,
-                JSON.stringify(matchResult.breakdown),
-                JSON.stringify(matchResult.matchedSkills),
-                JSON.stringify(matchResult.missingSkills)
-            ],
-            (err) =>{
-                if (err){
-                    console.error(`Error saving match for job ${jobID}: `, err);
-                } else {
-                    console.log(`Match score recalculated for ${jobID}`, matchResult.score);
+        for (const resume of resumes){
+            if (!resume.raw_text){
+                continue;
+            }
+
+            const matchResult = calculateMatchScore(resume.raw_text, jobDesc, jobTitle || '');
+
+            db.run(
+                `INSERT or REPLACE INTO job_matches
+                (resume_id, job_id, matched_score, breakdown_json, matched_skills_json, missing_skills_json, calculated_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                [
+                    resume.id,
+                    jobID,
+                    matchResult.score,
+                    JSON.stringify(matchResult.breakdown),
+                    JSON.stringify(matchResult.matchedSkills),
+                    JSON.stringify(matchResult.missingSkills)
+                ],
+                (err) =>{
+                    if (err){
+                        console.error(`Error saving match for job ${jobID}: `, err);
+                    } else {
+                        console.log(`Match score recalculated for ${jobID}`, matchResult.score);
+                    }
+
                 }
 
-            }
-        );
+            );
+        }
+        
+        
     });
 
 
 }
 
-app.get('/api/resume', (req, res) => {
-    db.get('SELECT * FROM resumes ORDER BY updated_at DESC LIMIT 1', [], (err, row) => {
+app.get('/api/resume', authenticateToken, (req, res) => {
+    const userId = req.users.userId;
 
-    
+    db.get('SELECT * FROM resumes WHERE user_id = ?', [userId], (err, row) => {
+
     if (err) {
         console.error('Error fetching resumes', err);
         return res.status(500).json({Error: 'Failed to fetch resume'});

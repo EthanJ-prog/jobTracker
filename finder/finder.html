@@ -8,7 +8,16 @@
   <!-- Page title and stylesheet -->
   <title>Pathfinder - Career Compass</title>
   <link rel="stylesheet" href="finder.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44c=" crossorigin="" />
   <style>
+    #map {
+      min-height: 500px;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #f3f4f6;
+    }
+
     /* Common button styles */
     .button {
         background: linear-gradient(135deg, #5C6BC0, #007acc);
@@ -341,6 +350,7 @@
           </div>
 
           <!-- JavaScript functionality -->
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7kG8tSbQwq+Bx5TGw9FxsQ1hLk3dN6L8M2y6wY=" crossorigin=""></script>
           <script src="finder.js"></script>
         </body>
         </html>
