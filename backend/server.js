@@ -1103,7 +1103,7 @@ app.get('/api/jobs/:id/match', authenticateToken, (req, res) => {
 });
 
 app.get('/api/matches', authenticateToken, (req, res) => {
-    const userId = req.users.userId;
+    const userId = req.user.userId;
 
     db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], (err, resume) => {
        if (err) {
@@ -1239,20 +1239,19 @@ app.get('/api/jobs/count', optionalAuthenticateToken, (req, res) => {
         } 
     }
 
-
-    const savedFilter = 
-        req.user && req.userId 
+    const userId = req.user && req.user.userId;
+    const savedFilter = userId
             ? `AND NOT EXISTS (
             SELECT 1 FROM saved_jobs sj
-            WHERE sj.title = jl.title
+            WHERE sj.user_id = ?
+            AND sj.title = jl.title
             AND sj.company = jl.company
             AND sj.status = 'saved'
-            AND sj.id = ?
         )` 
-            : '';
+        : '';
 
 
-    const countParams = req.user && req.userId ? [...params, req.user.userId] : params;
+    const countParams = userId ? [...params, userId] : params;
 
     const countSQL = `
         SELECT COUNT(*) as total 
@@ -1412,7 +1411,7 @@ async function parseResume(fileBuffer, mimetype) {
 
 
 app.post('/api/resume/upload', authenticateToken, upload.single('resume'), async (req, res) => {
-    const userId = req.users.userId;
+    const userId = req.user.userId;
     try {
         if (!req.file){
             return res.status(400).json({error: 'No file uploaded'});
@@ -1628,7 +1627,7 @@ function recalculateMatches(jobID, jobTitle, jobDesc) {
 }
 
 app.get('/api/resume', authenticateToken, (req, res) => {
-    const userId = req.users.userId;
+    const userId = req.user.userId;
 
     db.get('SELECT * FROM resumes WHERE user_id = ?', [userId], (err, row) => {
 

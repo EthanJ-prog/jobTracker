@@ -6,7 +6,7 @@ let mapInitialized = false;
 
 // Map provider configuration 
 const MAP_PROVIDER = 'mapbox';
-const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
+const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiZXRoYW4tcmoiLCJhIjoiY21ueHVodHQ2MDRvYTJxcTJmYzV2aGsyayJ9.XU_Ydi4BdqzJGA3ad2UgWQ';
 const GEOCODE_CACHE_KEY = 'finderGeoCache';
 
 // API configuration constants
