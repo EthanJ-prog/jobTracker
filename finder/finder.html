@@ -8,7 +8,7 @@
   <!-- Page title and stylesheet -->
   <title>Pathfinder - Career Compass</title>
   <link rel="stylesheet" href="finder.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44c=" crossorigin="" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.20.2/mapbox-gl.css" rel="stylesheet" />
   <style>
     #map {
       min-height: 500px;
@@ -231,12 +231,17 @@
         <div id="map-tab" class="tab-pane">
           <section class="map-section">
             <h2>Job Locations</h2>
+            <div class="map-legend">
+              <span>Markers correspond to active job listings shown on the Jobs tab.</span>
+              <span>Click a marker to highlight the matching card and open its details.</span>
+              <span>Match score colors are used when available.</span>
+            </div>
             <!-- Map container for visualizing job locations -->
             <div id="map" aria-label="Job locations map">
               <div class="map-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;padding:24px;">
                 <div>
                   <strong>Map initialization pending</strong>
-                  <p style="margin:8px 0 0">No map provider configured yet</p>
+                  <p style="margin:8px 0 0">Select the Map tab to initialize the job map.</p>
                 </div>
               </div>
             </div>
@@ -350,7 +355,7 @@
           </div>
 
           <!-- JavaScript functionality -->
-          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7kG8tSbQwq+Bx5TGw9FxsQ1hLk3dN6L8M2y6wY=" crossorigin=""></script>
+          <script src="https://api.mapbox.com/mapbox-gl-js/v2.20.2/mapbox-gl.js"></script>
           <script src="finder.js"></script>
         </body>
         </html>

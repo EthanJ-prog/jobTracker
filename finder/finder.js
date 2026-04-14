@@ -5,7 +5,8 @@ let jobMapMarkers = [];
 let mapInitialized = false;
 
 // Map provider configuration 
-const MAP_PROVIDER = 'leaflet';
+const MAP_PROVIDER = 'mapbox';
+const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN;
 const GEOCODE_CACHE_KEY = 'finderGeoCache';
 
 // API configuration constants
@@ -299,52 +300,44 @@ function initializeJobMap() {
   const mapEl = document.getElementById('map');
   if (!mapEl) return;
 
-  if (MAP_PROVIDER === 'leaflet' && window.L) {
-    try {
-      mapEl.style.height = '400px';
-      mapEl.innerHTML = '';
-      jobMap = L.map('map').setView([20,0], 2);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(jobMap);
-      mapInitialized = true;
-      console.info('Leaflet job map initialized');
-    } catch (err) {
-      console.error('Leaflet map initialization failed', err);
+  if (MAP_PROVIDER === 'mapbox') {
+    if (!window.mapboxgl) {
+      console.warn('Mapbox GL JS not loaded');
+      mapEl.innerHTML = `<div class="map-placeholder"><div><strong>Mapbox failed to load</strong><p>Check your network or script include.</p></div></div>`;
+      return;
     }
-    return;
-  }
 
-  if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
+    if (!MAPBOX_ACCESS_TOKEN || MAPBOX_ACCESS_TOKEN.includes('YOUR_MAPBOX_ACCESS_TOKEN_HERE')) {
+      console.warn('Mapbox access token not configured.');
+      mapEl.innerHTML = `<div class="map-placeholder"><div><strong>Mapbox token required</strong><p>Set MAPBOX_ACCESS_TOKEN in finder.js to your public token.</p></div></div>`;
+      return;
+    }
+
     try {
-      mapEl.style.height = '400px';
-      mapEl.innerHTML = '';
-      jobMap = new google.maps.Map(mapEl, {
-        center: { lat: 20, lng: 0 },
+      mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+      jobMap = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [0, 20],
         zoom: 2
       });
+      jobMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
       mapInitialized = true;
-      console.info('Google Maps job map initialized');
+      console.info('Mapbox job map initialized');
     } catch (err) {
-      console.error('Google Maps initialization failed', err);
+      console.error('Mapbox initialization failed', err);
     }
     return;
   }
 
-    console.warn('No map provider enabled or available - job map will not be shown');
+  console.warn('No map provider enabled or available - job map will not be shown');
 }
 
 function clearJobMapMarkers() {
   if (!mapInitialized || !jobMap) return;
 
-  if (MAP_PROVIDER === 'leaflet' && window.L) {
-    jobMapMarkers.forEach(marker => jobMap.removeLayer(marker));
-    jobMapMarkers = [];
-    return;
-  }
-
-  if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
-    jobMapMarkers.forEach(marker => marker.setMap(null));
+  if (MAP_PROVIDER === 'mapbox' && window.mapboxgl) {
+    jobMapMarkers.forEach(({ marker }) => marker.remove());
     jobMapMarkers = [];
     return;
   }
@@ -355,24 +348,30 @@ function clearJobMapMarkers() {
 function addJobMapMarker(job, lat, lng) {
   if (!mapInitialized || !jobMap || typeof lat !== 'number' || typeof lng !== 'number') return;
 
-  const popupText = `${job.title || 'Job'}\n${job.company || ''}\n${job.location || ''}`;
+  const popupHtml = `
+    <div class="map-popup">
+      <h4>${job.title || 'Job'}</h4>
+      <p>${job.company || 'Unknown company'}</p>
+      <p>${job.location || 'Location unknown'}</p>
+    </div>
+  `;
 
-  if (MAP_PROVIDER === 'leaflet' && window.L) {
-    const marker = L.marker([lat, lng]).addTo(jobMap);
-    marker.bindPopup(popupText);
-    jobMapMarkers.push(marker);
-    return;
-  }
+  const matchData = matchScore[job.id];
+  const markerColor = (hasResume && matchData && typeof matchData.score === 'number')
+    ? getMatchScoreColor(matchData.score)
+    : '#4f46e5';
 
-  if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
-    const marker = new google.maps.Marker({
-      position: { lat, lng },
-      map: jobMap,
-      title: job.title || 'Job'
+  if (MAP_PROVIDER === 'mapbox' && window.mapboxgl) {
+    const marker = new mapboxgl.Marker({ color: markerColor })
+      .setLngLat([lng, lat])
+      .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupHtml))
+      .addTo(jobMap);
+
+    marker.getElement().addEventListener('click', () => {
+      focusJobOnMap(job.id);
     });
-    const infowindow = new google.maps.InfoWindow({ content: popupText.replace(/\n/g, '<br>') });
-    marker.addListener('click', () => infowindow.open(jobMap, marker));
-    jobMapMarkers.push(marker);
+
+    jobMapMarkers.push({ jobId: job.id, marker });
     return;
   }
 }
@@ -474,16 +473,60 @@ async function updateJobMap(jobs) {
   }
 
   if (bounds.length > 0) {
-    if (MAP_PROVIDER === 'leaflet' && window.L) {
-      const leafletBounds = bounds.map(([lat,lng]) => [lat,lng]);
-      jobMap.fitBounds(leafletBounds, { padding: [30, 30] });
-    }
-    if (MAP_PROVIDER === 'google' && window.google && window.google.maps) {
-      const googleBounds = new google.maps.LatLngBounds();
-      bounds.forEach(([lat,lng]) => googleBounds.extend({ lat, lng }));
-      jobMap.fitBounds(googleBounds);
+    if (MAP_PROVIDER === 'mapbox' && window.mapboxgl) {
+      const mapboxBounds = new mapboxgl.LngLatBounds();
+      bounds.forEach(([lat,lng]) => mapboxBounds.extend([lng, lat]));
+      jobMap.fitBounds(mapboxBounds, { padding: 40, maxZoom: 11 });
     }
   }
+}
+
+function clearJobCardHighlights() {
+  document.querySelectorAll('.job-card--active').forEach(card => card.classList.remove('job-card--active'));
+  if (MAP_PROVIDER === 'mapbox' && window.mapboxgl) {
+    jobMapMarkers.forEach(({ marker }) => {
+      const element = marker.getElement();
+      if (element) {
+        element.style.transform = 'translate(-50%, -50%) scale(1)';
+        element.style.zIndex = '';
+      }
+    });
+  }
+}
+
+function focusJobOnMap(jobId) {
+  const mapTabButton = document.querySelector('.tab-button[data-tab="map"]');
+  if (mapTabButton && !mapTabButton.classList.contains('active')) {
+    mapTabButton.click();
+  }
+
+  setTimeout(() => {
+    if (jobMap && typeof jobMap.resize === 'function') {
+      jobMap.resize();
+    }
+
+    if (MAP_PROVIDER === 'mapbox' && window.mapboxgl) {
+      const entry = jobMapMarkers.find(item => String(item.jobId) === String(jobId));
+      if (entry) {
+        clearJobCardHighlights();
+        const marker = entry.marker;
+        const element = marker.getElement();
+        if (element) {
+          element.style.transform = 'translate(-50%, -50%) scale(1.2)';
+          element.style.zIndex = '999';
+        }
+        marker.togglePopup();
+        jobMap.flyTo({ center: marker.getLngLat(), zoom: 10, speed: 0.8 });
+      }
+    }
+
+    const card = document.querySelector(`.job-card[data-job-id="${jobId}"]`);
+    if (card) {
+      clearJobCardHighlights();
+      card.classList.add('job-card--active');
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 250);
 }
 
 /**
@@ -556,6 +599,11 @@ function createJobCard(job) {
 
 
   // Create job card HTML structure with all details (consistent order)
+  card.dataset.jobId = job.id || '';
+  if (job.location || job.latitude || job.longitude) {
+    card.classList.add('job-card--mapped');
+  }
+
   card.style.position = 'relative';
   card.innerHTML = `
     ${badgeHTML}
@@ -572,14 +620,24 @@ function createJobCard(job) {
         <p class="job-description-text">${job.description_summary ? `<strong>Description: </strong>${truncateText(job.description_summary, 150)}` : '<em>Description unavailable</em>'}</p>
       </div>
     </div>
+    <button class="map-button" type="button">Show on map</button>
     <button class="apply-button" ${job.apply_link ? '' : 'disabled'}> Apply </button>
     <button type="button" class="star-button">&#9734;</button>
   `;
 
   // Add apply button functionality
+  const mapButton = card.querySelector('.map-button');
+  if (mapButton) {
+    mapButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      focusJobOnMap(job.id);
+    });
+  }
+
   const applyButton = card.querySelector('.apply-button');
   if (job.apply_link) {
-    applyButton.addEventListener('click', () => {
+    applyButton.addEventListener('click', (e) => {
+      e.stopPropagation();
       window.open(job.apply_link, '_blank');
     });
   }
@@ -1121,7 +1179,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (tabID === 'map') {
               initializeJobMap();
-              updateJobMap(allJobs);
+
+              setTimeout(() => {
+                if (jobMap) jobMap.resize();
+                updateJobMap(allJobs);
+              }, 200);
             }
         });
     });
