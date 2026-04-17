@@ -83,6 +83,7 @@ const JSEARCH_BASE_URL = process.env.JSEARCH_BASE_URL || 'https://jsearch.p.rapi
 // Ollama configuration
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
+const RESUME_OLLAMA_MODEL = process.env.RESUME_OLLAMA_MODEL;
 
 const PROGRAMMING_LANGUAGES = [
     'javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'php', 'swift',
@@ -299,6 +300,13 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
 }
 
 let ollamaAvailable = false;
+let resumeOllamaAvailable = false;
+
+function isInstalledOllamaModel (installedModels, modelName) {
+    if (!modelName || !Array.isArray(installedModels)) return false;
+    return installedModels.some((installedModel) => installedModel === modelName || 
+    installedModel.startsWith(`${modelName}:`));
+}
 
 /**
  * Checks if Ollama AI service is available at the configured URL
@@ -308,8 +316,16 @@ async function checkOllamaAvailability() {
     try {
         const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
         if (response.ok) {
-            ollamaAvailable = true;
-            console.log(`Ollama connected successfully at ${OLLAMA_BASE_URL} using model: ${OLLAMA_MODEL}`);
+            const data = response.json();
+            const installedModels = Array.isArray(data.models) ? data.models.map((model) => model.name) : [];
+            ollamaAvailable = isInstalledOllamaModel(installedModels, OLLAMA_MODEL);
+            resumeOllamaAvailable = isInstalledOllamaModel(installedModels, RESUME_OLLAMA_MODEL);
+
+            if (ollamaAvailable) console.log(`✓ Ollama is available at ${OLLAMA_BASE_URL} with model "${OLLAMA_MODEL}"`);
+            if(!ollamaAvailable) console.warn(`Warning! Ollama is running but model "${OLLAMA_MODEL}" is not installed. Job description summarization will not be available.`);
+            if (resumeOllamaAvailable) console.log(`✓ Resume analysis model "${RESUME_OLLAMA_MODEL}" is available on Ollama`);
+            if (RESUME_OLLAMA_MODEL && !resumeOllamaAvailable) console.warn(`Warning! Resume analysis model "${RESUME_OLLAMA_MODEL}" is not installed on Ollama. Resume matching functionality will be limited.`);
+
         } else {
             console.warn('Warning! Ollama server is not responding. Job description summarization will not be available.');
         }
@@ -465,6 +481,34 @@ async function generateJobDescriptionSummary(description) {
         const elapsed = Date.now() - startTime;
         return {summary: null, elapsed: elapsed / 1000};
     }
+}
+
+function extractJsonObject(text) {
+    if (!text || typeof text !== 'string') return null;
+    let cleanText = text.trim();
+    if (cleanText.startsWith('```json')) cleanText = cleanText.replace('```json', '').trim();
+    if (cleanText.startsWith('```')) cleanText = cleanText.replace('```', '').trim();
+    if (cleanText.endsWith('```')) cleanText = cleanText.slice(0, -3).trim();
+    const firstBracket = cleanText.indexOf('{');
+    const lastBracket = cleanText.lastIndexOf('}');
+    if (firstBracket === -1 || lastBracket === -1) return null;
+    return cleanText.slice(firstBracket, lastBracket + 1);
+}
+
+function normalizeResumeText(text) {
+    const rawList = Array.isArray(text) ? text : (typeof text === 'string' && text.trim() ? [text] : []);
+    return [...new Set(rawList.map(item => String(item || '').trim()).filter(Boolean))];
+}
+
+function normalizeResumeContactInfo(contactInfo) {
+    const contact = contactInfo && typeof contactInfo === 'object' && !Array.isArray(contactInfo) ? contactInfo : {};
+    return {
+        name: typeof contact.name === 'string' ? contact.name.trim() : '',
+        email: typeof contact.email === 'string' ? contact.email.trim() : '',
+        phone: typeof contact.phone === 'string' ? contact.phone.trim() : '',
+        location: typeof contact.location === 'string' ? contact.location.trim() : '',
+        linkedIn: typeof contact.linkedIn === 'string' ? contact.linkedIn.trim() : ''
+    };
 }
 
 /**
