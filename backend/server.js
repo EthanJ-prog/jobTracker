@@ -12,6 +12,7 @@ const mammoth = require('mammoth');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Secret used to sign JWTs. In production this should come from a secure
 // environment variable and be rotated regularly. The fallback is only for
 // local development and must NOT be used in production systems.
@@ -84,6 +85,11 @@ const JSEARCH_BASE_URL = process.env.JSEARCH_BASE_URL || 'https://jsearch.p.rapi
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 const RESUME_OLLAMA_MODEL = process.env.RESUME_OLLAMA_MODEL;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+
+const geminiClient = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
+const geminiModel = geminiClient ? geminiClient.getGenerativeModel({ model: GEMINI_MODEL }) : null;
 
 const PROGRAMMING_LANGUAGES = [
     'javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'php', 'swift',
@@ -509,6 +515,32 @@ function normalizeResumeContactInfo(contactInfo) {
         location: typeof contact.location === 'string' ? contact.location.trim() : '',
         linkedIn: typeof contact.linkedIn === 'string' ? contact.linkedIn.trim() : ''
     };
+}
+
+async function parseResumeWithGemini(fileBuffer, mimetype) {
+    if (!geminiModel) throw new Error('Gemini is not configured. Set Gemini API key in backend file');
+    if (mimetype !== 'application/pdf') throw new Error('Only pdf resumes are supported.');
+
+    const prompt = `Read this resume and return ONLY valid JSON with this exact shape: 
+    {"raw_text":"string",
+    "skills":["string"],
+    "experience":["string"],
+    "education":["string"],
+    "contact_info":{"name":"string","email":"string","phone":"string","location":"string","linkedIn":"string"}}`;
+
+    const result = await geminiModel.generateContent([prompt, {inlineData: { mimeType: mimetype, data: fileBuffer.toString('base64') } }]);
+    const responseText = result && result.response ? result.response.text() : '';
+    const jsonString = extractJsonObject(responseText);
+    if (!jsonString) throw new Error('Gemini did not return valid json');
+    
+    const parsed = JSON.parse(jsonString);
+    const normalizedRawText = typeof parsed.raw_text === 'string' ? parsed.raw_text.trim() : '';
+    const normalizedSkills = normalizeResumeText(parsed.skills);
+    const normalizedExperience = normalizeResumeText(parsed.experience);
+    const normalizedEducation = normalizeResumeText(parsed.education);
+    const normalizedContactInfo = normalizeResumeContactInfo(parsed.contact_info);
+
+    return { rawText: normalizedRawText, skills: normalizedSkills, experience: normalizedExperience, education: normalizedEducation, contactInfo: normalizedContactInfo };
 }
 
 /**
@@ -1461,26 +1493,35 @@ app.post('/api/resume/upload', authenticateToken, upload.single('resume'), async
             return res.status(400).json({error: 'No file uploaded'});
         }
         const {originalname, mimetype, buffer} = req.file;
-        console.log(`\n Uploading resume: ${originalname} (${mimetype})`);
-        const rawText = await parseResume(buffer, mimetype);
+        const parsedResume = await parseResumeWithGemini(buffer, mimetype);
+        const rawText = parsedResume.rawText;
+
         if (!rawText || rawText.trim().length === 0){
             return res.status(400).json({error: 'Could not extract text from resume file'});
         }
 
-        const fileType = mimetype === 'application/pdf' ? 'pdf' : 'docx';
+        const fileType = 'pdf';
+        const skillsText = parsedResume.skills.join(', ');
+        const experienceText = parsedResume.experience.join(', ');
+        const educationText = parsedResume.education.join(', ');
+        const contactInfoText = JSON.stringify(parseResume.contactInfo);
+
         db.run(
             `INSERT INTO resumes (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
-            VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(user_id) DO UPDATE SET
                 filename = excluded.filename,
                 file_type = excluded.file_type,
-                raw_text = excluded.raw_text, 
+                raw_text = excluded.raw_text,
+                skills = excluded.skills,
+                experience = excluded.experience, 
+                education = excluded.education,
+                contact_info = exluded.contact_info,
                 updated_at = CURRENT_TIMESTAMP`,
-            [userId, originalname, fileType, rawText],
+            [userId, originalname, fileType, rawText, skillsText, experienceText, educationText, contactInfoText],
             function(err){
                 if (err) {
-                    console.error('Error saving resume:', err);
-                    return res.status(500).json({err: 'Failed to save resume to database'});
+                    return res.status(500).json({error: 'Failed to save resume to database'});
                 }
                 
                 db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], async(e2, row2) => {
