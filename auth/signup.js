@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (res.ok && data.authenticated) {
                     localStorage.setItem('token', data.token);
                     showToast('Login successful', 'success');
-                    window.location.href = '../../../../home/home.html';
+                    window.location.href = '../home/home.html';
                 } else {
                     showToast(data.error || '2FA verification failed', 'error');
                 }
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (res.ok && data.authenticated) {
                     localStorage.setItem('token', data.token);
                     showToast('Login successful', 'success');
-                    window.location.href = '../../../../home/home.html';
+                    window.location.href = '../home/home.html';
                 } else {
                     showToast(data.error || 'Login failed', 'error');
                 }
@@ -161,8 +161,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await res.json();
 
             if (res.ok) {
-
                 showToast('Account created, you may proceed to login!', 'success');
+                signupForm.reset();
                 showTab('login');
             } else {
 

@@ -113,6 +113,33 @@ input[type="text"] {
     transition: var(--transition);
 }
 
+.password-field-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.password-field-row input[type="password"] {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+.inline-password-button {
+    border: 1px solid #cfd7ff;
+    background: #eef2ff;
+    color: var(--primary-dark);
+    border-radius: var(--border-radius);
+    padding: 0.6rem 0.8rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.inline-password-button:hover {
+    background: #e2e8ff;
+}
+
 input:focus {
     outline: none;
     border-color: var(--primary);

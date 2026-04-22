@@ -26,7 +26,7 @@
       if (detailsMenu) {
         detailsMenu.removeAttribute('open');
       }
-      window.location.href = '../Login/Signup/Login/Login/signup.html';
+      window.location.href = '../auth/signup.html';
 
     });
   }

@@ -811,7 +811,7 @@ async function saveJobToTracker(job) {
   const token = localStorage.getItem('token');
   if (!token) {
     alert('Please sign in to save jobs to the tracker.');
-    window.location.href = '../Login/Signup/Login/Login/signup.html';
+    window.location.href = '../auth/signup.html';
     return;
   }
 
@@ -947,7 +947,7 @@ function setupAuthNav() {
       if (detailsMenu) {
         detailsMenu.removeAttribute('open');
       }
-      window.location.href = '../Login/Signup/Login/Login/signup.html';
+      window.location.href = '../auth/signup.html';
 
     });
 
@@ -1127,7 +1127,15 @@ function wirePaginationButtons() {
  */
 function toggleFilters() {
   const panel = document.getElementById('filter-panel');
-  panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+  if (!panel) return;
+  const isHidden = panel.hasAttribute('hidden');
+  if (isHidden) {
+    panel.removeAttribute('hidden');
+    panel.style.display = 'flex';
+  } else {
+    panel.style.display = 'none';
+    panel.setAttribute('hidden', '');
+  }
 }
 
 /**
@@ -1155,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (tabID === 'resume' && !localStorage.getItem('token')) {
               alert('Please log in to use Resume Match.');
-              window.location.href = '../Login/Signup/Login/Login/signup.html';
+              window.location.href = '../auth/signup.html';
               return;
             }
 
@@ -1202,6 +1210,11 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeFilters() {
   const applyFiltersBtn = document.getElementById('applyFilters');
   const clearFiltersBtn = document.getElementById('clearFilters');
+  const filterPanel = document.getElementById('filter-panel');
+  if (filterPanel) {
+    filterPanel.style.display = 'none';
+    filterPanel.setAttribute('hidden', '');
+  }
 
   if (applyFiltersBtn) {
     applyFiltersBtn.addEventListener('click', () => {
@@ -1220,7 +1233,10 @@ function initializeFilters() {
 
       fetchJobs(currentQuery, 1, currentFilters);
       const filterPanel = document.getElementById('filter-panel');
-      if (filterPanel) filterPanel.style.display = 'none';
+      if (filterPanel) {
+        filterPanel.style.display = 'none';
+        filterPanel.setAttribute('hidden', '');
+      }
     });
   }
 
@@ -1248,7 +1264,10 @@ function initializeFilters() {
 
       fetchJobs(currentQuery, 1, currentFilters);
       const filterPanel = document.getElementById('filter-panel');
-      if (filterPanel) filterPanel.style.display = 'none';
+      if (filterPanel) {
+        filterPanel.style.display = 'none';
+        filterPanel.setAttribute('hidden', '');
+      }
     });
   }
 }
@@ -1289,18 +1308,16 @@ async function handleResumeUpload(file) {
 
   if (!token) {
     alert('Please log in to upload a resume.');
-    window.location.href = '../Login/Signup/Login/Login/signup.html';
+    window.location.href = '../auth/signup.html';
     return;
   }
 
   const allowedTypes = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    'application/pdf'
   ];
 
   if (!allowedTypes.includes(file.type)) {
-    alert("Wrong file type, please use a different file");
+    alert("Only PDF resumes are supported right now.");
     return;
   }
 
@@ -1324,7 +1341,20 @@ async function handleResumeUpload(file) {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to upload resume');
+      const errorText = await response.text();
+      let errorMessage = 'Failed to upload resume';
+      try {
+        const parsedError = JSON.parse(errorText);
+        errorMessage = parsedError.error || parsedError.message || errorMessage;
+      } catch (_) {
+        if (errorText && errorText.trim()) errorMessage = errorText.trim();
+      }
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('token');
+        window.location.href = '../auth/signup.html';
+        throw new Error('Session expired. Please log in again.');
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
@@ -1366,18 +1396,18 @@ async function handleResumeUpload(file) {
 
   } catch (err) {
     console.error('Error uploading resume', err);
-    alert('Failed to upload resume. Please try again');
+    alert(`Failed to upload resume: ${err.message}`);
 
     const dropZone = document.getElementById('dropZone');
     console.error('Error matching jobs', err);
     dropZone.innerHTML = `
       <div class="file-input-container">
-        <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+        <input type="file" id="resumeFile" accept=".pdf,application/pdf" required />
         <div class="upload-trigger">
           <span class="upload-icon">ADD ICON HERE</span>
           <span>Drop your resume here or click to upload</span>
         </div>
-        <p class="file-types">Supported formats: PDF, DOC, DOCX</p>
+        <p class="file-types">Supported formats: PDF</p>
       </div>
       `;
 

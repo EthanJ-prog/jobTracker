@@ -20,7 +20,7 @@
                 <input type="email" id="login-email" required>
                 
                 <label for="login-password">Password:</label>
-                <input type="password" id="login-password" required>
+                <input type="password" id="login-password" autocomplete="current-password" required>
 
                 <div id="2fa-code" style="display: none;">
                     <label for="verification-code">Enter the 6-digit code sent to your email:</label>
@@ -38,10 +38,10 @@
                 <input type="email" id="signup-email" required>
                 
                 <label for="signup-password">Password:</label>
-                <input type="password" id="signup-password" required>
+                <input type="password" id="signup-password" autocomplete="new-password" required>
                 
                 <label for="signup-confirm-password">Confirm Password:</label>
-                <input type="password" id="signup-confirm-password" required>
+                <input type="password" id="signup-confirm-password" autocomplete="new-password" required>
                 
                 <label>
                     <input type="checkbox" id="enable-2fa">Enable Two-Factor Authentication (2FA)

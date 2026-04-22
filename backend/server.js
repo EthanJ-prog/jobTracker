@@ -86,7 +86,7 @@ const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 const RESUME_OLLAMA_MODEL = process.env.RESUME_OLLAMA_MODEL;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL_NAME || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 const geminiClient = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const geminiModel = geminiClient ? geminiClient.getGenerativeModel({ model: GEMINI_MODEL }) : null;
@@ -1504,7 +1504,7 @@ app.post('/api/resume/upload', authenticateToken, upload.single('resume'), async
         const skillsText = parsedResume.skills.join(', ');
         const experienceText = parsedResume.experience.join(', ');
         const educationText = parsedResume.education.join(', ');
-        const contactInfoText = JSON.stringify(parseResume.contactInfo);
+        const contactInfoText = JSON.stringify(parsedResume.contactInfo);
 
         db.run(
             `INSERT INTO resumes (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
@@ -1516,7 +1516,7 @@ app.post('/api/resume/upload', authenticateToken, upload.single('resume'), async
                 skills = excluded.skills,
                 experience = excluded.experience, 
                 education = excluded.education,
-                contact_info = exluded.contact_info,
+                contact_info = excluded.contact_info,
                 updated_at = CURRENT_TIMESTAMP`,
             [userId, originalname, fileType, rawText, skillsText, experienceText, educationText, contactInfoText],
             function(err){
