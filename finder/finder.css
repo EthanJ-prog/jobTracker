@@ -21,6 +21,7 @@
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
     --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
     --transition: all 0.2s ease;
+    --control-height: 48px;
 }
 
 body {
@@ -62,7 +63,9 @@ main {
 /* Main search input field styling */
 #search-input {
     flex: 1;
-    padding: 14px 20px;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 20px;
     font-size: 1rem;
     border: 2px solid #e0e7ff;
     border-radius: 8px;
@@ -87,7 +90,12 @@ main {
 
 /* Search button styling */
 .search-button {
-    padding: 14px 24px;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
@@ -119,6 +127,8 @@ main {
 
 /* Sort select dropdown styling */
 #sort-select {
+    box-sizing: border-box;
+    height: var(--control-height);
     padding: 8px 12px;
     border: 2px solid #e0e7ff;
     border-radius: 8px;
@@ -139,7 +149,12 @@ main {
 
 /* Filter toggle button with gradient background */
 .filter-button {
-    padding: 10px 16px;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
@@ -337,7 +352,7 @@ main {
 /* Limit visible description length to reduce blank space and keep cards uniform */
 .job-description-text {
     display: -webkit-box;
-    -webkit-line-clamp: 2; /* show up to 3 lines */
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -465,80 +480,110 @@ main {
     justify-content: center;
     width: 100%;
 }
-    background: linear-gradient(135deg, #ccc, #aaa);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
 
 /* Filter panel container (hidden by default) */
 .filter-panel {
     display: none;
-    flex-direction: column;
-    gap: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 24px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: 16px 18px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 248, 255, 0.98));
+    padding: 24px 24px 22px;
     margin: 20px auto;
-    max-width: 900px;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(92, 107, 192, 0.15);
+    max-width: 760px;
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(92, 107, 192, 0.14);
     animation: fadeIn 0.3s ease;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(92, 107, 192, 0.1);
+    border: 1px solid rgba(92, 107, 192, 0.12);
 }
 
-/* Filter panel header */
-.filter-panel::before {
-    content: "Advanced Filters";
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--primary);
-    margin-bottom: 10px;
-    display: block;
+.filter-panel-header {
+    grid-column: 1 / -1;
+}
+
+.filter-panel-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2a56;
+}
+
+.filter-panel-header p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: #64748b;
 }
 
 /* Filter group container */
 .filter-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
+    min-width: 0;
+    margin-bottom: 0;
 }
 
 /* Filter panel label styling */
 .filter-panel label {
     font-size: 14px;
     color: var(--text-primary);
-    font-weight: 500;
-    margin-bottom: 4px;
+    font-weight: 600;
+    margin-bottom: 2px;
 }
 
 /* Filter input and select styling */
 .filter-panel input,
 .filter-panel select {
-    padding: 12px 16px;
-    border: 2px solid #e0e7ff;
-    border-radius: 8px;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 16px;
+    border: 1px solid #d7def6;
+    border-radius: 12px;
     width: 100%;
     font-size: 14px;
     color: var(--text-primary);
-    background: white;
+    background: #fff;
     transition: all 0.2s ease;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.filter-panel input::placeholder {
+    color: #94a3b8;
 }
 
 /* Custom checkbox styling */
 .filter-panel input[type="checkbox"] {
-    width: auto;
-    margin-right: 8px;
+    width: 18px;
+    height: 18px;
+    margin: 0;
     accent-color: var(--primary);
-    transform: scale(1.2);
+    flex: 0 0 auto;
 }
 
-/* Checkbox label styling */
-.filter-panel label:has(input[type="checkbox"]) {
+.checkbox-group {
+    grid-column: 1 / -1;
+}
+
+.filter-toggle {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 16px;
+    border: 1px solid #d7def6;
+    border-radius: 12px;
+    background: #fff;
     cursor: pointer;
-    font-weight: 500;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+    transition: var(--transition);
+}
+
+.filter-toggle:hover {
+    border-color: #bcc8ef;
+    background: #f8faff;
 }
 
 /* Filter inputs focus state */
@@ -555,13 +600,18 @@ main {
     background: linear-gradient(135deg, var(--primary), var(--accent));
     color: white;
     border: none;
-    padding: 12px 20px;
-    border-radius: 8px;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 22px;
+    border-radius: 12px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
     min-width: 120px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Apply filters button hover effect */
@@ -1012,40 +1062,52 @@ main {
     color: #333;
 }
 
-/* Individual filter group container */
-.filter-group {
-    margin-bottom: 15px;
-    width: 100%;
-}
-
 /* Filter action buttons container */
 .filter-actions {
     display: flex;
+    grid-column: 1 / -1;
     gap: 12px;
-    margin-top: 20px;
-    justify-content: center;
+    margin-top: 2px;
+    justify-content: flex-end;
 }
 
 /* Clear filters button styling */
 .clear-filters {
-    background: #f5f5f5;
-    color: #666;
-    border: 2px solid #e0e0e0;
-    padding: 12px 20px;
-    border-radius: 8px;
+    background: #fff;
+    color: #475569;
+    border: 1px solid #d7def6;
+    box-sizing: border-box;
+    height: var(--control-height);
+    padding: 0 20px;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.2s ease;
     min-width: 120px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Clear filters button hover effect */
 .clear-filters:hover {
-    background: #e0e0e0;
-    border-color: #ccc;
+    background: #f8faff;
+    border-color: #bcc8ef;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 /* Star button for saving jobs (positioned in top-left of job card) */
@@ -1543,15 +1605,22 @@ main {
     }
 
     .filter-panel {
+        grid-template-columns: 1fr;
         padding: 16px;
         margin: 10px 0;
         max-width: 100%;
         gap: 16px;
     }
 
+    .filter-group,
+    .checkbox-group {
+        grid-column: 1;
+    }
+
     .filter-actions {
-        flex-direction: row;
+        flex-direction: column;
         gap: 8px;
+        justify-content: stretch;
     }
 
     .apply-filters, .clear-filters {
@@ -1699,5 +1768,3 @@ main {
     from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
-
-

@@ -1131,7 +1131,7 @@ function toggleFilters() {
   const isHidden = panel.hasAttribute('hidden');
   if (isHidden) {
     panel.removeAttribute('hidden');
-    panel.style.display = 'flex';
+    panel.style.display = 'grid';
   } else {
     panel.style.display = 'none';
     panel.setAttribute('hidden', '');
@@ -1632,5 +1632,4 @@ function initializeJobDetailOverlay() {
     }
   });
 }
-
 

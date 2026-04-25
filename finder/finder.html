@@ -80,16 +80,21 @@
       <!-- Search input and filter toggle -->
       <div class="search-bar-container">
         <input type="text" id="search-input" placeholder="Search jobs..." aria-label="Search jobs" />
-        <button class="filter-button" onclick="toggleFilters()">Filters</button>
+        <button type="button" class="filter-button" onclick="toggleFilters()">Filters</button>
       </div>
 
       <!-- Advanced filter panel (hidden by default) -->
       <div class="filter-panel" id="filter-panel" hidden>
+        <div class="filter-panel-header">
+          <h3>Filters</h3>
+          <p>Narrow your search results</p>
+        </div>
+
         <!-- Job type filter dropdown -->
         <div class="filter-group">
-            <label for="jobType">Job Type:</label>
+            <label for="jobType" class="visually-hidden">Job Type</label>
             <select id="jobType" name="jobType">
-                <option value="">All Types</option>
+                <option value="">Job Type</option>
                 <option value="full_time">Full-time</option>
                 <option value="part_time">Part-time</option>
                 <option value="contract">Contract</option>
@@ -97,39 +102,39 @@
             </select>
         </div>
 
-        <div class="filter-group">
-          <label for="remote">
-            <input type="checkbox" id="remote" name="remote">
-            Remote Only
-          </label>
-        </div>
-
         <!-- Location filter input -->
         <div class="filter-group">
-            <label for="location">Location:</label>
-            <input type="text" id="location" name="location" placeholder="City, State, or Country">
+            <label for="location" class="visually-hidden">Location</label>
+            <input type="text" id="location" name="location" placeholder="Location">
         </div>
 
         <!-- Salary filter input -->
         <div class="filter-group">
-            <label for="salary">Minimum Salary:</label>
-            <input type="number" id="salary" name="salary" placeholder="Minimum yearly salary (in dollars)">
+            <label for="salary" class="visually-hidden">Minimum Salary</label>
+            <input type="number" id="salary" name="salary" placeholder="Min Salary">
         </div>
 
         <div class="filter-group">
-          <label for="datePosted">Date Posted:</label>
+          <label for="datePosted" class="visually-hidden">Date Posted</label>
           <select id="datePosted" name="datePosted">
-            <option value="">All Time</option>
+            <option value="">Date Posted</option>
             <option value="24H">Last Day</option>
             <option value="7D">Last Week</option>
             <option value="30D">Last Month</option>
           </select>
         </div>
 
+        <div class="filter-group checkbox-group">
+          <label for="remote" class="filter-toggle">
+            <input type="checkbox" id="remote" name="remote">
+            <span>Remote Only</span>
+          </label>
+        </div>
+
         <!-- Filter action buttons -->
         <div class="filter-actions">
-            <button class="apply-filters" id="applyFilters">Apply Filters</button>
-            <button class="clear-filters" id="clearFilters">Clear All</button>
+            <button type="button" class="clear-filters" id="clearFilters">Clear</button>
+            <button type="button" class="apply-filters" id="applyFilters">Apply Filters</button>
         </div>
     </div>
     </section>
