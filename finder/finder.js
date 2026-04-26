@@ -1,8 +1,10 @@
 ﻿// Global state variables for job management
 let allJobs = [];
+let allActiveJobsForMap = [];
 let jobMap = null;
 let jobMapMarkers = [];
 let mapInitialized = false;
+let markerCount = 0;
 
 // Map provider configuration 
 const MAP_PROVIDER = 'mapbox';
@@ -237,6 +239,7 @@ async function fetchJobs(query = '', page = 1, filters = null) {
       console.warn('Sorting failed:', err);
     }
 
+    allActiveJobsForMap = [...allUnsavedJobs];
     // Extract the jobs for the current page
     const startIndex = targetOffset;
     const endIndex = startIndex + PAGE_SIZE;
@@ -246,6 +249,7 @@ async function fetchJobs(query = '', page = 1, filters = null) {
 
     allJobs = toDisplay;
     displayJobs(toDisplay);
+    updateJobMap(allActiveJobsForMap);
 
     // Update pagination state
     currentPage = page;
@@ -288,8 +292,6 @@ function displayJobs(jobs) {
   });
 
   updateTotalJobsDisplay();
-  // Keep map in sync for the active result set
-  updateJobMap(jobs);
 }
 
 /**
@@ -343,6 +345,26 @@ function clearJobMapMarkers() {
   }
 
   jobMapMarkers = [];
+}
+
+function updateMarkerCount(markerCount, mapInputCount) {
+
+  const legend = document.querySelector('.map-legend');
+  if (!legend) return;
+
+  let diagnostics = document.getElementById('map-marker-diagnostics');
+
+  if (!diagnostics) {
+
+    diagnostics = document.createElement('span');
+    diagnostics.id = 'map-marker-diagnostics';
+    legend.appendChild(diagnostics);
+  }
+  const totalLabel = typeof totalJobsCount === 'number' ? totalJobsCount.toLocaleString() : '...';
+  diagnostics.textContent = `Markers On Map: ${markerCount} | Total Jobs Label: ${totalLabel} | Map Input Jobs: ${mapInputCount}`; 
+
+
+
 }
 
 function addJobMapMarker(job, lat, lng) {
@@ -449,6 +471,8 @@ async function updateJobMap(jobs) {
   clearJobMapMarkers();
 
   if (!Array.isArray(jobs) || jobs.length === 0) {
+    markerCount = 0;
+    updateMarkerCount(0, 0);
     return;
   }
 
@@ -458,7 +482,7 @@ async function updateJobMap(jobs) {
     let jobLat = Number(job.latitude);
     let jobLng = Number(job.longitude);
 
-    if (!jobLat || !jobLng) {
+    if (!Number.isFinite(jobLat) || !Number.isFinite(jobLng)) {
       const geocoded = await geocodeJobLocation(job.location || job.city || job.region);
       if (geocoded && geocoded.lat && geocoded.lng) {
         jobLat = geocoded.lat;
@@ -479,6 +503,8 @@ async function updateJobMap(jobs) {
       jobMap.fitBounds(mapboxBounds, { padding: 40, maxZoom: 11 });
     }
   }
+  markerCount = jobMapMarkers.length;
+  updateMarkerCount(markerCount, jobs.length);
 }
 
 function clearJobCardHighlights() {
@@ -515,7 +541,9 @@ function focusJobOnMap(jobId) {
           element.style.transform = 'translate(-50%, -50%) scale(1.2)';
           element.style.zIndex = '999';
         }
-        marker.togglePopup();
+        const popup = marker.getPopup();
+
+        if (popup && !popup.isOpen()) marker.togglePopup();
         jobMap.flyTo({ center: marker.getLngLat(), zoom: 10, speed: 0.8 });
       }
     }
@@ -1152,6 +1180,34 @@ function debounce(fn, delay) {
   };
 }
 
+function setResumeProcessing(isProcessing) {
+  const allButtons = document.querySelectorAll('button');
+  allButtons.forEach(button => {
+    button.disabled = isProcessing;
+  });
+
+  const tabButtons = document.querySelectorAll('.tab-button');
+  tabButtons.forEach(button => {
+    button.disabled = isProcessing;
+  });
+
+  const navLinks = document.getElementById('navbar');
+   navLinks.forEach(navLinks => {
+    navLinks.disabled = isProcessing;
+  });
+
+
+  const resumeFile = document.getElementById('resumeFile');
+  if (resumeFile) {
+    resumeFile.disabled = isProcessing;
+  }
+
+  const dropZone = document.getElementById('dropZone');
+  if (dropZone) {
+    dropZone.style.pointerEvents = isProcessing ? 'none' : '';
+    dropZone.style.opacity = isProcessing ? '0.8' : '';
+  }
+}
 
 // Tab navigation functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -1176,6 +1232,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             document.getElementById(`${tabID}-tab`).classList.add('active');
 
+            const boardSection = document.querySelector('.board');
+            if (boardSection) {
+              boardSection.style.display = tabID === 'jobs' ? '' : 'none';
+            }
+
+            const filterPanel = document.getElementById('filter-panel');
+            if (filterPanel && tabID !== 'jobs') {
+              filterPanel.style.display = 'none';
+              filterPanel.setAttribute('hidden', '');
+            }
+
             const pageCtrls = document.querySelector('.pagination-controls');
             if (pageCtrls){
               if (tabID === 'jobs'){
@@ -1190,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
               setTimeout(() => {
                 if (jobMap) jobMap.resize();
-                updateJobMap(allJobs);
+                updateJobMap(allActiveJobsForMap);
               }, 200);
             }
         });
@@ -1324,6 +1391,8 @@ async function handleResumeUpload(file) {
   const formData = new FormData();
   formData.append('resume', file);
 
+  setResumeProcessing(true);
+
   try {
     const dropZone = document.getElementById('dropZone');
     const originalContent = dropZone.innerHTML;
@@ -1416,6 +1485,8 @@ async function handleResumeUpload(file) {
       if (file) handleResumeUpload(file);
     });
 
+  } finally {
+    setResumeProcessing(false);
   }
 
 }
