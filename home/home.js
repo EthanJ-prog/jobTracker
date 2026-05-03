@@ -1,5 +1,14 @@
+function getAuthToken() {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+}
+
+function clearAuthToken() {
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
+}
+
 (function setupAuthNav() {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const loginLink = document.getElementById('nav-login'); 
   const userWrap = document.getElementById('nav-user-wrap');
   const signOutButton = document.getElementById('nav-signout');
@@ -21,7 +30,7 @@
 
   if (signOutButton) {
     signOutButton.addEventListener('click', () => {
-      localStorage.removeItem('token');
+      clearAuthToken();
 
       if (detailsMenu) {
         detailsMenu.removeAttribute('open');

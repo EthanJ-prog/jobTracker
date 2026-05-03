@@ -1,6 +1,15 @@
 // API configuration for backend communication
 const API_BASE = "http://localhost:3000";
 
+function getAuthToken() {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+}
+
+function clearAuthToken() {
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
+}
+
 /**
  * Generic API call function for making HTTP requests to the backend
  * @param {string} endpoint - The API endpoint to call
@@ -8,7 +17,7 @@ const API_BASE = "http://localhost:3000";
  * @returns {Promise<Object>} - Parsed JSON response from the API
  */
 async function apiCall(endpoint, options = {}) {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers["Authorization"] = 'Bearer ' + token;
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -27,7 +36,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     setupAuthNav();
 
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
 
     if (!token) {
       window.location.href = '../auth/signup.html';
@@ -71,7 +80,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setupAuthNav() {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const loginLink = document.getElementById('nav-login'); 
   const userWrap = document.getElementById('nav-user-wrap');
   const signOutButton = document.getElementById('nav-signout');
@@ -91,7 +100,7 @@ function setupAuthNav() {
 
   if (signOutButton) {
     signOutButton.addEventListener('click', () => {
-      localStorage.removeItem('token');
+      clearAuthToken();
 
       if (detailsMenu) {
         detailsMenu.removeAttribute('open');

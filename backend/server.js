@@ -784,7 +784,7 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
 
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe = false } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password required' });
@@ -805,7 +805,8 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
           twoFactorCodes.set(user.id, {
             code,
-            expiresAt: Date.now() + 5 * 60 * 1000
+            expiresAt: Date.now() + 5 * 60 * 1000,
+            rememberMe: Boolean(rememberMe)
           });
 
           const sent = await send2FACodeByEmail(code, email);
@@ -823,7 +824,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
         const token = jwt.sign(
           { userId: user.id },
           JWT_SECRET,
-          { expiresIn: '1h' }
+          { expiresIn: rememberMe ? '30d' : '1h' }
         );
 
         res.json({
@@ -871,13 +872,14 @@ app.post('/api/auth/2fa/verify', twoFALimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid verification code' });
     }
 
+    const remember = Boolean(stored.rememberMe);
     twoFactorCodes.delete(userId);
 
     // Issue JWT AFTER successful 2FA
     const token = jwt.sign(
       { userId },
       JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: remember ? '30d' : '1h' }
     );
 
     res.json({

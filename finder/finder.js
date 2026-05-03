@@ -16,6 +16,15 @@ const API_BASE = 'http://localhost:3000';
 const PAGE_SIZE = 8; // Number of jobs to display per page
 const REQUEST_SIZE = PAGE_SIZE * 5; // Request 5x more jobs to account for saved jobs filtering (40 jobs)
 
+function getAuthToken() {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+}
+
+function clearAuthToken() {
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
+}
+
 // Pagination and search state
 let currentPage = 1;
 let lastPageCount = 0;
@@ -35,7 +44,7 @@ let matchScore = {};
 let hasResume = false;
 
 async function fetchMatchScores() {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
 
   if (!token) {
     hasResume = false;
@@ -819,7 +828,7 @@ function showLoadingMessage() {
  */
 async function getSavedJobs() {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const headers = {};
     if (token) headers["Authorization"] = 'Bearer ' + token;
     const response = await fetch(`${API_BASE}/jobs`, { headers });
@@ -836,7 +845,7 @@ async function getSavedJobs() {
  * @param {Object} job - Job object to save
  */
 async function saveJobToTracker(job) {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   if (!token) {
     alert('Please sign in to save jobs to the tracker.');
     window.location.href = '../auth/signup.html';
@@ -950,7 +959,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function setupAuthNav() {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
   const loginLink = document.getElementById('nav-login'); 
   const userWrap = document.getElementById('nav-user-wrap');
   const signOutButton = document.getElementById('nav-signout');
@@ -970,7 +979,7 @@ function setupAuthNav() {
 
   if (signOutButton) {
     signOutButton.addEventListener('click', () => {
-      localStorage.removeItem('token');
+      clearAuthToken();
 
       if (detailsMenu) {
         detailsMenu.removeAttribute('open');
@@ -1093,7 +1102,7 @@ async function updateDbCountLabel(query, filters = null) {
 
     const queryParam = params.toString() ? `?${params.toString()}` : '';
 
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     const headers = {};
 
     if (token) headers["Authorization"] = 'Bearer ' + token;
@@ -1217,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', () => {
             const tabID = button.dataset.tab;
 
-            if (tabID === 'resume' && !localStorage.getItem('token')) {
+            if (tabID === 'resume' && !getAuthToken()) {
               alert('Please log in to use Resume Match.');
               window.location.href = '../auth/signup.html';
               return;
@@ -1371,7 +1380,7 @@ function initializeResumeUpload() {
 }
 
 async function handleResumeUpload(file) {
-  const token = localStorage.getItem('token');
+  const token = getAuthToken();
 
   if (!token) {
     alert('Please log in to upload a resume.');
@@ -1419,7 +1428,7 @@ async function handleResumeUpload(file) {
         if (errorText && errorText.trim()) errorMessage = errorText.trim();
       }
       if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('token');
+        clearAuthToken();
         window.location.href = '../auth/signup.html';
         throw new Error('Session expired. Please log in again.');
       }

@@ -1,5 +1,23 @@
 const API_URL = 'http://localhost:3000';
 let pendingUserID = null;
+let pendingRememberMe = false;
+
+function getAuthToken() {
+    return localStorage.getItem('token') || sessionStorage.getItem('token');
+}
+
+function saveAuthToken(token, remember = false) {
+    if (remember) {
+        localStorage.setItem('token', token);
+    } else {
+        sessionStorage.setItem('token', token);
+    }
+}
+
+function clearAuthToken() {
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+}
 
 // Tab switching functionality
 function showTab(tabName) {
@@ -70,6 +88,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const rememberMe = document.getElementById('remember-me').checked;
+
         if (pendingUserID) {
             const code = document.getElementById('verification-code').value;
             if (!code || code.length !== 6) {
@@ -81,12 +101,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const res = await fetch(API_URL + '/api/auth/2fa/verify', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ userId: pendingUserID, code: code })
+                    body: JSON.stringify({ userId: pendingUserID, code: code, rememberMe: pendingRememberMe })
                 });
                 const data = await res.json();
 
                 if (res.ok && data.authenticated) {
-                    localStorage.setItem('token', data.token);
+                    saveAuthToken(data.token, pendingRememberMe);
+                    pendingUserID = null;
+                    pendingRememberMe = false;
                     showToast('Login successful', 'success');
                     window.location.href = '../home/home.html';
                 } else {
@@ -102,16 +124,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 const res = await fetch(API_URL + '/api/auth/login', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ email: email, password: password })
+                    body: JSON.stringify({ email: email, password: password, rememberMe })
                 });
                 const data = await res.json();
 
                 if (res.ok && data.twoFactorRequired) {
                     pendingUserID = data.userId;
+                    pendingRememberMe = rememberMe;
                     document.getElementById('2fa-code').style.display = 'block';
                     showToast('The authentication code has been sent to your email!', 'info');
                 } else if (res.ok && data.authenticated) {
-                    localStorage.setItem('token', data.token);
+                    saveAuthToken(data.token, rememberMe);
                     showToast('Login successful', 'success');
                     window.location.href = '../home/home.html';
                 } else {
