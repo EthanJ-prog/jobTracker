@@ -133,6 +133,8 @@ def main(argv):
         "human resources coordinator",
         "operations coordinator",
         "administrative assistant",
+        "volunteer",
+        "clerk",
     ]
 
     # Display configuration

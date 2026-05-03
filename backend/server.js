@@ -80,6 +80,9 @@ const db = new sqlite3.Database('jobs.db', (err) => {
 // JSearch API configuration
 const JSEARCH_API_KEY = process.env.JSEARCH_API_KEY;
 const JSEARCH_BASE_URL = process.env.JSEARCH_BASE_URL || 'https://jsearch.p.rapidapi.com';
+const JSEARCH_REQ_LIMIT = parseInt(process.env.JSEARCH_REQ_LIMIT, 10) || 50;
+let jsearchUsageMonthKey = '';
+let jsearchUsageCount = 0;
 
 // Ollama configuration
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
@@ -322,7 +325,7 @@ async function checkOllamaAvailability() {
     try {
         const response = await fetch(`${OLLAMA_BASE_URL}/api/tags`);
         if (response.ok) {
-            const data = response.json();
+            const data = await response.json();
             const installedModels = Array.isArray(data.models) ? data.models.map((model) => model.name) : [];
             ollamaAvailable = isInstalledOllamaModel(installedModels, OLLAMA_MODEL);
             resumeOllamaAvailable = isInstalledOllamaModel(installedModels, RESUME_OLLAMA_MODEL);
@@ -370,6 +373,31 @@ db.run(`
         FOREIGN KEY (user_id) REFERENCES users(id)
     )
 `);
+
+function getCurrentKey () {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+}
+
+function jsearchQuotaCalculation () {
+
+    const currentMonthKey = getCurrentKey();
+
+    if (currentMonthKey !== jsearchUsageMonthKey) {
+
+        console.log('JSearch usage month key is not the current one');
+        jsearchUsageMonthKey = currentMonthKey;
+        jsearchUsageCount = 0;
+    }
+
+    if (jsearchUsageCount >= JSEARCH_REQ_LIMIT) return false;
+
+    jsearchUsageCount += 1;
+
+    return true;
+}
 
 /**
  * Calculates expiration date and method for a job
@@ -922,6 +950,12 @@ app.get('/api/jobs/search', async (req, res) => {
         }
         if(!JSEARCH_API_KEY) {
             return res.status(500).json({error: 'Server missing API configuration'});
+        }
+
+        const canUseJSearch = jsearchQuotaCalculation();
+
+        if (!canUseJSearch) {
+            return res.status(429).json({ error: "Rate limit for JSearch reached" });
         }
 
         // Build JSearch API URL with parameters
