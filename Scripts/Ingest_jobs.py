@@ -113,7 +113,26 @@ def main(argv):
     queries = args.query if args.query else [
         "software engineer",
         "software developer",
-        "SWE",
+        "frontend developer",
+        "backend developer",
+        "full stack developer",
+        "data analyst",
+        "data scientist",
+        "machine learning engineer",
+        "product manager",
+        "project manager",
+        "business analyst",
+        "UX designer",
+        "UI designer",
+        "quality assurance analyst",
+        "customer success manager",
+        "technical support specialist",
+        "sales representative",
+        "marketing specialist",
+        "financial analyst",
+        "human resources coordinator",
+        "operations coordinator",
+        "administrative assistant",
     ]
 
     # Display configuration
