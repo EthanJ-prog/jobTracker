@@ -111,30 +111,174 @@ def main(argv):
 
     # Set default queries if none provided
     queries = args.query if args.query else [
+        # Technology & Software Development
         "software engineer",
         "software developer",
         "frontend developer",
         "backend developer",
         "full stack developer",
+        "mobile app developer",
+        "ios developer",
+        "android developer",
+        "web developer",
+        "javascript developer",
+        "python developer",
+        "java developer",
+        "c# developer",
+        "php developer",
+        "ruby developer",
+        "go developer",
+        "rust developer",
+        "devops engineer",
+        "site reliability engineer",
+        "systems administrator",
+        "database administrator",
+        "cloud engineer",
+        "aws engineer",
+        "azure engineer",
+        "gcp engineer",
+        
+        # Data & Analytics
         "data analyst",
         "data scientist",
+        "data engineer",
+        "business intelligence analyst",
+        "data visualization specialist",
         "machine learning engineer",
+        "ai engineer",
+        "deep learning engineer",
+        "computer vision engineer",
+        "nlp engineer",
+        "quantitative analyst",
+        "research scientist",
+        
+        # Product & Design
         "product manager",
+        "product owner",
+        "product analyst",
+        "ux designer",
+        "ui designer",
+        "ux/ui designer",
+        "graphic designer",
+        "product designer",
+        "interaction designer",
+        "user experience researcher",
+        "design systems designer",
+        
+        # Project & Program Management
         "project manager",
+        "program manager",
+        "scrum master",
+        "agile coach",
+        "technical project manager",
+        "product operations manager",
+        "operations manager",
+        
+        # Business & Strategy
         "business analyst",
-        "UX designer",
-        "UI designer",
-        "quality assurance analyst",
-        "customer success manager",
-        "technical support specialist",
-        "sales representative",
+        "business development manager",
+        "strategy consultant",
+        "management consultant",
+        "business operations analyst",
+        "growth hacker",
+        "market research analyst",
+        
+        # Marketing & Sales
         "marketing specialist",
+        "digital marketing manager",
+        "content marketing manager",
+        "seo specialist",
+        "social media manager",
+        "brand manager",
+        "marketing coordinator",
+        "sales representative",
+        "account executive",
+        "business development representative",
+        "sales development representative",
+        "customer success manager",
+        "account manager",
+        
+        # Finance & Accounting
         "financial analyst",
+        "investment analyst",
+        "financial planner",
+        "accountant",
+        "auditor",
+        "tax specialist",
+        "fp&a analyst",
+        "corporate finance analyst",
+        "credit analyst",
+        
+        # Human Resources
         "human resources coordinator",
+        "hr generalist",
+        "talent acquisition specialist",
+        "recruiter",
+        "hr business partner",
+        "people operations manager",
+        "training coordinator",
+        "employee relations specialist",
+        
+        # Operations & Administration
         "operations coordinator",
         "administrative assistant",
+        "executive assistant",
+        "office manager",
+        "facilities coordinator",
+        "supply chain analyst",
+        "logistics coordinator",
+        "procurement specialist",
+        
+        # Customer Service & Support
+        "customer service representative",
+        "technical support specialist",
+        "customer success specialist",
+        "client services manager",
+        "support engineer",
+        
+        # Education & Training
+        "technical trainer",
+        "instructional designer",
+        "e-learning developer",
+        "corporate trainer",
+        
+        # Research & Development
+        "research assistant",
+        "r&d engineer",
+        "innovation specialist",
+        
+        # Quality Assurance
+        "quality assurance analyst",
+        "qa engineer",
+        "test engineer",
+        "automation engineer",
+        "quality control inspector",
+        
+        # Entry-level & Internship Opportunities
+        "intern",
+        "internship",
+        "entry level",
+        "junior developer",
+        "junior analyst",
+        "graduate program",
+        "rotational program",
+        
+        # Freelance & Contract
+        "freelance",
+        "contract",
+        "consultant",
+        "independent contractor",
+        
+        # Other Opportunities
         "volunteer",
+        "part time",
+        "temporary",
+        "seasonal",
         "clerk",
+        "assistant",
+        "coordinator",
+        "specialist",
+        "associate",
     ]
 
     # Display configuration
