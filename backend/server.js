@@ -81,8 +81,6 @@ const db = new sqlite3.Database('jobs.db', (err) => {
 const JSEARCH_API_KEY = process.env.JSEARCH_API_KEY;
 const JSEARCH_BASE_URL = process.env.JSEARCH_BASE_URL || 'https://jsearch.p.rapidapi.com';
 const JSEARCH_REQ_LIMIT = parseInt(process.env.JSEARCH_REQ_LIMIT, 10) || 50;
-let jsearchUsageMonthKey = '';
-let jsearchUsageCount = 0;
 
 // Ollama configuration
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL;
@@ -374,6 +372,13 @@ db.run(`
     )
 `);
 
+db.run(`
+    CREATE TABLE IF NOT EXISTS jsearch_usage (
+        month_key TEXT PRIMARY KEY,
+        count INTEGER DEFAULT 0
+    )
+`);
+
 function getCurrentKey () {
     const now = new Date();
     const year = now.getUTCFullYear();
@@ -382,22 +387,40 @@ function getCurrentKey () {
 }
 
 function jsearchQuotaCalculation () {
+    return new Promise((resolve) => {
+        const currentMonthKey = getCurrentKey();
 
-    const currentMonthKey = getCurrentKey();
+        db.get(
+            'SELECT count FROM jsearch_usage WHERE month_key = ?',
+            [currentMonthKey],
+            (err, row) => {
+                if (err) {
+                    console.error('Could not get quota from job usage table.', err.message);
+                    return resolve(false);
+                }
 
-    if (currentMonthKey !== jsearchUsageMonthKey) {
+                const currentCount = row ? row.count : 0;
+                if (currentCount >= JSEARCH_REQ_LIMIT) {
+                    return resolve(false);
+                }
 
-        console.log('JSearch usage month key is not the current one');
-        jsearchUsageMonthKey = currentMonthKey;
-        jsearchUsageCount = 0;
-    }
-
-    if (jsearchUsageCount >= JSEARCH_REQ_LIMIT) return false;
-
-    jsearchUsageCount += 1;
-
-    return true;
+                db.run(
+                    `INSERT INTO jsearch_usage (month_key, count) VALUES (?, 1)
+                    ON CONFLICT(month_key) DO UPDATE SET count = count + 1`,
+                    [currentMonthKey], 
+                    (writeErr) => {
+                        if (writeErr) {
+                            console.error('Error writing into the usage table.', writeErr.message);
+                            return resolve(false);
+                        }
+                        resolve(true);
+                    }
+                );
+            }
+        );
+    });
 }
+
 
 /**
  * Calculates expiration date and method for a job
@@ -952,7 +975,7 @@ app.get('/api/jobs/search', async (req, res) => {
             return res.status(500).json({error: 'Server missing API configuration'});
         }
 
-        const canUseJSearch = jsearchQuotaCalculation();
+        const canUseJSearch = await jsearchQuotaCalculation();
 
         if (!canUseJSearch) {
             return res.status(429).json({ error: "Rate limit for JSearch reached" });

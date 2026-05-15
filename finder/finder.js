@@ -485,23 +485,52 @@ async function updateJobMap(jobs) {
     return;
   }
 
+  console.log('Updating job map with jobs:', jobs.length);
+
+  const stats = {
+    fromDb: 0,
+    geocoded: 0,
+    skipped: 0,
+    errored: 0
+  }
+  const skippedJobs = [];
   const bounds = [];
 
   for (const job of jobs) {
     let jobLat = Number(job.latitude);
     let jobLng = Number(job.longitude);
-
+    let jobCoordsSource = 'from-db';
     if (!Number.isFinite(jobLat) || !Number.isFinite(jobLng)) {
+      jobCoordsSource = 'need-geocode';
       const geocoded = await geocodeJobLocation(job.location || job.city || job.region);
       if (geocoded && geocoded.lat && geocoded.lng) {
         jobLat = geocoded.lat;
         jobLng = geocoded.lng;
+        jobCoordsSource = 'from-geocode';
+      } else {
+        jobCoordsSource = 'geocode-failed';
       }
     }
 
+    console.log('[MAP] job', job.id, '|', job.title, '| location:', job.location, '| coords source:', jobCoordsSource, '| lat:', jobLat, 'lng:', jobLng);
+
     if (isFinite(jobLat) && isFinite(jobLng)) {
-      addJobMapMarker(job, jobLat, jobLng);
-      bounds.push([jobLat, jobLng]);
+      try {
+        addJobMapMarker(job, jobLat, jobLng);
+        bounds.push([jobLat, jobLng]);
+        if (jobCoordsSource === 'from-db'){
+          stats.fromDb++;
+        } else {
+          stats.geocoded++;
+        } 
+      } catch (err) {
+        console.error('Failed to add marker for job:', job.id, job.title, err);
+        stats.errored++;
+      }
+    } else {
+      console.warn('Skipping job with invalid coordinates:', job.id, job.title, 'location:', job.location, jobCoordsSource);
+      stats.skipped++;
+      skippedJobs.push({ id: job.id, title: job.title, location: job.location, reason: jobCoordsSource });
     }
   }
 
@@ -514,6 +543,13 @@ async function updateJobMap(jobs) {
   }
   markerCount = jobMapMarkers.length;
   updateMarkerCount(markerCount, jobs.length);
+
+  console.log('[MAP] Done. Stats:', stats, '| marker created:', markerCount, '|', jobs.length);
+    if (skippedJobs.length > 0) {
+      console.log('[MAP] Jobs not displayed:')
+      console.table(skippedJobs);
+    }
+
 }
 
 function clearJobCardHighlights() {
