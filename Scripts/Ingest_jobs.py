@@ -6,6 +6,7 @@ import sys
 import time
 from urllib.parse import urlencode 
 import requests
+import random
 
 
 def build_url(base_url: str, query: str, page: int, country: str, date_posted: str) -> str:
@@ -280,6 +281,8 @@ def main(argv):
         "specialist",
         "associate",
     ]
+
+    random.shuffle(queries)
 
     # Display configuration
     print(f"Backend: {args.api_base} | queries={queries}")

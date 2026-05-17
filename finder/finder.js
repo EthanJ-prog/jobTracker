@@ -356,38 +356,50 @@ function clearJobMapMarkers() {
   jobMapMarkers = [];
 }
 
-function updateMarkerCount(markerCount, mapInputCount) {
+// function updateMarkerCount(markerCount, mapInputCount) {
 
-  const legend = document.querySelector('.map-legend');
-  if (!legend) return;
+//   const legend = document.querySelector('.map-legend');
+//   if (!legend) return;
 
-  let diagnostics = document.getElementById('map-marker-diagnostics');
+//   let diagnostics = document.getElementById('map-marker-diagnostics');
 
-  if (!diagnostics) {
+//   if (!diagnostics) {
 
-    diagnostics = document.createElement('span');
-    diagnostics.id = 'map-marker-diagnostics';
-    legend.appendChild(diagnostics);
-  }
-  const totalLabel = typeof totalJobsCount === 'number' ? totalJobsCount.toLocaleString() : '...';
-  diagnostics.textContent = `Markers On Map: ${markerCount} | Total Jobs Label: ${totalLabel} | Map Input Jobs: ${mapInputCount}`; 
+//     diagnostics = document.createElement('span');
+//     diagnostics.id = 'map-marker-diagnostics';
+//     legend.appendChild(diagnostics);
+//   }
+//   const totalLabel = typeof totalJobsCount === 'number' ? totalJobsCount.toLocaleString() : '...';
+//   diagnostics.textContent = `Markers On Map: ${markerCount} | Total Jobs Label: ${totalLabel} | Map Input Jobs: ${mapInputCount}`; 
 
 
 
-}
+// }
 
-function addJobMapMarker(job, lat, lng) {
+function addJobMapMarker(jobsAtLocation, lat, lng) {
   if (!mapInitialized || !jobMap || typeof lat !== 'number' || typeof lng !== 'number') return;
+
+  const firstJob = jobsAtLocation[0];
+  const jobCount = jobsAtLocation.length;
+  let jobListHtml = '';
+
+  for (const job of jobsAtLocation) {
+    const title = job.title || 'Job';
+    const company = job.company || 'Unknown Company';
+    jobListHtml += `<li><strong>${title} - ${company}</strong></li>`
+  }
+
+  const locationText = firstJob.location || 'Location Not Found';
 
   const popupHtml = `
     <div class="map-popup">
-      <h4>${job.title || 'Job'}</h4>
-      <p>${job.company || 'Unknown company'}</p>
-      <p>${job.location || 'Location unknown'}</p>
+      <h4>${locationText}</h4>
+      <p>Job Count: ${jobCount}</p>
+      <ul>${jobListHtml}</ul>
     </div>
   `;
 
-  const matchData = matchScore[job.id];
+  const matchData = matchScore[firstJob.id];
   const markerColor = (hasResume && matchData && typeof matchData.score === 'number')
     ? getMatchScoreColor(matchData.score)
     : '#4f46e5';
@@ -399,10 +411,11 @@ function addJobMapMarker(job, lat, lng) {
       .addTo(jobMap);
 
     marker.getElement().addEventListener('click', () => {
-      focusJobOnMap(job.id);
+      focusJobOnMap(firstJob.id);
     });
 
-    jobMapMarkers.push({ jobId: job.id, marker });
+    const jobIds = jobsAtLocation.map(j => j.id);
+    jobMapMarkers.push({ jobIds, marker });
     return;
   }
 }
@@ -495,6 +508,7 @@ async function updateJobMap(jobs) {
   }
   const skippedJobs = [];
   const bounds = [];
+  const jobsByCoords = new Map();
 
   for (const job of jobs) {
     let jobLat = Number(job.latitude);
@@ -515,22 +529,30 @@ async function updateJobMap(jobs) {
     console.log('[MAP] job', job.id, '|', job.title, '| location:', job.location, '| coords source:', jobCoordsSource, '| lat:', jobLat, 'lng:', jobLng);
 
     if (isFinite(jobLat) && isFinite(jobLng)) {
-      try {
-        addJobMapMarker(job, jobLat, jobLng);
+      const key = jobLat + ',' + jobLng;
+      if (!jobsByCoords.has(key)) {
+        jobsByCoords.set(key, { lat: jobLat, lng: jobLng, jobs: [] });
         bounds.push([jobLat, jobLng]);
-        if (jobCoordsSource === 'from-db'){
-          stats.fromDb++;
-        } else {
-          stats.geocoded++;
-        } 
-      } catch (err) {
-        console.error('Failed to add marker for job:', job.id, job.title, err);
-        stats.errored++;
       }
+      jobsByCoords.get(key).jobs.push(job);
+      if (jobCoordsSource === 'from-db') {
+        stats.fromDb++;
+      } else {
+        stats.geocoded++;
+      } 
     } else {
       console.warn('Skipping job with invalid coordinates:', job.id, job.title, 'location:', job.location, jobCoordsSource);
       stats.skipped++;
       skippedJobs.push({ id: job.id, title: job.title, location: job.location, reason: jobCoordsSource });
+    }
+  }
+
+  for (const group of jobsByCoords.values()) {
+    try {
+      addJobMapMarker(group.jobs, group.lat, group.lng);
+    } catch (err) {
+      console.error('Failed to add map markers to group', group.lat, group.lng, err);
+      stats.error++;
     }
   }
 
@@ -577,7 +599,7 @@ function focusJobOnMap(jobId) {
     }
 
     if (MAP_PROVIDER === 'mapbox' && window.mapboxgl) {
-      const entry = jobMapMarkers.find(item => String(item.jobId) === String(jobId));
+      const entry = jobMapMarkers.find(item => item.jobIds.some(id => String(id) === String(jobId)));
       if (entry) {
         clearJobCardHighlights();
         const marker = entry.marker;
