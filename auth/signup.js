@@ -184,9 +184,34 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await res.json();
 
             if (res.ok) {
-                showToast('Account created, you may proceed to login!', 'success');
-                signupForm.reset();
-                showTab('login');
+
+                const loginRes = await fetch(API_URL + '/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, rememberMe: false })
+                });
+                const loginData = await loginRes.json();
+
+                if (loginRes.ok && loginData.authenticated){
+                    console.log('1');
+                    saveAuthToken(loginData.token, false);
+                    showToast('Welcome! You have successfully signed up!', 'success');
+                    window.location.href = '../home/home.html';
+                } else if (loginRes.ok && loginData.twoFactorRequired) {
+                    console.log('2');
+                    pendingUserID = loginData.userId;
+                    pendingRememberMe = false;
+                    signupForm.reset();
+                    showTab('login');
+                    document.getElementById('2fa-code').style.display = 'block';
+                    showToast('Check your email for verification code!', 'info');
+
+                } else {
+                    console.log('3');
+                    showToast('Account created. Please log in.', 'success');
+                    signupForm.reset();
+                    showTab('login');
+                }
             } else {
 
                 showToast(data.error ||'Sign up error, please try again', 'error');
