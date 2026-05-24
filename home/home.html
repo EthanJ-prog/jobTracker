@@ -6,6 +6,7 @@
     <title>Pathfinder - Your Job Search Companion</title>
     <link rel="stylesheet" href="home.css">
     <link rel="stylesheet" href="../shared/nav.css">
+    <link rel="stylesheet" href="../shared/popup.css">
 </head>
 <body>
     <nav class="navbar">
@@ -35,6 +36,45 @@
             </div>
         </div> 
     </nav>
+
+    <div id="popup-backdrop" class="popup-backdrop" hidden></div>
+
+    <section id="profile-popup" class="popup-panel" hidden>
+        <div class="popup-header">
+            <h2 class="popup-title">Profile</h2>
+            <button type="button" class="popup-close" aria-label="Close profile popup">&times;</button>
+        </div>
+        <div class="popup-body">
+            <p><strong>Name:</strong> Student User</p>
+            <p><strong>Email:</strong> student@example.com</p>
+            <p><strong>Member since:</strong> January 2025</p>
+            <div class="popup-section">
+                <h3>Overview</h3>
+                <p>Access your account details, update your profile information, and review your preferences.</p>
+            </div>
+            <div class="popup-action">
+                <button type="button" class="popup-button popup-close">Close</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="settings-popup" class="popup-panel" hidden>
+        <div class="popup-header">
+            <h2 class="popup-title">Settings</h2>
+            <button type="button" class="popup-close" aria-label="Close settings popup">&times;</button>
+        </div>
+        <div class="popup-body">
+            <p><strong>Notifications:</strong> Email alerts enabled</p>
+            <p><strong>Theme:</strong> Light mode</p>
+            <div class="popup-section">
+                <h3>Preferences</h3>
+                <p>Update your notification settings, theme preference, and account privacy controls.</p>
+            </div>
+            <div class="popup-action">
+                <button type="button" class="popup-button popup-close">Close</button>
+            </div>
+        </div>
+    </section>
 
     <header class="hero">
         <h1>Welcome to Pathfinder</h1>

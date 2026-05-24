@@ -10,6 +10,70 @@ function clearAuthToken() {
   sessionStorage.removeItem('token');
 }
 
+function showPopup(popupId) {
+  const backdrop = document.getElementById('popup-backdrop');
+  const detailsMenu = document.getElementById('user-menu-details');
+  const profilePopup = document.getElementById('profile-popup');
+  const settingsPopup = document.getElementById('settings-popup');
+
+  if (detailsMenu) {
+    detailsMenu.removeAttribute('open');
+  }
+
+  if (profilePopup) {
+    profilePopup.setAttribute('hidden', '');
+  }
+  if (settingsPopup) {
+    settingsPopup.setAttribute('hidden', '');
+  }
+
+  if (backdrop) {
+    backdrop.removeAttribute('hidden');
+  }
+
+  const popup = document.getElementById(popupId);
+  if (popup) {
+    popup.removeAttribute('hidden');
+  }
+  document.body.classList.add('modal-open');
+}
+
+function hidePopups() {
+  const backdrop = document.getElementById('popup-backdrop');
+  const profilePopup = document.getElementById('profile-popup');
+  const settingsPopup = document.getElementById('settings-popup');
+
+  if (backdrop) {
+    backdrop.setAttribute('hidden', '');
+  }
+  if (profilePopup) {
+    profilePopup.setAttribute('hidden', '');
+  }
+  if (settingsPopup) {
+    settingsPopup.setAttribute('hidden', '');
+  }
+  document.body.classList.remove('modal-open');
+}
+
+function setupPopupHandlers() {
+  const backdrop = document.getElementById('popup-backdrop');
+  const closeButtons = document.querySelectorAll('.popup-close');
+
+  closeButtons.forEach((button) => {
+    button.addEventListener('click', hidePopups);
+  });
+
+  if (backdrop) {
+    backdrop.addEventListener('click', hidePopups);
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      hidePopups();
+    }
+  });
+}
+
 /**
  * Generic API call function for making HTTP requests to the backend
  * @param {string} endpoint - The API endpoint to call
@@ -84,6 +148,8 @@ function setupAuthNav() {
   const loginLink = document.getElementById('nav-login'); 
   const userWrap = document.getElementById('nav-user-wrap');
   const signOutButton = document.getElementById('nav-signout');
+  const profileLink = document.getElementById('nav-profile');
+  const settingsLink = document.getElementById('nav-settings');
   const detailsMenu = document.getElementById('user-menu-details');
 
   if (token) {
@@ -111,6 +177,22 @@ function setupAuthNav() {
 
 
   }
+
+  if (profileLink) {
+    profileLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      showPopup('profile-popup');
+    });
+  }
+
+  if (settingsLink) {
+    settingsLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      showPopup('settings-popup');
+    });
+  }
+
+  setupPopupHandlers();
 }
 
 
