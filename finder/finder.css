@@ -434,18 +434,75 @@ main {
 .map-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 16px;
     margin-bottom: 16px;
     font-size: 0.95rem;
-    color: #333;
+    color: #1f2937;
+    align-items: flex-start;
 }
 
-.map-legend span {
-    background: rgba(255,255,255,0.92);
-    border: 1px solid rgba(92, 107, 192, 0.15);
-    padding: 10px 14px;
-    border-radius: 999px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+.map-legend .legend-section {
+    background: rgba(255,255,255,0.98);
+    border: 1px solid rgba(92, 107, 192, 0.08);
+    padding: 12px 14px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    min-width: 220px;
+}
+
+.map-legend .legend-title {
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.map-legend .legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.map-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.map-legend .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    flex: 0 0 auto;
+}
+
+.map-legend .legend-label {
+    color: #334155;
+    font-size: 0.95rem;
+}
+
+.map-legend .legend-note {
+    color: #475569;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+}
+
+.map-legend .legend-diagnostics {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 6px;
+}
+
+@media (max-width: 720px) {
+    .map-legend {
+        flex-direction: column;
+    }
+    .map-legend .legend-section {
+        min-width: auto;
+        width: 100%;
+    }
 }
 
 .mapboxgl-popup-content {
@@ -463,6 +520,71 @@ main {
     margin: 0;
     font-size: 0.95rem;
     color: #444;
+}
+
+.map-popup {
+    padding: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.map-popup h4 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: #1f2937;
+}
+
+.map-popup p {
+    margin: 0 0 8px;
+    color: #4b5563;
+    font-size: 0.95rem;
+}
+
+.map-popup ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.map-popup li {
+    margin-bottom: 6px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.08);
+    color: #111827;
+    font-size: 0.9rem;
+}
+
+.map-popup li strong {
+    display: block;
+    color: #111827;
+}
+
+.map-popup li span {
+    display: block;
+    color: #4b5563;
+    font-size: 0.85rem;
+}
+
+.custom-map-marker {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+}
+
+.custom-map-marker--cluster {
+    width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
 }
 
 .mapboxgl-popup-close-button {
@@ -699,6 +821,55 @@ main {
     display: grid;
     grid-template-columns: 1fr;
     gap: 24px;
+    position: relative;
+}
+
+.resume-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.95);
+    display: none;
+    place-items: center;
+    z-index: 10;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+}
+
+.resume-loading-overlay.active {
+    display: grid;
+}
+
+.resume-loading-overlay .loader-content {
+    max-width: 320px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.95);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+}
+
+.resume-loading-overlay .loader-spinner {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 16px;
+    border: 5px solid rgba(0, 0, 0, 0.12);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spinner-rotate 1s linear infinite;
+}
+
+@keyframes spinner-rotate {
+    to { transform: rotate(360deg); }
+}
+
+.resume-loading-overlay p {
+    margin: 0;
+    color: #333;
+    line-height: 1.6;
+}
+
+.resume-loading-overlay p + p {
+    margin-top: 8px;
 }
 
 /* Resume upload section heading */

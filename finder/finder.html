@@ -250,6 +250,14 @@
               </div>
             </div>
 
+            <div class="resume-loading-overlay" id="resumeLoadingOverlay" aria-hidden="true">
+              <div class="loader-content">
+                <div class="loader-spinner" aria-hidden="true"></div>
+                <p>Uploading and analyzing your resume…</p>
+                <p>Calculating job match scores now.</p>
+              </div>
+            </div>
+
             <!-- Skills Analysis Section -->
             <div class="skills-match" id="skillsAnalysis" style="display: none;">
               <h3>Skills Analysis</h3>
@@ -289,10 +297,41 @@
         <div id="map-tab" class="tab-pane">
           <section class="map-section">
             <h2>Job Locations</h2>
-            <div class="map-legend">
-              <span>Markers correspond to active job listings shown on the Jobs tab.</span>
-              <span>Click a marker to highlight the matching card and open its details.</span>
-              <span>Match score colors are used when available.</span>
+            <div class="map-legend" role="group" aria-label="Map legend">
+              <div class="legend-section">
+                <div class="legend-title">Marker — Match Score</div>
+                <div class="legend-items">
+                  <div class="legend-item">
+                    <span class="legend-swatch" style="background:#22c55e"></span>
+                    <span class="legend-label">80–100 — High match</span>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-swatch" style="background:#eab308"></span>
+                    <span class="legend-label">60–79 — Good match</span>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-swatch" style="background:#f97316"></span>
+                    <span class="legend-label">40–59 — Moderate match</span>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-swatch" style="background:#ef4444"></span>
+                    <span class="legend-label">0–39 — Low match</span>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-swatch" style="background:#4f46e5"></span>
+                    <span class="legend-label">Neutral — no match data / clusters</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="legend-section">
+                <div class="legend-title">How to use</div>
+                <div class="legend-note">Click a marker to open a popup with the jobs at that location.</div>
+                <div class="legend-note">Marker color reflects your resume match when available.</div>
+                <div class="legend-note">Clustered markers show a count for multiple jobs at one location.</div>
+              </div>
+
+              <div id="map-marker-diagnostics" class="legend-diagnostics" hidden></div>
             </div>
             <!-- Map container for visualizing job locations -->
             <div id="map" aria-label="Job locations map">

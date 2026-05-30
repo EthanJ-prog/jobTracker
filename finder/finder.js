@@ -420,25 +420,24 @@ function clearJobMapMarkers() {
   jobMapMarkers = [];
 }
 
-// function updateMarkerCount(markerCount, mapInputCount) {
+function updateMarkerCount(markerCountValue, mapInputCount) {
+  const legend = document.querySelector('.map-legend');
+  if (!legend) return;
 
-//   const legend = document.querySelector('.map-legend');
-//   if (!legend) return;
+  let diagnostics = document.getElementById('map-marker-diagnostics');
 
-//   let diagnostics = document.getElementById('map-marker-diagnostics');
+  if (!diagnostics) {
+    diagnostics = document.createElement('span');
+    diagnostics.id = 'map-marker-diagnostics';
+    legend.appendChild(diagnostics);
+  }
 
-//   if (!diagnostics) {
-
-//     diagnostics = document.createElement('span');
-//     diagnostics.id = 'map-marker-diagnostics';
-//     legend.appendChild(diagnostics);
-//   }
-//   const totalLabel = typeof totalJobsCount === 'number' ? totalJobsCount.toLocaleString() : '...';
-//   diagnostics.textContent = `Markers On Map: ${markerCount} | Total Jobs Label: ${totalLabel} | Map Input Jobs: ${mapInputCount}`; 
-
-
-
-// }
+  // Ensure diagnostics are visible and styled
+  diagnostics.classList.add('legend-diagnostics');
+  diagnostics.removeAttribute('hidden');
+  const totalLabel = typeof totalJobsCount === 'number' ? totalJobsCount.toLocaleString() : '...';
+  diagnostics.textContent = `Markers On Map: ${markerCountValue} | Total Jobs Label: ${totalLabel} | Map Input Jobs: ${mapInputCount}`;
+}
 
 function addJobMapMarker(jobsAtLocation, lat, lng) {
   if (!mapInitialized || !jobMap || typeof lat !== 'number' || typeof lng !== 'number') return;
@@ -450,26 +449,44 @@ function addJobMapMarker(jobsAtLocation, lat, lng) {
   for (const job of jobsAtLocation) {
     const title = job.title || 'Job';
     const company = job.company || 'Unknown Company';
-    jobListHtml += `<li><strong>${title} - ${company}</strong></li>`
+    jobListHtml += `
+      <li>
+        <strong>${title}</strong>
+        <span>${company}</span>
+      </li>`;
   }
 
   const locationText = firstJob.location || 'Location Not Found';
+  const locationSubtitle = jobCount > 1 ? `${jobCount} jobs at this location` : 'Single job location';
 
   const popupHtml = `
     <div class="map-popup">
       <h4>${locationText}</h4>
-      <p>Job Count: ${jobCount}</p>
+      <p>${locationSubtitle}</p>
       <ul>${jobListHtml}</ul>
     </div>
   `;
 
   const matchData = matchScore[firstJob.id];
-  const markerColor = (hasResume && matchData && typeof matchData.score === 'number')
-    ? getMatchScoreColor(matchData.score)
-    : '#4f46e5';
+  const isClusteredLocation = jobsAtLocation.length > 1;
+  const markerColor = isClusteredLocation
+    ? '#4f46e5' // neutral color for overlapping markers
+    : (hasResume && matchData && typeof matchData.score === 'number')
+      ? getMatchScoreColor(matchData.score)
+      : '#4f46e5';
 
   if (MAP_PROVIDER === 'mapbox' && window.mapboxgl) {
-    const marker = new mapboxgl.Marker({ color: markerColor })
+    const markerEl = document.createElement('div');
+    markerEl.className = 'custom-map-marker';
+    markerEl.style.backgroundColor = markerColor;
+    markerEl.title = locationText;
+
+    if (isClusteredLocation) {
+      markerEl.textContent = String(jobCount);
+      markerEl.classList.add('custom-map-marker--cluster');
+    }
+
+    const marker = new mapboxgl.Marker(markerEl)
       .setLngLat([lng, lat])
       .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupHtml))
       .addTo(jobMap);
@@ -1338,12 +1355,6 @@ function setResumeProcessing(isProcessing) {
     button.disabled = isProcessing;
   });
 
-  const navLinks = document.getElementById('navbar');
-   navLinks.forEach(navLinks => {
-    navLinks.disabled = isProcessing;
-  });
-
-
   const resumeFile = document.getElementById('resumeFile');
   if (resumeFile) {
     resumeFile.disabled = isProcessing;
@@ -1353,6 +1364,12 @@ function setResumeProcessing(isProcessing) {
   if (dropZone) {
     dropZone.style.pointerEvents = isProcessing ? 'none' : '';
     dropZone.style.opacity = isProcessing ? '0.8' : '';
+  }
+
+  const loadingOverlay = document.getElementById('resumeLoadingOverlay');
+  if (loadingOverlay) {
+    loadingOverlay.classList.toggle('active', isProcessing);
+    loadingOverlay.setAttribute('aria-hidden', (!isProcessing).toString());
   }
 }
 
@@ -1596,17 +1613,7 @@ async function handleResumeUpload(file) {
 
     document.getElementById('uploadNewResume').addEventListener('click', () => {
       dropZone.innerHTML = originalContent;
-      const newFileInput = document.getElementById('resumeFile');
-
-      if (newFileInput) {
-        newFileInput.addEventListener('change', (e) => {
-        const newFile = e.target.files[0];
-        if (newFile) handleResumeUpload(newFile);
-
-        });
-
-      }
-
+      initializeResumeUpload();
     });
     alert(`Resume uploaded succesfully! Matched against ${matchCount} jobs with an average score of ${avgScore}%.`);
 
@@ -1631,6 +1638,7 @@ async function handleResumeUpload(file) {
       const file = e.target.files[0];
       if (file) handleResumeUpload(file);
     });
+    initializeResumeUpload();
 
   } finally {
     setResumeProcessing(false);
