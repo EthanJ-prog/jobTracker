@@ -326,6 +326,11 @@ async function fetchJobs(query = '', page = 1, filters = null) {
 
     // Update pagination state
     currentPage = page;
+    try {
+      sessionStorage.setItem('finderCurrentPage', page.toString());
+    } catch (e) {
+      // ignore storage errors (privacy mode etc.)
+    }
     currentQuery = query;
     lastPageCount = toDisplay.length;
     updatePaginationControls();
@@ -852,6 +857,11 @@ function createJobCard(job) {
         // Persist to sessionStorage to survive page reloads (Safari bfcache)
         sessionStorage.setItem('finderTotalJobsCount', totalJobsCount.toString());
         sessionStorage.setItem('finderCountTimestamp', Date.now().toString());
+        try {
+          sessionStorage.setItem('finderCurrentPage', currentPage.toString());
+        } catch (e) {
+          // ignore storage errors
+        }
       }
       
       // Update UI immediately without any async database calls
@@ -1045,7 +1055,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateDbCountLabel('', currentFilters);
   }
   
-  fetchJobs('');
+  // Determine initial page to fetch. If we restored count from sessionStorage,
+  // try to restore the last viewed page as well.
+  let initialPage = 1;
+  if (restoredFromSession) {
+    try {
+      const savedPage = sessionStorage.getItem('finderCurrentPage');
+      if (savedPage) {
+        const parsed = parseInt(savedPage, 10);
+        if (!isNaN(parsed) && parsed > 0) initialPage = parsed;
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+  }
+
+  fetchJobs('', initialPage);
   
   // Clear the preventCountRefetch flag after initial load completes
   // This allows future searches to get fresh counts from the database

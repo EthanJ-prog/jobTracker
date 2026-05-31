@@ -842,7 +842,7 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
         db.run(
             `INSERT INTO users (email, password_hash, two_factor_enabled) VALUES (?, ?, ?)`,
             [email, passwordHash, enable2FA],
-            function (err) {
+            async function (err) {
                 if (err) {
                     // Unique constraint violation -> duplicate email
                     if (err.message.includes('UNIQUE')) {
@@ -851,9 +851,35 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
                     return res.status(500).json({ error: 'Database error' });
                 }
 
+                const newUserId = this.lastID;
+                if (enable2FA) {
+                    const code = Math.floor(100000 + Math.random() * 900000).toString();
+                    twoFactorCodes.set(newUserId, {
+                        code,
+                        expiresAt: Date.now() + 5 * 60 * 1000,
+                        rememberMe: false
+                    }); 
+                    const sent = await send2FACodeByEmail(code, email);     
+                    if (!sent) {
+                        return res.status(500).json({ error: 'Failed to send 2FA code. Please try again later.' });
+                    }
+                    
+                    return res.status(201).json({
+                        twoFactorRequired: true,
+                        userId: newUserId
+                    });
+                }
+
+                const token = jwt.sign(
+                    { userId: newUserId },
+                    JWT_SECRET,
+                    { expiresIn: '1h' }
+                );
+
                 // Created successfully
                 res.status(201).json({
-                    message: 'User created successfully'
+                    authenticated: true,
+                    token
                 });
             }
         );
