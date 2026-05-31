@@ -1,5 +1,21 @@
-// Load environment variables from .env file
-require('dotenv').config();
+const path = require('path');
+const dotenv = require('dotenv');
+
+// Load environment variables from the workspace root .env file by default.
+// This handles the case where backend/server.js is started from a different working directory.
+const envPath = path.resolve(__dirname, '../.env');
+const dotenvResult = dotenv.config({ path: envPath });
+if (dotenvResult.error) {
+    console.warn(`Warning: Could not load .env from ${envPath}: ${dotenvResult.error.message}`);
+    const fallbackResult = dotenv.config();
+    if (fallbackResult.error) {
+        console.warn(`Warning: Could not load fallback .env from current working directory: ${fallbackResult.error.message}`);
+    } else {
+        console.log('Loaded environment variables from current working directory as fallback.');
+    }
+} else {
+    console.log(`Loaded environment variables from ${envPath}`);
+}
 
 // Import required dependencies
 const express = require('express');
@@ -91,6 +107,14 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL_NAME || process.env.GEMINI_MODEL |
 
 const geminiClient = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const geminiModel = geminiClient ? geminiClient.getGenerativeModel({ model: GEMINI_MODEL }) : null;
+
+if (!GEMINI_API_KEY) {
+    console.warn('Warning: GEMINI_API_KEY is not set. Resume parsing using Gemini will be disabled.');
+} else if (!geminiModel) {
+    console.warn(`Warning: Gemini model initialization failed for model "${GEMINI_MODEL}". Please verify GEMINI_MODEL and GEMINI_API_KEY.`);
+} else {
+    console.log(`Gemini configured successfully. Model: ${GEMINI_MODEL}`);
+}
 
 const PROGRAMMING_LANGUAGES = [
     'javascript', 'python', 'java', 'c++', 'c#', 'ruby', 'php', 'swift',
@@ -569,7 +593,15 @@ function normalizeResumeContactInfo(contactInfo) {
 }
 
 async function parseResumeWithGemini(fileBuffer, mimetype) {
-    if (!geminiModel) throw new Error('Gemini is not configured. Set Gemini API key in backend file');
+    if (!GEMINI_API_KEY) {
+        throw new Error('Gemini is not configured. No GEMINI_API_KEY was found. Ensure backend .env contains GEMINI_API_KEY and the server is loading the correct .env file.');
+    }
+    if (!geminiClient) {
+        throw new Error('Gemini client initialization failed. Verify GEMINI_API_KEY and backend configuration.');
+    }
+    if (!geminiModel) {
+        throw new Error(`Gemini model is not initialized. Check GEMINI_MODEL (${GEMINI_MODEL}) and GEMINI_API_KEY configuration.`);
+    }
     if (mimetype !== 'application/pdf') throw new Error('Only pdf resumes are supported.');
 
     const prompt = `Read this resume and return ONLY valid JSON with this exact shape: 
@@ -578,7 +610,6 @@ async function parseResumeWithGemini(fileBuffer, mimetype) {
     "experience":["string"],
     "education":["string"],
     "contact_info":{"name":"string","email":"string","phone":"string","location":"string","linkedIn":"string"}}`;
-
     const result = await geminiModel.generateContent([prompt, {inlineData: { mimeType: mimetype, data: fileBuffer.toString('base64') } }]);
     const responseText = result && result.response ? result.response.text() : '';
     const jsonString = extractJsonObject(responseText);
