@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+    Authentication page: Login and Sign Up tabs.
+    - Handles 2FA flows, toast notifications, and client-side validation.
+    - JavaScript behavior is in `signup.js` and styles in `signup.css`.
+-->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -39,6 +44,9 @@
         <div id="signup" class="tab-content">
             <h2>Sign Up</h2>
             <form>
+                <label for="signup-name">Full Name:</label>
+                <input type="text" id="signup-name" required>
+                
                 <label for="signup-email">Email:</label>
                 <input type="email" id="signup-email" required>
                 

@@ -398,3 +398,8 @@ body {
         gap: 1rem;
     }
 }
+
+/*
+    Styles for the home/landing page. Defines global CSS variables, base layout,
+    and components used on the landing page (hero, features, steps, footer).
+*/

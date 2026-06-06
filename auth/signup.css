@@ -268,3 +268,8 @@ button[type="submit"]:active {
     background: rgba(0, 0, 0, 0.1);
     color: var(--text-primary);
 }
+
+/*
+    Signup page styles: layout for login/signup tabs and toast notifications.
+    Mirrors theme variables used across the app for a consistent design.
+*/

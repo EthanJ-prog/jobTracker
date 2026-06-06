@@ -1,15 +1,27 @@
 // API configuration for backend communication
 const API_BASE = "http://localhost:3000";
 
+/**
+ * Return the current auth token from storage (localStorage preferred).
+ * @returns {string|null}
+ */
 function getAuthToken() {
   return localStorage.getItem('token') || sessionStorage.getItem('token');
 }
 
+/**
+ * Remove authentication tokens from storage. Use when signing out
+ * or if the backend indicates the session is invalid.
+ */
 function clearAuthToken() {
   localStorage.removeItem('token');
   sessionStorage.removeItem('token');
 }
 
+/**
+ * Show a popup by id and reveal the backdrop. Hides other popups
+ * and ensures the document body receives the modal-open class.
+ */
 function showPopup(popupId) {
   const backdrop = document.getElementById('popup-backdrop');
   const detailsMenu = document.getElementById('user-menu-details');
@@ -38,6 +50,9 @@ function showPopup(popupId) {
   document.body.classList.add('modal-open');
 }
 
+/**
+ * Hide all popup overlays and remove the backdrop.
+ */
 function hidePopups() {
   const backdrop = document.getElementById('popup-backdrop');
   const profilePopup = document.getElementById('profile-popup');
@@ -55,6 +70,7 @@ function hidePopups() {
   document.body.classList.remove('modal-open');
 }
 
+// Attach handlers to popup close elements and escape/backdrop actions.
 function setupPopupHandlers() {
   const backdrop = document.getElementById('popup-backdrop');
   const closeButtons = document.querySelectorAll('.popup-close');
@@ -143,6 +159,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 });
 
+/**
+ * Setup authentication-related navigation elements in the header
+ * (login link visibility, user menu, sign out handler, and popup links).
+ */
 function setupAuthNav() {
   const token = getAuthToken();
   const loginLink = document.getElementById('nav-login'); 
@@ -354,7 +374,9 @@ function createJobCard(job) {
   return card;
 }
 
-// Set up drag and drop functionality for all column containers
+// Set up drag-and-drop functionality for all column containers.
+// Handles dragenter/leave visuals, drop validation, and server-side
+// updates to job status when a card is moved between columns.
 document.querySelectorAll('.column').forEach(column => {
   // Handle drag over events to allow dropping
   const container = column.querySelector('.column-content');
@@ -422,7 +444,7 @@ document.querySelectorAll('.column').forEach(column => {
   });
 });
 
-// Set up add job button functionality for all columns
+// Toggle the add-job form for each column when its Add/Cancel button is clicked.
 document.querySelectorAll('.add-button').forEach(button => {
   button.addEventListener('click', () => {
     const wrapper = button.previousElementSibling.querySelector('.input-wrapper');
@@ -439,7 +461,8 @@ document.querySelectorAll('.add-button').forEach(button => {
   });
 });
 
-// Set up submit button functionality for creating new jobs
+// Handle creating new job records via the submit buttons in each column.
+// Performs validation, posts to the API, and inserts the created card.
 document.querySelectorAll('.submit-button').forEach(button => {
   button.addEventListener('click', async () => {
     const columnId = button.getAttribute('data-column');
@@ -499,4 +522,244 @@ document.querySelectorAll('.submit-button').forEach(button => {
     }
 
   });
+});
+
+// ===== Profile Management =====
+
+const API_URL = 'http://localhost:3000';
+
+/**
+ * Load user profile data from the server and display it
+ */
+async function loadUserProfile() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const response = await fetch(`${API_URL}/api/user/profile`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('Failed to load profile:', response.status);
+      return;
+    }
+
+    const profile = await response.json();
+
+    // Display profile data
+    document.getElementById('profile-name').textContent = profile.name || 'Not set';
+    document.getElementById('profile-email').textContent = profile.email || '';
+    document.getElementById('profile-joined').textContent = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // For edit mode
+    document.getElementById('profile-email-display').textContent = profile.email || '';
+    document.getElementById('profile-joined-display').textContent = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('profile-name-input').value = profile.name || '';
+
+  } catch (error) {
+    console.error('Error loading profile:', error);
+  }
+}
+
+/**
+ * Toggle between view and edit modes for the profile
+ */
+function toggleProfileEditMode(isEdit) {
+  const viewMode = document.getElementById('profile-view-mode');
+  const editMode = document.getElementById('profile-edit-mode');
+
+  if (isEdit) {
+    viewMode.style.display = 'none';
+    editMode.style.display = 'block';
+  } else {
+    viewMode.style.display = 'block';
+    editMode.style.display = 'none';
+  }
+}
+
+/**
+ * Save the updated profile name
+ */
+async function saveUserProfile() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const name = document.getElementById('profile-name-input').value.trim();
+    if (!name) {
+      alert('Name cannot be empty');
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/api/user/profile`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert('Failed to save profile: ' + (error.error || 'Unknown error'));
+      return;
+    }
+
+    // Reload profile and close edit mode
+    await loadUserProfile();
+    toggleProfileEditMode(false);
+
+  } catch (error) {
+    console.error('Error saving profile:', error);
+    alert('Error saving profile: ' + error.message);
+  }
+}
+
+/**
+ * Load 2FA status from the server
+ */
+async function load2FAStatus() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const response = await fetch(`${API_URL}/api/user/2fa-status`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('Failed to load 2FA status:', response.status);
+      return;
+    }
+
+    const data = await response.json();
+    const toggle = document.getElementById('twofa-toggle');
+    const status = document.getElementById('twofa-status');
+
+    if (toggle) {
+      toggle.checked = data.two_factor_enabled;
+    }
+
+    if (status) {
+      status.textContent = `Status: ${data.two_factor_enabled ? '✓ Enabled' : '✗ Disabled'}`;
+      status.style.color = data.two_factor_enabled ? '#059669' : '#6b7280';
+    }
+
+  } catch (error) {
+    console.error('Error loading 2FA status:', error);
+  }
+}
+
+/**
+ * Toggle 2FA on/off
+ */
+async function toggle2FA(event) {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const enable = event.target.checked;
+    const response = await fetch(`${API_URL}/api/user/2fa-toggle`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ enable })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert('Failed to update 2FA: ' + (error.error || 'Unknown error'));
+      // Reload status on failure
+      await load2FAStatus();
+      return;
+    }
+
+    const status = document.getElementById('twofa-status');
+    if (status) {
+      status.textContent = `Status: ${enable ? '✓ Enabled' : '✗ Disabled'}`;
+      status.style.color = enable ? '#059669' : '#6b7280';
+    }
+
+  } catch (error) {
+    console.error('Error toggling 2FA:', error);
+    alert('Error updating 2FA: ' + error.message);
+    // Reload status on failure
+    await load2FAStatus();
+  }
+}
+
+/**
+ * Setup profile popup event handlers
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  const editBtn = document.getElementById('profile-edit-btn');
+  const saveBtn = document.getElementById('profile-save-btn');
+  const cancelBtn = document.getElementById('profile-cancel-btn');
+
+  if (editBtn) {
+    editBtn.addEventListener('click', () => toggleProfileEditMode(true));
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveUserProfile);
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      toggleProfileEditMode(false);
+      // Reload profile data to reset form
+      loadUserProfile();
+    });
+  }
+
+  // Load profile when popup is shown
+  const profilePopup = document.getElementById('profile-popup');
+  if (profilePopup) {
+    // Use MutationObserver to detect when popup is shown
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'hidden') {
+          if (!profilePopup.hasAttribute('hidden')) {
+            loadUserProfile();
+          }
+        }
+      });
+    });
+
+    observer.observe(profilePopup, { attributes: true });
+  }
+
+  // Setup 2FA toggle
+  const twoFAToggle = document.getElementById('twofa-toggle');
+  if (twoFAToggle) {
+    twoFAToggle.addEventListener('change', toggle2FA);
+  }
+
+  // Load 2FA status when settings popup is shown
+  const settingsPopup = document.getElementById('settings-popup');
+  if (settingsPopup) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'hidden') {
+          if (!settingsPopup.hasAttribute('hidden')) {
+            load2FAStatus();
+          }
+        }
+      });
+    });
+
+    observer.observe(settingsPopup, { attributes: true });
+  }
 });

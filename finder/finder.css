@@ -24,6 +24,11 @@
     --control-height: 48px;
 }
 
+/*
+    Finder styles: controls the job search, filter UI, job cards, and map
+    presentation. Variables at the top keep the theme consistent with other pages.
+*/
+
 body {
     font-family: "Segoe UI", Roboto, sans-serif;
     background: linear-gradient(135deg, #f4f6f8, #e8ecf5);

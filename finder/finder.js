@@ -20,6 +20,10 @@ function getAuthToken() {
   return localStorage.getItem('token') || sessionStorage.getItem('token');
 }
 
+/**
+ * Remove any stored authentication tokens from both storage locations.
+ * Used when signing out or when an API call returns an unauthorized status.
+ */
 function clearAuthToken() {
   localStorage.removeItem('token');
   sessionStorage.removeItem('token');
@@ -70,6 +74,8 @@ function hidePopups() {
   document.body.classList.remove('modal-open');
 }
 
+// Wire popup close/open handlers for backdrop clicks, close buttons, and Escape key.
+// Keeps popup UI behavior consistent across the app (keyboard and click dismissal).
 function setupPopupHandlers() {
   const backdrop = document.getElementById('popup-backdrop');
   const closeButtons = document.querySelectorAll('.popup-close');
@@ -107,6 +113,11 @@ let currentFilters = {
 let matchScore = {};
 let hasResume = false;
 
+/**
+ * Retrieve match scoring data for the current user resume from the backend.
+ * Sets `hasResume` to indicate whether a resume exists and populates
+ * the `matchScore` lookup used to color and sort job matches.
+ */
 async function fetchMatchScores() {
   const token = getAuthToken();
 
@@ -137,6 +148,12 @@ async function fetchMatchScores() {
   }
 }
 
+/**
+ * Map a numeric match score to a color used in badges and markers.
+ * Higher scores map to greener tones; lower to red for quick scanning.
+ * @param {number} score - Match score (0-100)
+ * @returns {string} Hex color string
+ */
 function getMatchScoreColor(score) {
   if (score >= 80) return '#22c55e';  // Green for 80-100%
   if (score >= 60) return '#eab308';  // Yellow for 60-79%
@@ -413,6 +430,11 @@ function initializeJobMap() {
   console.warn('No map provider enabled or available - job map will not be shown');
 }
 
+/**
+ * Remove all markers from the active job map and reset internal marker list.
+ * Supports multiple map providers (currently Mapbox) by delegating removal
+ * to the provider-specific API when available.
+ */
 function clearJobMapMarkers() {
   if (!mapInitialized || !jobMap) return;
 
@@ -425,6 +447,11 @@ function clearJobMapMarkers() {
   jobMapMarkers = [];
 }
 
+/**
+ * Update the map legend diagnostics element with current marker counts,
+ * total jobs known, and how many jobs were provided as input to the map.
+ * This is useful for debugging and giving users quick feedback on map state.
+ */
 function updateMarkerCount(markerCountValue, mapInputCount) {
   const legend = document.querySelector('.map-legend');
   if (!legend) return;
@@ -444,6 +471,15 @@ function updateMarkerCount(markerCountValue, mapInputCount) {
   diagnostics.textContent = `Markers On Map: ${markerCountValue} | Total Jobs Label: ${totalLabel} | Map Input Jobs: ${mapInputCount}`;
 }
 
+/**
+ * Add a marker to the job map for one geographic location. If multiple
+ * jobs share the same coordinates this will create a clustered marker
+ * that shows the list of jobs in the popup. Markers are colored by
+ * match score when available to visually indicate fit.
+ * @param {Array} jobsAtLocation - Jobs that share the same lat/lng
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ */
 function addJobMapMarker(jobsAtLocation, lat, lng) {
   if (!mapInitialized || !jobMap || typeof lat !== 'number' || typeof lng !== 'number') return;
 
@@ -673,6 +709,8 @@ function clearJobCardHighlights() {
   }
 }
 
+// Focus a job on the map and in the list view: switch to the map tab,
+// highlight the marker and the corresponding job card, and animate the map.
 function focusJobOnMap(jobId) {
   const mapTabButton = document.querySelector('.tab-button[data-tab="map"]');
   if (mapTabButton && !mapTabButton.classList.contains('active')) {
@@ -909,6 +947,11 @@ function createJobCard(job) {
   return card;
 }
 
+  /**
+   * Request a short summary for a long job description from the backend
+   * and insert it into the provided job card. This reduces initial
+   * payload size and provides a concise preview for the user.
+   */
   async function loadJobDescriptionSummary(card, description){
     try {
       const descElement = card.querySelector('.job-description-text');
@@ -1369,6 +1412,8 @@ function debounce(fn, delay) {
   };
 }
 
+// Toggle UI state while resume processing/upload is in progress.
+// Disables buttons and input areas and shows/hides a loading overlay.
 function setResumeProcessing(isProcessing) {
   const allButtons = document.querySelectorAll('button');
   allButtons.forEach(button => {
@@ -1559,6 +1604,9 @@ function initializeResumeUpload() {
 
 }
 
+// Validate and upload a resume file to the backend, then refresh match
+// scores and job listings. Only PDF is allowed; user is redirected to
+// login if not authenticated.
 async function handleResumeUpload(file) {
   const token = getAuthToken();
 
@@ -1671,6 +1719,12 @@ async function handleResumeUpload(file) {
 
 }
 
+/**
+ * Populate and display the job detail overlay (modal).
+ * Fills overlay fields, wires the save/apply buttons, and shows
+ * match score breakdown if available.
+ * @param {Object} job - Job object to display in overlay
+ */
 function openJobDetailOverlay(job) {
   const overlay = document.getElementById('job-detail-overlay');
   
@@ -1883,4 +1937,242 @@ function initializeJobDetailOverlay() {
     }
   });
 }
+
+// ===== Profile Management =====
+
+/**
+ * Load user profile data from the server and display it
+ */
+async function loadUserProfile() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const response = await fetch(`${API_BASE}/api/user/profile`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('Failed to load profile:', response.status);
+      return;
+    }
+
+    const profile = await response.json();
+
+    // Display profile data
+    document.getElementById('profile-name').textContent = profile.name || 'Not set';
+    document.getElementById('profile-email').textContent = profile.email || '';
+    document.getElementById('profile-joined').textContent = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // For edit mode
+    document.getElementById('profile-email-display').textContent = profile.email || '';
+    document.getElementById('profile-joined-display').textContent = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('profile-name-input').value = profile.name || '';
+
+  } catch (error) {
+    console.error('Error loading profile:', error);
+  }
+}
+
+/**
+ * Toggle between view and edit modes for the profile
+ */
+function toggleProfileEditMode(isEdit) {
+  const viewMode = document.getElementById('profile-view-mode');
+  const editMode = document.getElementById('profile-edit-mode');
+
+  if (isEdit) {
+    viewMode.style.display = 'none';
+    editMode.style.display = 'block';
+  } else {
+    viewMode.style.display = 'block';
+    editMode.style.display = 'none';
+  }
+}
+
+/**
+ * Save the updated profile name
+ */
+async function saveUserProfile() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const name = document.getElementById('profile-name-input').value.trim();
+    if (!name) {
+      alert('Name cannot be empty');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/api/user/profile`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert('Failed to save profile: ' + (error.error || 'Unknown error'));
+      return;
+    }
+
+    // Reload profile and close edit mode
+    await loadUserProfile();
+    toggleProfileEditMode(false);
+
+  } catch (error) {
+    console.error('Error saving profile:', error);
+    alert('Error saving profile: ' + error.message);
+  }
+}
+
+/**
+ * Load 2FA status from the server
+ */
+async function load2FAStatus() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const response = await fetch(`${API_BASE}/api/user/2fa-status`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('Failed to load 2FA status:', response.status);
+      return;
+    }
+
+    const data = await response.json();
+    const toggle = document.getElementById('twofa-toggle');
+    const status = document.getElementById('twofa-status');
+
+    if (toggle) {
+      toggle.checked = data.two_factor_enabled;
+    }
+
+    if (status) {
+      status.textContent = `Status: ${data.two_factor_enabled ? '✓ Enabled' : '✗ Disabled'}`;
+      status.style.color = data.two_factor_enabled ? '#059669' : '#6b7280';
+    }
+
+  } catch (error) {
+    console.error('Error loading 2FA status:', error);
+  }
+}
+
+/**
+ * Toggle 2FA on/off
+ */
+async function toggle2FA(event) {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    const enable = event.target.checked;
+    const response = await fetch(`${API_BASE}/api/user/2fa-toggle`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ enable })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert('Failed to update 2FA: ' + (error.error || 'Unknown error'));
+      // Reload status on failure
+      await load2FAStatus();
+      return;
+    }
+
+    const status = document.getElementById('twofa-status');
+    if (status) {
+      status.textContent = `Status: ${enable ? '✓ Enabled' : '✗ Disabled'}`;
+      status.style.color = enable ? '#059669' : '#6b7280';
+    }
+
+  } catch (error) {
+    console.error('Error toggling 2FA:', error);
+    alert('Error updating 2FA: ' + error.message);
+    // Reload status on failure
+    await load2FAStatus();
+  }
+}
+
+/**
+ * Setup profile popup event handlers
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  const editBtn = document.getElementById('profile-edit-btn');
+  const saveBtn = document.getElementById('profile-save-btn');
+  const cancelBtn = document.getElementById('profile-cancel-btn');
+
+  if (editBtn) {
+    editBtn.addEventListener('click', () => toggleProfileEditMode(true));
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveUserProfile);
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      toggleProfileEditMode(false);
+      // Reload profile data to reset form
+      loadUserProfile();
+    });
+  }
+
+  // Load profile when popup is shown
+  const profilePopup = document.getElementById('profile-popup');
+  if (profilePopup) {
+    // Use MutationObserver to detect when popup is shown
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'hidden') {
+          if (!profilePopup.hasAttribute('hidden')) {
+            loadUserProfile();
+          }
+        }
+      });
+    });
+
+    observer.observe(profilePopup, { attributes: true });
+  }
+
+  // Setup 2FA toggle
+  const twoFAToggle = document.getElementById('twofa-toggle');
+  if (twoFAToggle) {
+    twoFAToggle.addEventListener('change', toggle2FA);
+  }
+
+  // Load 2FA status when settings popup is shown
+  const settingsPopup = document.getElementById('settings-popup');
+  if (settingsPopup) {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'hidden') {
+          if (!settingsPopup.hasAttribute('hidden')) {
+            load2FAStatus();
+          }
+        }
+      });
+    });
+
+    observer.observe(settingsPopup, { attributes: true });
+  }
+});
 

@@ -29,6 +29,11 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+// Backend main server for Pathfinder.
+// - Serves REST endpoints for job search, job storage, resume upload/analysis,
+//   user authentication (including optional 2FA) and match-score calculation.
+// - Uses SQLite for lightweight persistence and supports Ollama/Gemini for
+//   AI-powered resume/job analysis when configured.
 // Secret used to sign JWTs. In production this should come from a secure
 // environment variable and be rotated regularly. The fallback is only for
 // local development and must NOT be used in production systems.
@@ -333,6 +338,15 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
 let ollamaAvailable = false;
 let resumeOllamaAvailable = false;
 
+/**
+ * Check whether an Ollama model name is present in the list of installed models.
+ * Some Ollama responses include model names with additional metadata after a
+ * colon (e.g. "model:version"), so this function checks for exact matches
+ * and prefix matches.
+ * @param {Array<string>} installedModels - Array of model names reported by Ollama
+ * @param {string} modelName - Desired model name to look for
+ * @returns {boolean} True when model is installed/available
+ */
 function isInstalledOllamaModel (installedModels, modelName) {
     if (!modelName || !Array.isArray(installedModels)) return false;
     return installedModels.some((installedModel) => installedModel === modelName || 
@@ -371,6 +385,10 @@ checkOllamaAvailability();
 if (!JSEARCH_API_KEY) {
     console.warn('Warning: JSEARCH_API_KEY is not set. Job search functionality will be disabled.');
 }
+// Initialize SQLite schema: lightweight tables for users, saved jobs,
+// JSearch monthly usage counters, job listings, resumes and precomputed matches.
+// The schema is intentionally simple for local/dev use; consider migrating
+// to a managed DB for production and using migrations for schema changes.
 
 db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -378,9 +396,26 @@ db.run(`
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         two_factor_enabled BOOLEAN DEFAULT 0,
+        name TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
 `);
+
+// Migration: Add name column if it doesn't exist (for existing databases)
+db.run(`
+    PRAGMA table_info(users);
+`, (err, data) => {
+    if (!err) {
+        db.all(`PRAGMA table_info(users)`, (err, columns) => {
+            if (!err && columns) {
+                const hasNameColumn = columns.some(col => col.name === 'name');
+                if (!hasNameColumn) {
+                    db.run(`ALTER TABLE users ADD COLUMN name TEXT`);
+                }
+            }
+        });
+    }
+});
 
 db.run(`
     CREATE TABLE IF NOT EXISTS saved_jobs (
@@ -410,6 +445,12 @@ function getCurrentKey () {
     return `${year}-${month}`;
 }
 
+/**
+ * Ensure the monthly JSearch API quota has not been exceeded.
+ * Uses a simple SQLite-backed counter keyed by YYYY-MM to limit the number
+ * of external API requests made each month (helps avoid exceeding paid limits).
+ * @returns {Promise<boolean>} Resolves true when a request may proceed, false when limit reached
+ */
 function jsearchQuotaCalculation () {
     return new Promise((resolve) => {
         const currentMonthKey = getCurrentKey();
@@ -592,6 +633,13 @@ function normalizeResumeContactInfo(contactInfo) {
     };
 }
 
+/**
+ * Parse a resume using the configured Gemini model.
+ * This wrapper validates configuration and enforces PDF-only processing
+ * for the Gemini path. It sends base64-encoded file bytes to the model
+ * with a strict prompt requesting JSON of a fixed shape, then extracts
+ * and normalizes the returned JSON.
+ */
 async function parseResumeWithGemini(fileBuffer, mimetype) {
     if (!GEMINI_API_KEY) {
         throw new Error('Gemini is not configured. No GEMINI_API_KEY was found. Ensure backend .env contains GEMINI_API_KEY and the server is loading the correct .env file.');
@@ -817,7 +865,7 @@ async function send2FACodeByEmail(code, email) {
 // client/server errors respectively.
 app.post('/api/auth/signup', authLimiter, async (req, res) => {
     try {
-        const { email, password, twoFactorEnabled, enable2FA: enable2FARequest } = req.body;
+        const { email, password, name, twoFactorEnabled, enable2FA: enable2FARequest } = req.body;
 
         // Basic input validation
         if (!email || !password) {
@@ -838,10 +886,11 @@ app.post('/api/auth/signup', authLimiter, async (req, res) => {
                 ? twoFactorEnabled
                 : (enable2FARequest ?? req.body.enable2fa);
         const enable2FA = requested2FA ? 1 : 0;
+        const userName = typeof name === 'string' ? name.trim() : '';
 
         db.run(
-            `INSERT INTO users (email, password_hash, two_factor_enabled) VALUES (?, ?, ?)`,
-            [email, passwordHash, enable2FA],
+            `INSERT INTO users (email, password_hash, two_factor_enabled, name) VALUES (?, ?, ?, ?)`,
+            [email, passwordHash, enable2FA, userName],
             async function (err) {
                 if (err) {
                     // Unique constraint violation -> duplicate email
@@ -1004,6 +1053,128 @@ app.post('/api/auth/2fa/verify', twoFALimiter, async (req, res) => {
 // generated during login. On successful verification the server issues
 // the same JWT used for normal logins. Codes are deleted after use
 // or when expired to prevent replay attacks.
+
+// Get user profile endpoint: returns user info (name, email, created_at)
+app.get('/api/user/profile', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    db.get(
+      'SELECT id, email, name, created_at FROM users WHERE id = ?',
+      [userId],
+      (err, user) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({
+          id: user.id,
+          email: user.email,
+          name: user.name || '',
+          created_at: user.created_at
+        });
+      }
+    );
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update user profile endpoint: allows updating user name
+app.put('/api/user/profile', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0) {
+      return res.status(400).json({ error: 'Name cannot be empty' });
+    }
+
+    db.run(
+      'UPDATE users SET name = ? WHERE id = ?',
+      [trimmedName, userId],
+      (err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        res.json({
+          success: true,
+          message: 'Profile updated successfully',
+          name: trimmedName
+        });
+      }
+    );
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get 2FA status endpoint
+app.get('/api/user/2fa-status', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    db.get(
+      'SELECT two_factor_enabled FROM users WHERE id = ?',
+      [userId],
+      (err, user) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({
+          two_factor_enabled: Boolean(user.two_factor_enabled)
+        });
+      }
+    );
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Toggle 2FA endpoint
+app.put('/api/user/2fa-toggle', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { enable } = req.body;
+
+    if (typeof enable !== 'boolean') {
+      return res.status(400).json({ error: 'Invalid request: enable must be a boolean' });
+    }
+
+    const twoFactorEnabled = enable ? 1 : 0;
+
+    db.run(
+      'UPDATE users SET two_factor_enabled = ? WHERE id = ?',
+      [twoFactorEnabled, userId],
+      (err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        res.json({
+          success: true,
+          message: `Two-factor authentication ${enable ? 'enabled' : 'disabled'} successfully`,
+          two_factor_enabled: enable
+        });
+      }
+    );
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // Example protected route which requires a valid JWT. The `authenticateToken`
 // middleware validates the token and exposes decoded payload in `req.user`.
@@ -1244,6 +1415,13 @@ db.run(`
 `);
 
 
+/**
+ * Get a precomputed match between the authenticated user's resume and
+ * a specific job listing. Returns whether the user has an uploaded resume
+ * and, if available, the score and matching breakdown stored in
+ * `job_matches` for this resume/job pair.
+ * GET /api/jobs/:id/match
+ */
 app.get('/api/jobs/:id/match', authenticateToken, (req, res) => {
     const jobId = parseInt(req.params.id, 10);
     const userId = req.user.userId;
@@ -1773,9 +1951,17 @@ function calculateAllMatches(resumeID, rawText) {
     });
 }
 
+/**
+ * Recalculate match scores for a single job across all stored resumes.
+ * This is invoked after a job is created or updated so stored resumes can
+ * be re-scored against the new/changed job description.
+ * @param {number|string} jobID - Job identifier in `job_listings`
+ * @param {string} jobTitle - Job title (optional)
+ * @param {string} jobDesc - Full job description text
+ */
 function recalculateMatches(jobID, jobTitle, jobDesc) {
     if (!jobDesc) {
-        console.log("Skipping job, missing description", jobID);    
+        console.log("Skipping job, missing description", jobID);
         return;
     }
 

@@ -1,11 +1,22 @@
+// Base API URL used by the signup/login pages
 const API_URL = 'http://localhost:3000';
+// Temp state used when two-factor authentication is required
 let pendingUserID = null;
 let pendingRememberMe = false;
 
+/**
+ * Return the stored authentication token from local or session storage.
+ * @returns {string|null}
+ */
 function getAuthToken() {
     return localStorage.getItem('token') || sessionStorage.getItem('token');
 }
 
+/**
+ * Persist an authentication token. When `remember` is true the token is
+ * stored in localStorage (survives browser close); otherwise sessionStorage
+ * is used (cleared on tab close).
+ */
 function saveAuthToken(token, remember = false) {
     if (remember) {
         localStorage.setItem('token', token);
@@ -14,12 +25,15 @@ function saveAuthToken(token, remember = false) {
     }
 }
 
+/**
+ * Remove any stored auth tokens from both storage locations.
+ */
 function clearAuthToken() {
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
 }
 
-// Tab switching functionality
+// Switch visible tab panels on the signup/login page.
 function showTab(tabName) {
     // Hide all tab contents
     const tabContents = document.querySelectorAll('.tab-content');
@@ -39,7 +53,7 @@ function showTab(tabName) {
     });
 }
 
-// Toast notification system
+// Toast notification system used across the auth flow for lightweight alerts
 function showToast(message, type = 'info', duration = 5000) {
     const toastContainer = document.getElementById('toast-container');
     
@@ -152,13 +166,14 @@ document.addEventListener('DOMContentLoaded', function() {
     signupForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
+        const name = document.getElementById('signup-name').value;
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
         const confirmPassword = document.getElementById('signup-confirm-password').value;
         const enable2FA = document.getElementById('enable-2fa').checked;
 
         // Basic validation
-        if (!email || !password || !confirmPassword) {
+        if (!name || !email || !password || !confirmPassword) {
             showToast('Please fill in all required fields', 'error');
             return;
         }
@@ -178,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const res = await fetch(API_URL + '/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, enable2FA })
+                body: JSON.stringify({ name, email, password, enable2FA })
             });
 
             const data = await res.json();

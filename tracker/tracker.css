@@ -7,6 +7,11 @@
   padding: 0;
 }
 
+/*
+  Tracker (kanban) styles: layout and visuals for the application's
+  progress board, job cards, and interactive controls.
+*/
+
 /* Shared base styles */
 body {
     font-family: "Segoe UI", Roboto, sans-serif;
