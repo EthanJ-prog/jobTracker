@@ -86,9 +86,52 @@ function showToast(message, type = 'info', duration = 5000) {
     }, duration);
 }
 
+function showTwoFactorOverlay() {
+    document.getElementById('twofactor-overlay').style.display = 'flex';
+    document.getElementById('overlay-verification-code').focus();
+}
+
+function hideTwoFactorOverlay() {
+    document.getElementById('twofactor-overlay').style.display = 'none';
+    document.getElementById('overlay-verification-code').value = '';
+}
+
+async function verify2FACode() {
+    const code = document.getElementById('overlay-verification-code').value;
+
+    if (!code || code.length !== 6) {
+        showToast('Please enter a valid 6-digit code', 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch(API_URL + '/api/auth/2fa/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: pendingUserID, code: code, rememberMe: pendingRememberMe })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.authenticated) {
+            saveAuthToken(data.token, pendingRememberMe);
+            pendingUserID = null;
+            pendingRememberMe = null;
+            hideTwoFactorOverlay();
+            showToast('Login successful!', 'success');
+            window.location.href = '../home/home.html';
+        } else {
+            showToast(data.error || 'Invalid authentication code', 'error');
+        }
+
+    } catch (err) {
+        showToast('Could not connect to server', 'error');
+    }
+}
 
 // Form validation and submission
 document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('overlay-verify-button').addEventListener('click', verify2FACode);
+    document.getElementById('overlay-cancel-button').addEventListener('click', hideTwoFactorOverlay);
     // Login form submission
     const loginForm = document.querySelector('#login form');
     loginForm.addEventListener('submit', async function(e) {
@@ -104,35 +147,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const rememberMe = document.getElementById('remember-me').checked;
 
-        if (pendingUserID) {
-            const code = document.getElementById('verification-code').value;
-            if (!code || code.length !== 6) {
-                showToast('Please enter a valid 6-digit code', 'error');
-                return;
-            } 
-
-            try {
-                const res = await fetch(API_URL + '/api/auth/2fa/verify', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ userId: pendingUserID, code: code, rememberMe: pendingRememberMe })
-                });
-                const data = await res.json();
-
-                if (res.ok && data.authenticated) {
-                    saveAuthToken(data.token, pendingRememberMe);
-                    pendingUserID = null;
-                    pendingRememberMe = false;
-                    showToast('Login successful', 'success');
-                    window.location.href = '../home/home.html';
-                } else {
-                    showToast(data.error || '2FA verification failed', 'error');
-                }
-            } catch (err) {
-                showToast('Could not connect to server', 'error');
-            }
-            return;
-        }
 
         try {
                 const res = await fetch(API_URL + '/api/auth/login', {
@@ -145,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (res.ok && data.twoFactorRequired) {
                     pendingUserID = data.userId;
                     pendingRememberMe = rememberMe;
-                    document.getElementById('2fa-code').style.display = 'block';
+                    showTwoFactorOverlay();
                     showToast('The authentication code has been sent to your email!', 'info');
                 } else if (res.ok && data.authenticated) {
                     saveAuthToken(data.token, rememberMe);
@@ -206,8 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 pendingUserID = data.userId;
                 pendingRememberMe = false;
                 signupForm.reset();
-                showTab('login');
-                document.getElementById('2fa-code').style.display = 'block';
+                showTwoFactorOverlay();
                 showToast('The authentication code has been sent to your email! Please verify to complete signup.', 'info');
             } else {
                 showToast(data.error || 'Sign up error, please try again', 'error');

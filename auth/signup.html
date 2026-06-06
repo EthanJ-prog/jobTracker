@@ -32,11 +32,6 @@
                     Remember me
                 </label>
 
-                <div id="2fa-code" style="display: none;">
-                    <label for="verification-code">Enter the 6-digit code sent to your email:</label>
-                    <input type="text" id="verification-code" placeholder="123456" maxlength="6">
-                </div>
-
                 <button type="submit">Login</button>
             </form>
         </div>
@@ -44,7 +39,7 @@
         <div id="signup" class="tab-content">
             <h2>Sign Up</h2>
             <form>
-                <label for="signup-name">Full Name:</label>
+                <label for="signup-name">Name:</label>
                 <input type="text" id="signup-name" required>
                 
                 <label for="signup-email">Email:</label>
@@ -66,6 +61,16 @@
         </div>
     </div>
     
+    <div id="twofactor-overlay" class="twofactor-overlay" style="display: none;">
+        <div class="twofactor-modal">
+            <h2>Two Factor Authentication</h2>
+            <p>Enter the 6 digit code sent to your email</p>
+            <input type="text" id="overlay-verification-code" placeholder="123456" maxlength="6">
+            <button type="button" id="overlay-verify-button">Verify</button>
+            <button type="button" id="overlay-cancel-button">Cancel</button>
+        </div>
+    </div>
+
     <!-- Toast notification container -->
     <div class="toast-container" id="toast-container"></div>
     
