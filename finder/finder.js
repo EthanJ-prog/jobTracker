@@ -1068,6 +1068,53 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log("Loaded job finder");
   await fetchMatchScores();
   console.log('Match scores loaded: ', hasResume ? 'Resume Found' : 'No resume found');
+  
+  // Update UI if resume already exists
+  if (hasResume) {
+    const dropZone = document.getElementById('dropZone');
+    const actionButtonsContainer = document.getElementById('resumeActionButtons');
+    
+    if (dropZone) {
+      dropZone.innerHTML = `
+        <div class="upload-success">
+          <p>✓ Resume Uploaded!</p>
+          <p>Your resume is being used to match jobs</p>
+        </div>
+      `;
+    }
+    
+    if (actionButtonsContainer) {
+      actionButtonsContainer.style.display = 'flex';
+      
+      // Setup Upload Different Resume button
+      const uploadNewBtn = document.getElementById('uploadNewResume');
+      if (uploadNewBtn) {
+        uploadNewBtn.addEventListener('click', () => {
+          if (dropZone) {
+            dropZone.innerHTML = `
+              <div class="file-input-container">
+                <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+                <div class="upload-trigger">
+                  <span class="upload-icon">📄</span>
+                  <span>Drop your resume here or click to upload</span>
+                </div>
+                <p class="file-types">Supported formats: PDF, DOC, DOCX</p>
+              </div>
+            `;
+          }
+          actionButtonsContainer.style.display = 'none';
+          initializeResumeUpload();
+        });
+      }
+      
+      // Setup Remove Resume button
+      const removeBtn = document.getElementById('removeResume');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', removeResume);
+      }
+    }
+  }
+  
   // Check for saved count in sessionStorage (to persist count after page reload)
   const savedCount = sessionStorage.getItem('finderTotalJobsCount');
   const savedTimestamp = sessionStorage.getItem('finderCountTimestamp');
@@ -1616,6 +1663,12 @@ async function handleResumeUpload(file) {
     return;
   }
 
+  // Check if user already has a resume uploaded
+  if (hasResume) {
+    alert('You already have a resume uploaded. Please remove it before uploading a new one.');
+    return;
+  }
+
   const allowedTypes = [
     'application/pdf'
   ];
@@ -1680,14 +1733,31 @@ async function handleResumeUpload(file) {
     <div class="upload-success">
       <p>Resume Uploaded!</p>
       <p>Matched against ${matchCount} jobs, Average Score: ${avgScore}%</p>
-      <button type="button" id="uploadNewResume" class="button"> Upload different resume</button>
     </div>
     `;
 
-    document.getElementById('uploadNewResume').addEventListener('click', () => {
-      dropZone.innerHTML = originalContent;
-      initializeResumeUpload();
-    });
+    // Show the resume action buttons
+    const actionButtonsContainer = document.getElementById('resumeActionButtons');
+    if (actionButtonsContainer) {
+      actionButtonsContainer.style.display = 'flex';
+      
+      // Setup Upload Different Resume button
+      const uploadNewBtn = document.getElementById('uploadNewResume');
+      if (uploadNewBtn) {
+        uploadNewBtn.addEventListener('click', () => {
+          dropZone.innerHTML = originalContent;
+          actionButtonsContainer.style.display = 'none';
+          initializeResumeUpload();
+        });
+      }
+      
+      // Setup Remove Resume button
+      const removeBtn = document.getElementById('removeResume');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', removeResume);
+      }
+    }
+
     alert(`Resume uploaded succesfully! Matched against ${matchCount} jobs with an average score of ${avgScore}%.`);
 
   } catch (err) {
@@ -1712,6 +1782,102 @@ async function handleResumeUpload(file) {
       if (file) handleResumeUpload(file);
     });
     initializeResumeUpload();
+
+  } finally {
+    setResumeProcessing(false);
+  }
+
+}
+
+/**
+ * Remove the uploaded resume from the user's account
+ * Clears resume data and resets the UI back to upload state
+ */
+async function removeResume() {
+  const token = getAuthToken();
+
+  if (!token) {
+    alert('Please log in to remove a resume.');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to remove your resume? This will clear all match scores.')) {
+    return;
+  }
+
+  setResumeProcessing(true);
+
+  try {
+    const response = await fetch(`${API_BASE}/api/resume/remove`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token}
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = 'Failed to remove resume';
+      try {
+        const parsedError = JSON.parse(errorText);
+        errorMessage = parsedError.error || parsedError.message || errorMessage;
+      } catch (_) {
+        if (errorText && errorText.trim()) errorMessage = errorText.trim();
+      }
+      if (response.status === 401 || response.status === 403) {
+        clearAuthToken();
+        window.location.href = '../auth/signup.html';
+        throw new Error('Session expired. Please log in again.');
+      }
+      throw new Error(errorMessage);
+    }
+
+    console.log('Resume removed successfully');
+    alert('Resume removed successfully');
+
+    // Clear match scores
+    hasResume = false;
+    matchScore = {};
+
+    // Reset the UI to upload state
+    const dropZone = document.getElementById('dropZone');
+    const actionButtonsContainer = document.getElementById('resumeActionButtons');
+    
+    if (dropZone) {
+      dropZone.innerHTML = `
+        <div class="file-input-container">
+          <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+          <div class="upload-trigger">
+            <span class="upload-icon">📄</span>
+            <span>Drop your resume here or click to upload</span>
+          </div>
+          <p class="file-types">Supported formats: PDF, DOC, DOCX</p>
+        </div>
+      `;
+      initializeResumeUpload();
+    }
+
+    if (actionButtonsContainer) {
+      actionButtonsContainer.style.display = 'none';
+    }
+
+    // Hide skills analysis and suggestions sections
+    const skillsAnalysis = document.getElementById('skillsAnalysis');
+    if (skillsAnalysis) skillsAnalysis.style.display = 'none';
+
+    const suggestions = document.getElementById('resumeSuggestions');
+    if (suggestions) suggestions.style.display = 'none';
+
+    const suggestedJobs = document.getElementById('suggested-jobs');
+    if (suggestedJobs) suggestedJobs.style.display = 'none';
+
+    // Refresh job listings to remove match scores
+    await fetchMatchScores();
+    await fetchJobs(currentQuery, currentPage, currentFilters);
+
+    console.log('UI reset and job listings refreshed after resume removal');
+
+  } catch (err) {
+    console.error('Error removing resume', err);
+    alert(`Failed to remove resume: ${err.message}`);
 
   } finally {
     setResumeProcessing(false);

@@ -1376,6 +1376,26 @@ main {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
+/* Danger button variant - used for destructive actions like removing resume */
+.button-danger {
+    background: linear-gradient(135deg, var(--error), #d32f2f);
+}
+
+.button-danger:hover {
+    background: linear-gradient(135deg, #c62828, #b71c1c);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3);
+}
+
+/* Resume action buttons container */
+.resume-action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
 /* Common card styles */
 .card {
     background: white;
