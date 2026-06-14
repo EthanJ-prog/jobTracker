@@ -1665,8 +1665,12 @@ async function handleResumeUpload(file) {
 
   // Check if user already has a resume uploaded
   if (hasResume) {
-    alert('You already have a resume uploaded. Please remove it before uploading a new one.');
-    return;
+    const replaceConfirmed = confirm(
+      'A resume is already uploaded. Uploading a new resume will replace the current resume and keep your previous resume in your profile under "Resumes".\n\nDo you want to continue?'
+    );
+    if (!replaceConfirmed) {
+      return;
+    }
   }
 
   const allowedTypes = [

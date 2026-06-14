@@ -59,9 +59,13 @@
                     <h3>Overview</h3>
                     <p>Access your account details, update your profile information, and review your preferences.</p>
                 </div>
+                <div class="popup-section" id="profile-resumes-section" style="display: none;">
+                    <h3>Resumes</h3>
+                    <p id="profile-current-resume-label"></p>
+                    <div id="profile-resume-history"></div>
+                </div>
                 <div class="popup-action">
                     <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
-                    <button type="button" class="popup-button popup-button-danger" id="profile-delete-btn">Delete Account</button>
                     <button type="button" class="popup-button popup-close">Close</button>
                 </div>
             </div>
@@ -88,6 +92,7 @@
         <div class="popup-body">
             <div class="settings-section">
                 <h3>Security</h3>
+                <button type="button" class="popup-button popup-button-danger" id="profile-delete-btn">Delete Account</button>
                 <div class="settings-item">
                     <div class="settings-label">
                         <strong>Two-Factor Authentication (2FA)</strong>

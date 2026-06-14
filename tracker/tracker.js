@@ -561,14 +561,67 @@ async function loadUserProfile() {
     document.getElementById('profile-joined-display').textContent = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     document.getElementById('profile-name-input').value = profile.name || '';
 
+    await loadUserResumes();
+
   } catch (error) {
     console.error('Error loading profile:', error);
   }
 }
 
-/**
- * Toggle between view and edit modes for the profile
- */
+async function loadUserResumes() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  if (!token) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/api/user/resumes`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+
+    if (!response.ok) {
+      console.error('Failed to load resume history');
+      return;
+    }
+
+    const data = await response.json();
+    const section = document.getElementById('profile-resumes-section');
+    const currentLabel = document.getElementById('profile-current-resume-label');
+    const historyContainer = document.getElementById('profile-resume-history');
+
+    if (!section || !currentLabel || !historyContainer) {
+      return;
+    }
+
+    if (!data.current && (!Array.isArray(data.history) || data.history.length === 0)) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    if (data.current) {
+      currentLabel.textContent = `Active resume: ${data.current.filename} (updated ${new Date(data.current.updated_at).toLocaleDateString()})`;
+    } else {
+      currentLabel.textContent = 'No active resume uploaded.';
+    }
+
+    if (Array.isArray(data.history) && data.history.length > 0) {
+      historyContainer.innerHTML = `
+        <ul class="resume-history-list">
+          ${data.history.map((resume) => `
+            <li>
+              <strong>${resume.filename}</strong> — replaced ${new Date(resume.replaced_at).toLocaleDateString()}
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    } else {
+      historyContainer.innerHTML = '<p>No previous resumes saved yet.</p>';
+    }
+  } catch (err) {
+    console.error('Error loading user resumes:', err);
+  }
+}
 function toggleProfileEditMode(isEdit) {
   const viewMode = document.getElementById('profile-view-mode');
   const editMode = document.getElementById('profile-edit-mode');

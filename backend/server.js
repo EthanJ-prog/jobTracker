@@ -1084,17 +1084,59 @@ app.get('/api/user/profile', authenticateToken, (req, res) => {
           return res.status(404).json({ error: 'User not found' });
         }
 
-        res.json({
-          id: user.id,
-          email: user.email,
-          name: user.name || '',
-          created_at: user.created_at
-        });
+        db.get(
+          'SELECT COUNT(*) as resume_count FROM resume_history WHERE user_id = ?',
+          [userId],
+          (err2, countRow) => {
+            if (err2) {
+              return res.status(500).json({ error: 'Database error' });
+            }
+
+            res.json({
+              id: user.id,
+              email: user.email,
+              name: user.name || '',
+              created_at: user.created_at,
+              resume_count: countRow?.resume_count || 0
+            });
+          }
+        );
       }
     );
   } catch {
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+app.get('/api/user/resumes', authenticateToken, (req, res) => {
+  const userId = req.user.userId;
+
+  db.get(
+    'SELECT id, filename, file_type, created_at, updated_at FROM resumes WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1',
+    [userId],
+    (err, currentResume) => {
+      if (err) {
+        console.error('Error fetching current resume:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      db.all(
+        'SELECT id, filename, file_type, uploaded_at, replaced_at FROM resume_history WHERE user_id = ? ORDER BY replaced_at DESC',
+        [userId],
+        (err2, historyRows) => {
+          if (err2) {
+            console.error('Error fetching resume history:', err2);
+            return res.status(500).json({ error: 'Database error' });
+          }
+
+          res.json({
+            current: currentResume || null,
+            history: historyRows || []
+          });
+        }
+      );
+    }
+  );
 });
 
 // Update user profile endpoint: allows updating user name
@@ -1485,6 +1527,23 @@ db.run(`
 `);
 
 db.run(`
+    CREATE TABLE IF NOT EXISTS resume_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        raw_text TEXT,
+        skills TEXT,
+        experience TEXT,
+        education TEXT,
+        contact_info TEXT,
+        uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        replaced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+`);
+
+db.run(`
     CREATE TABLE IF NOT EXISTS job_matches (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         resume_id INTEGER NOT NULL,
@@ -1516,15 +1575,13 @@ app.get('/api/jobs/:id/match', authenticateToken, (req, res) => {
         return res.status(400).json({ error: 'Invalid job ID'}); 
     }
 
-    db.get('SELECT id FROM resumes WHERE users_id = ?', [userId], (err, resume) => {
+    db.get('SELECT id FROM resumes WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1', [userId], (err, resume) => {
         if (err) {
             console.error('Error fetching resumes', err);
             return res.status(500).json({ error: 'Database error' });
-
-        } 
+        }
 
         if (!resume) {
-            console.error('Could not find resume', err);
             return res.json({ hasResume: false, match: null});
         }
 
@@ -1561,7 +1618,7 @@ app.get('/api/jobs/:id/match', authenticateToken, (req, res) => {
 app.get('/api/matches', authenticateToken, (req, res) => {
     const userId = req.user.userId;
 
-    db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], (err, resume) => {
+    db.get('SELECT id FROM resumes WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1', [userId], (err, resume) => {
        if (err) {
         console.error('Error fetching resume:', err);
         return res.status(500).json({Error: 'Database error'});
@@ -1886,32 +1943,81 @@ app.post('/api/resume/upload', authenticateToken, upload.single('resume'), async
         const educationText = parsedResume.education.join(', ');
         const contactInfoText = JSON.stringify(parsedResume.contactInfo);
 
-        db.run(
-            `INSERT INTO resumes (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id) DO UPDATE SET
-                filename = excluded.filename,
-                file_type = excluded.file_type,
-                raw_text = excluded.raw_text,
-                skills = excluded.skills,
-                experience = excluded.experience, 
-                education = excluded.education,
-                contact_info = excluded.contact_info,
-                updated_at = CURRENT_TIMESTAMP`,
-            [userId, originalname, fileType, rawText, skillsText, experienceText, educationText, contactInfoText],
-            function(err){
-                if (err) {
-                    return res.status(500).json({error: 'Failed to save resume to database'});
-                }
-                
-                db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], async(e2, row2) => {
-                    if (e2 || !row2) {
-                        return res.status(500).json({ err: 'Could not resolve resume id after save' });
-                    }
-                    await finishResumeUpload(res, originalname, rawText, row2.id);
-                });
+        db.get('SELECT * FROM resumes WHERE user_id = ?', [userId], (err, existingResume) => {
+            if (err) {
+                return res.status(500).json({error: 'Failed to query existing resume'});
             }
-        );
+
+            const completeUpload = async (resumeId) => {
+                try {
+                    await finishResumeUpload(res, originalname, rawText, resumeId);
+                } catch (err) {
+                    console.error('Error completing resume upload:', err);
+                }
+            };
+
+            const saveNewResume = () => {
+                db.run(
+                    `INSERT INTO resumes (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                    [userId, originalname, fileType, rawText, skillsText, experienceText, educationText, contactInfoText],
+                    function(err) {
+                        if (err) {
+                            return res.status(500).json({error: 'Failed to save resume to database'});
+                        }
+                        completeUpload(this.lastID);
+                    }
+                );
+            };
+
+            const replaceExistingResume = () => {
+                db.serialize(() => {
+                    db.run(
+                        `INSERT INTO resume_history (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, uploaded_at, replaced_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                        [
+                            userId,
+                            existingResume.filename,
+                            existingResume.file_type,
+                            existingResume.raw_text,
+                            existingResume.skills,
+                            existingResume.experience,
+                            existingResume.education,
+                            existingResume.contact_info,
+                            existingResume.created_at || new Date().toISOString()
+                        ],
+                        function(err) {
+                            if (err) {
+                                return res.status(500).json({error: 'Failed to archive existing resume'});
+                            }
+
+                            db.run(
+                                `UPDATE resumes SET filename = ?, file_type = ?, raw_text = ?, skills = ?, experience = ?, education = ?, contact_info = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`,
+                                [originalname, fileType, rawText, skillsText, experienceText, educationText, contactInfoText, userId],
+                                function(err) {
+                                    if (err) {
+                                        return res.status(500).json({error: 'Failed to replace existing resume'});
+                                    }
+
+                                    db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], async (e2, row2) => {
+                                        if (e2 || !row2) {
+                                            return res.status(500).json({ err: 'Could not resolve resume id after save' });
+                                        }
+                                        completeUpload(row2.id);
+                                    });
+                                }
+                            );
+                        }
+                    );
+                });
+            };
+
+            if (existingResume) {
+                replaceExistingResume();
+            } else {
+                saveNewResume();
+            }
+        });
     } catch (err) {
         res.status(500).json({error: 'Failed to process resume: ' + err.message});
     };
@@ -2128,6 +2234,44 @@ app.get('/api/resume', authenticateToken, (req, res) => {
     };
 
     res.json(resume);
+    });
+});
+
+/**
+ * Remove the authenticated user's resume and delete any associated job match scores
+ * DELETE /api/resume/remove
+ */
+app.delete('/api/resume/remove', authenticateToken, (req, res) => {
+    const userId = req.user.userId;
+
+    db.get('SELECT id FROM resumes WHERE user_id = ?', [userId], (err, row) => {
+        if (err) {
+            console.error('Error fetching resume for deletion', err);
+            return res.status(500).json({error: 'Failed to remove resume'});
+        }
+
+        if (!row) {
+            return res.status(404).json({error: 'No resume found to remove'});
+        }
+
+        const resumeId = row.id;
+
+        db.serialize(() => {
+            db.run('DELETE FROM job_matches WHERE resume_id = ?', [resumeId], function (err) {
+                if (err) {
+                    console.error('Error deleting resume match scores', err);
+                }
+            });
+
+            db.run('DELETE FROM resumes WHERE id = ?', [resumeId], function (err) {
+                if (err) {
+                    console.error('Error deleting resume', err);
+                    return res.status(500).json({error: 'Failed to remove resume'});
+                }
+
+                res.json({message: 'Resume removed successfully'});
+            });
+        });
     });
 });
 
