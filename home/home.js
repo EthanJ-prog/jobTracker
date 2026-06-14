@@ -378,6 +378,135 @@ async function toggle2FA(event) {
   }
 }
 
+function escapeAdminText(value) {
+  return String(value || '').replace(/[&<>"']/g, (char) => ({
+
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&>;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+async function loadAdminPanel() {
+
+  const token = getAuthToken();
+  const adminSection = document.getElementById('admin-section');
+  const usersList = document.getElementById('admin-users-list');
+  const jobsList = document.getElementById('admin-jobs-list');
+
+  if (!adminSection || !usersList || !jobsList) return;
+
+  adminSection.setAttribute('hidden', '');
+
+  usersList.textContent = '';
+  jobsList.textContent = '';
+
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${API_URL}/api/admin/check`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) return;
+    adminSection.removeAttribute('hidden');
+
+    await loadAdminUsers();
+    await loadAdminJobs();
+  } catch (err) {
+    console.error('Error loading admin panel', err);
+  }
+}
+
+async function loadAdminUsers() {
+  const token = getAuthToken();
+  const usersList = document.getElementById('admin-users-list');
+
+  if (!token || !usersList) return;
+  usersList.textContent = 'Loading users...';
+
+  const res = await fetch(`${API_URL}/api/admin/users`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!res.ok) {
+    usersList.textContent = 'Could not load users';
+    return;
+  }
+
+  const users = await res.json();
+  if (!users.length) {
+    usersList.textContent = 'No users found';
+    return;
+  }
+
+  usersList.innerHTML = users.map((user) => `<p>${escapeAdminText(user.name || 'No name')} - ${escapeAdminText(user.email)} <button type="button" onclick="deleteAdminUser(${user.id})">Delete</button></p>`).join('');
+
+}
+
+async function loadAdminJobs() {
+  const token = getAuthToken();
+  const jobsList = document.getElementById('admin-jobs-list');
+
+  if (!token || !jobsList) return;
+
+  jobsList.textContent = 'Loading jobs...';
+
+  const res = await fetch(`${API_URL}/api/admin/jobs`, {
+    headers: { Authorization: `Bearer: ${token}` }
+  });
+
+  if (!res.ok) {
+    jobsList.textContent = 'Could not load jobs';
+    return;
+  }
+
+  const jobs = await res.json();
+  if (!jobs.length) {
+    jobsList.textContent = 'No users found';
+    return;
+  }
+
+  jobsList.innerHTML = jobs.map((job) => `<p>${escapeAdminText(job.title)} - ${escapeAdminText(job.company)} <button type="button" onclick="deleteAdminJob(${job.id})">Delete</button></p>`).join('');
+}
+
+async function deleteAdminUser(userId) {
+  const token = getAuthToken();
+
+  if (!token) return;
+  if (!confirm('Delete this user and their save data?')) return;
+  const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer: ${token}` }
+  });
+
+  if (!res.ok) {
+    alert('Could not delete user');
+    return;
+  }
+
+  await loadAdminUsers();
+}
+
+async function deleteAdminJob(jobId) {
+  const token = getAuthToken();
+
+  if (!token) return;
+  if (!confirm('Delete this job listing?')) return;
+  const res = await fetch(`${API_URL}/api/admin/jobs/${jobId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer: ${token}` }
+  });
+
+  if (!res.ok) {
+    alert('Could not delete job');
+    return;
+  }
+
+  await loadAdminJobs();
+}
 /**
  * Delete user account - permanently removes the account and all associated data
  */
@@ -495,6 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mutation.type === 'attributes' && mutation.attributeName === 'hidden') {
           if (!settingsPopup.hasAttribute('hidden')) {
             load2FAStatus();
+            loadAdminPanel();
           }
         }
       });

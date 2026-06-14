@@ -1281,12 +1281,28 @@ app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
     });
 });
 
-app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
-    const id = req.params.id;
-    db.run('DELETE FROM users WHERE id = ?', [id], function(err) {
-        if (err) return res.status(500).json({ error: 'Database Error' });
-        res.json({ deleted: this.changes });
+ function runAdminDelete(sql, params) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function(err) {
+            if (err) return reject(err);
+            resolve(this.changes);
+        });
     });
+}
+
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async(req, res) => {
+    const id = req.params.id;
+    try {
+        await runAdminDelete('DELETE FROM job_matches WHERE resume_id in (SELECT id FROM resumes WHERE user_id = ?)', [id]);
+        await runAdminDelete('DELETE FROM resume_history WHERE user_id = ?', [id]);
+        await runAdminDelete('DELETE FROM resumes WHERE user_id = ?', [id]);
+        await runAdminDelete('DELETE FROM saved_jobs WHERE user_id = ?', [id]);
+        const deleted = await runAdminDelete('DELETE FROM users WHERE id = ?', [id]);
+        res.json({ deleted });
+    } catch (err) {
+        console.error('Error deleting user:', err);
+        res.status(500).json({ error: 'Database Error' });
+    }
 });
 
 app.get('/api/admin/jobs', authenticateToken, requireAdmin, (req, res) => {
@@ -1296,12 +1312,16 @@ app.get('/api/admin/jobs', authenticateToken, requireAdmin, (req, res) => {
     });
 });
 
-app.delete('/api/admin/jobs/:id', authenticateToken, requireAdmin, (req, res) => {
+app.delete('/api/admin/jobs/:id', authenticateToken, requireAdmin, async(req, res) => {
     const id = req.params.id;
-    db.run('DELETE FROM job_listings WHERE id = ?', [id], function(err) {
-        if (err) return res.status(500).json({ error: 'Database Error' });
-        res.json({ deleted: this.changes });
-    });
+    try {
+        await runAdminDelete('DELETE FROM job_matches WHERE job_id = ?', [id]);
+        const deleted = await runAdminDelete('DELETE FROM job_listings WHERE id = ?', [id]);
+        res.json({ deleted });
+    } catch (err) {
+        console.error('Error deleting job:', err);
+        res.status(500).json({ error: 'Database Error' });
+    }
 });
 
 // Example protected route which requires a valid JWT. The `authenticateToken`
