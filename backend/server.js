@@ -39,6 +39,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // local development and must NOT be used in production systems.
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_key_change_this';
 
+const ADMIN_EMAIL = 'admin@pathfinder.com';
+
 // In-memory store for short-lived 2FA codes. Keys are user IDs and values
 // contain the code plus an expiration timestamp. This is suitable for small
 // deployments and testing but should be backed by a shared store (Redis)
@@ -818,6 +820,18 @@ function authenticateToken(req, res, next) {
     });
 }
 
+function requireAdmin(req, res, next) {
+    const userId = req.user.userId;
+    db.get('SELECT email FROM users WHERE id = ?', [userId], (err, user) => {
+        if (err) return res.status(500).json({ error: 'Database Error' });
+        if (!user || user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Admin not found' });
+        next();
+
+
+    });
+
+}
+
 function optionalAuthenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -1174,6 +1188,78 @@ app.put('/api/user/2fa-toggle', authenticateToken, async (req, res) => {
   } catch {
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+// Delete account endpoint: allows users to permanently delete their account
+app.delete('/api/user/account', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // First, delete all saved jobs for this user
+    db.run(
+      'DELETE FROM saved_jobs WHERE user_id = ?',
+      [userId],
+      (err) => {
+        if (err) {
+          console.error('Error deleting saved jobs:', err);
+          return res.status(500).json({ error: 'Failed to delete account data' });
+        }
+
+        // Then delete the user
+        db.run(
+          'DELETE FROM users WHERE id = ?',
+          [userId],
+          (deleteErr) => {
+            if (deleteErr) {
+              console.error('Error deleting user:', deleteErr);
+              return res.status(500).json({ error: 'Failed to delete account' });
+            }
+
+            res.json({
+              success: true,
+              message: 'Account deleted successfully'
+            });
+          }
+        );
+      }
+    );
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/admin/check', authenticateToken, requireAdmin, (req, res) => {
+    res.json({ isAdmin: true });
+});
+
+app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
+    db.all('SELECT id, email, name FROM users', [], (err, rows) => {
+        if (err) return res.status(500).json({ error: 'Database Error' });
+        res.json(rows);
+    });
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, (req, res) => {
+    const id = req.params.id;
+    db.run('DELETE FROM users WHERE id = ?', [id], function(err) {
+        if (err) return res.status(500).json({ error: 'Database Error' });
+        res.json({ deleted: this.changes });
+    });
+});
+
+app.get('/api/admin/jobs', authenticateToken, requireAdmin, (req, res) => {
+    db.all('SELECT id, title, company FROM job_listings', [], (err, rows) => {
+        if (err) return res.status(500).json({ error: 'Database Error' });
+        res.json(rows);
+    });
+});
+
+app.delete('/api/admin/jobs/:id', authenticateToken, requireAdmin, (req, res) => {
+    const id = req.params.id;
+    db.run('DELETE FROM job_listings WHERE id = ?', [id], function(err) {
+        if (err) return res.status(500).json({ error: 'Database Error' });
+        res.json({ deleted: this.changes });
+    });
 });
 
 // Example protected route which requires a valid JWT. The `authenticateToken`

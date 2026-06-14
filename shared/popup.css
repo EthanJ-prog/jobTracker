@@ -105,6 +105,19 @@
   transform: translateY(0);
 }
 
+.popup-button-danger {
+  background: linear-gradient(135deg, #e53935, #c62828);
+}
+
+.popup-button-danger:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.popup-button-danger:active {
+  transform: translateY(0);
+}
+
 .form-group {
   margin: 1rem 0;
   display: flex;

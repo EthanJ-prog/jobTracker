@@ -61,6 +61,7 @@
                 </div>
                 <div class="popup-action">
                     <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
+                    <button type="button" class="popup-button popup-button-danger" id="profile-delete-btn">Delete Account</button>
                     <button type="button" class="popup-button popup-close">Close</button>
                 </div>
             </div>
@@ -98,6 +99,13 @@
                     </label>
                 </div>
                 <p id="twofa-status" class="settings-status">Status: Loading...</p>
+            </div>
+            <div class ="settings-section" id="admin-section" hidden>
+                <h3>Admin</h3>
+                <h4>Users</h4>
+                <div id="admin-users-list"></div>
+                <h4>Jobs</h4>
+                <div id="admin-jobs-list"></div>
             </div>
             <div class="popup-action">
                 <button type="button" class="popup-button popup-close">Close</button>

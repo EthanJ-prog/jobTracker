@@ -322,12 +322,70 @@ async function toggle2FA(event) {
 }
 
 /**
+ * Delete user account - permanently removes the account and all associated data
+ */
+async function deleteUserAccount() {
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+
+    // Get user email to show in confirmation
+    const emailElement = document.getElementById('profile-email');
+    const email = emailElement ? emailElement.textContent : 'your account';
+
+    // Double confirmation dialog
+    const firstConfirm = confirm(
+      `Are you sure you want to delete your account (${email})?\n\nThis action cannot be undone and will permanently delete all your data, including saved jobs and application tracking.`
+    );
+
+    if (!firstConfirm) {
+      return;
+    }
+
+    // Second confirmation for extra safety
+    const secondConfirm = confirm(
+      'This is your final warning. All data will be deleted permanently. Do you want to continue?'
+    );
+
+    if (!secondConfirm) {
+      return;
+    }
+
+    const response = await fetch(`${API_URL}/api/user/account`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      alert('Failed to delete account: ' + (error.error || 'Unknown error'));
+      return;
+    }
+
+    // Account deleted successfully
+    alert('Your account has been deleted successfully.');
+    
+    // Clear auth and redirect to signup
+    clearAuthToken();
+    window.location.href = '../auth/signup.html';
+
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    alert('Error deleting account: ' + error.message);
+  }
+}
+
+/**
  * Setup profile popup event handlers
  */
 document.addEventListener('DOMContentLoaded', function() {
   const editBtn = document.getElementById('profile-edit-btn');
   const saveBtn = document.getElementById('profile-save-btn');
   const cancelBtn = document.getElementById('profile-cancel-btn');
+  const deleteBtn = document.getElementById('profile-delete-btn');
 
   if (editBtn) {
     editBtn.addEventListener('click', () => toggleProfileEditMode(true));
@@ -343,6 +401,10 @@ document.addEventListener('DOMContentLoaded', function() {
       // Reload profile data to reset form
       loadUserProfile();
     });
+  }
+
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', deleteUserAccount);
   }
 
   // Load profile when popup is shown
