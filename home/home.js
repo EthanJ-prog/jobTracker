@@ -383,7 +383,7 @@ function escapeAdminText(value) {
 
     '&': '&amp;',
     '<': '&lt;',
-    '>': '&>;',
+    '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;'
   }[char]));
@@ -455,7 +455,7 @@ async function loadAdminJobs() {
   jobsList.textContent = 'Loading jobs...';
 
   const res = await fetch(`${API_URL}/api/admin/jobs`, {
-    headers: { Authorization: `Bearer: ${token}` }
+    headers: { Authorization: `Bearer ${token}` }
   });
 
   if (!res.ok) {
@@ -465,7 +465,7 @@ async function loadAdminJobs() {
 
   const jobs = await res.json();
   if (!jobs.length) {
-    jobsList.textContent = 'No users found';
+    jobsList.textContent = 'No jobs found';
     return;
   }
 
@@ -479,7 +479,7 @@ async function deleteAdminUser(userId) {
   if (!confirm('Delete this user and their save data?')) return;
   const res = await fetch(`${API_URL}/api/admin/users/${userId}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer: ${token}` }
+    headers: { Authorization: `Bearer ${token}` }
   });
 
   if (!res.ok) {
@@ -497,7 +497,7 @@ async function deleteAdminJob(jobId) {
   if (!confirm('Delete this job listing?')) return;
   const res = await fetch(`${API_URL}/api/admin/jobs/${jobId}`, {
     method: 'DELETE',
-    headers: { Authorization: `Bearer: ${token}` }
+    headers: { Authorization: `Bearer ${token}` }
   });
 
   if (!res.ok) {

@@ -47,10 +47,14 @@ const ADMIN_EMAIL = 'admin@pathfinder.com';
 // when running multiple server instances.
 const twoFactorCodes = new Map();
 
-const { Resend } = require('resend');
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM = process.env.RESEND_FROM || 'Pathfinder 2FA <onboarding@resend.dev>';
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+const emailjs = require('@emailjs/nodejs');
+const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY;
+const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY;
+const emailjsConfigured = Boolean(
+    EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY && EMAILJS_PRIVATE_KEY
+);
 
 // Initialize Express application
 const app = express();
@@ -846,29 +850,21 @@ function optionalAuthenticateToken(req, res, next) {
 
 
 async function send2FACodeByEmail(code, email) {
-    if (!resend) {
+    if (!emailjsConfigured) {
         return false;
     }
 
-    const text = `Your verification code is: ${code}\n\nDo not share this with anyone. It expires in 5 minutes.`;
-
     try {
-        const { error } = await resend.emails.send({
-            from: RESEND_FROM,
-            to: email,
-            subject: 'Pathfinder login code — do not share',
-            text,
-            html: `<p>Your verification code is: <strong>${code}</strong></p><p>Do not share this with anyone. It expires in 5 minutes.</p>`
-        });
-
-        if (error) {
-            console.error('Resend send failed:', error);
-            return false;
-        }
+        await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID,
+            { to_email: email, verification_code: code },
+            { publicKey: EMAILJS_PUBLIC_KEY, privateKey: EMAILJS_PRIVATE_KEY }
+        );
 
         return true;
     } catch (err) {
-        console.error('Resend send error:', err.message);
+        console.error('EmailJS send error:', err.message || err);
         return false;
     }
 }
@@ -1281,23 +1277,67 @@ app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
     });
 });
 
- function runAdminDelete(sql, params) {
+function runAdminDeleteTransaction(steps) {
     return new Promise((resolve, reject) => {
-        db.run(sql, params, function(err) {
-            if (err) return reject(err);
-            resolve(this.changes);
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            let lastChanges = 0;
+
+            const runStep = (index) => {
+                if (index >= steps.length) {
+                    db.run('COMMIT', (err) => {
+                        if (err) return reject(err);
+                        resolve(lastChanges);
+                    });
+                    return;
+                }
+                const { sql, params } = steps[index];
+                db.run(sql, params, function(err) {
+                    if (err) {
+                        return db.run('ROLLBACK', () => reject(err));
+                    }
+                    lastChanges = this.changes;
+                    runStep(index + 1);
+                });
+            };
+
+            runStep(0);
         });
     });
 }
 
-app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async(req, res) => {
-    const id = req.params.id;
+function getUserById(id) {
+    return new Promise((resolve, reject) => {
+        db.get('SELECT id, email FROM users WHERE id = ?', [id], (err, row) => {
+            if (err) return reject(err);
+            resolve(row);
+        });
+    });
+}
+
+app.delete('/api/admin/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: 'Invalid user id' });
+    }
+    if (id === req.user.userId) {
+        return res.status(403).json({ error: 'Cannot delete your own admin account' });
+    }
     try {
-        await runAdminDelete('DELETE FROM job_matches WHERE resume_id in (SELECT id FROM resumes WHERE user_id = ?)', [id]);
-        await runAdminDelete('DELETE FROM resume_history WHERE user_id = ?', [id]);
-        await runAdminDelete('DELETE FROM resumes WHERE user_id = ?', [id]);
-        await runAdminDelete('DELETE FROM saved_jobs WHERE user_id = ?', [id]);
-        const deleted = await runAdminDelete('DELETE FROM users WHERE id = ?', [id]);
+        const target = await getUserById(id);
+        if (!target) {
+            return res.json({ deleted: 0 });
+        }
+        if (target.email === ADMIN_EMAIL) {
+            return res.status(403).json({ error: 'Cannot delete the admin account' });
+        }
+        const deleted = await runAdminDeleteTransaction([
+            { sql: 'DELETE FROM job_matches WHERE resume_id IN (SELECT id FROM resumes WHERE user_id = ?)', params: [id] },
+            { sql: 'DELETE FROM resume_history WHERE user_id = ?', params: [id] },
+            { sql: 'DELETE FROM resumes WHERE user_id = ?', params: [id] },
+            { sql: 'DELETE FROM saved_jobs WHERE user_id = ?', params: [id] },
+            { sql: 'DELETE FROM users WHERE id = ?', params: [id] },
+        ]);
         res.json({ deleted });
     } catch (err) {
         console.error('Error deleting user:', err);
@@ -1312,11 +1352,16 @@ app.get('/api/admin/jobs', authenticateToken, requireAdmin, (req, res) => {
     });
 });
 
-app.delete('/api/admin/jobs/:id', authenticateToken, requireAdmin, async(req, res) => {
-    const id = req.params.id;
+app.delete('/api/admin/jobs/:id', authenticateToken, requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+        return res.status(400).json({ error: 'Invalid job id' });
+    }
     try {
-        await runAdminDelete('DELETE FROM job_matches WHERE job_id = ?', [id]);
-        const deleted = await runAdminDelete('DELETE FROM job_listings WHERE id = ?', [id]);
+        const deleted = await runAdminDeleteTransaction([
+            { sql: 'DELETE FROM job_matches WHERE job_id = ?', params: [id] },
+            { sql: 'DELETE FROM job_listings WHERE id = ?', params: [id] },
+        ]);
         res.json({ deleted });
     } catch (err) {
         console.error('Error deleting job:', err);
