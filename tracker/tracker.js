@@ -12,6 +12,7 @@ let trackerFilters = {
   is_remote: false
 };
 
+// Resolve a job field by checking a list of possible property names.
 function getJobField(job, fieldNames) {
   for (const name of fieldNames) {
     if (job && Object.prototype.hasOwnProperty.call(job, name) && job[name] != null) {
@@ -21,6 +22,7 @@ function getJobField(job, fieldNames) {
   return '';
 }
 
+// Normalize salary values so numeric filters can be compared reliably.
 function parseSalaryValue(value) {
   if (value === undefined || value === null || value === '') {
     return NaN;
@@ -35,6 +37,7 @@ function parseSalaryValue(value) {
   return Number.isFinite(parsed) ? parsed : NaN;
 }
 
+// Determine whether a single job should appear in the current filtered view.
 function isJobMatchFilters(job) {
   const query = trackerFilters.query.trim().toLowerCase();
   const statusFilter = trackerFilters.status;
@@ -43,14 +46,15 @@ function isJobMatchFilters(job) {
   const salaryFilter = parseSalaryValue(trackerFilters.salary_min);
   const postedDateFilter = trackerFilters.posted_date;
   const remoteOnly = trackerFilters.is_remote;
-  
+
   if (statusFilter && String(job.status || '').toLowerCase() !== statusFilter.toLowerCase()) {
     return false;
   }
 
   if (jobTypeFilter) {
+    const normalizedJobTypeFilter = jobTypeFilter.toLowerCase().replace('_', '-');
     const jobType = String(getJobField(job, ['employment_type', 'job_type', 'jobType', 'type'])).toLowerCase();
-    if (!jobType.includes(jobTypeFilter.toLowerCase())) {
+    if (!jobType.includes(normalizedJobTypeFilter)) {
       return false;
     }
   }
@@ -115,10 +119,12 @@ function isJobMatchFilters(job) {
   return true;
 }
 
+// Return only the jobs that satisfy the currently active tracker filters.
 function getFilteredTrackerJobs() {
   return trackerJobs.filter(isJobMatchFilters);
 }
 
+// Rebuild the visible job cards for each tracker column from the supplied job list.
 function renderTrackerColumns(jobs) {
   document.querySelectorAll('.column').forEach(column => {
     const content = column.querySelector('.column-content');
@@ -141,12 +147,14 @@ function renderTrackerColumns(jobs) {
   });
 }
 
+// Re-render the tracker using the latest filter state.
 function applyTrackerFilters() {
   const filtered = getFilteredTrackerJobs();
   renderTrackerColumns(filtered);
   return filtered;
 }
 
+// Reset all tracker filters and refresh the displayed jobs.
 function clearTrackerFilters() {
   trackerFilters = {
     query: '',
@@ -167,6 +175,7 @@ function clearTrackerFilters() {
   applyTrackerFilters();
 }
 
+// Bind the tracker filter inputs to the filter state and re-rendering logic.
 function setupTrackerFilters() {
   const queryInput = document.getElementById('tracker-search-input');
   const columnSelect = document.getElementById('tracker-column-filter');
@@ -312,7 +321,7 @@ async function apiCall(endpoint, options = {}) {
   return response.json();
 };
 
-// Initialize the job tracker when DOM is loaded
+// Initialize the tracker view once the page DOM is ready.
 window.addEventListener('DOMContentLoaded', async () => {
   try {
     setupAuthNav();

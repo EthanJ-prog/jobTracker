@@ -1733,7 +1733,8 @@ app.get('/jobs', authenticateToken, (req, res,) => {
 
     const userId = req.user.userId;
 
-    db.all('SELECT * FROM saved_jobs WHERE user_id = ?', [userId], (err, rows) => {
+    const query = 'SELECT sj.*, jl.location AS location, jl.employment_type AS employment_type, jl.is_remote AS is_remote, jl.posted_date AS posted_date, jl.salary_min AS salary_min, jl.salary_max AS salary_max FROM saved_jobs sj LEFT JOIN job_listings jl ON LOWER(TRIM(sj.title)) = LOWER(TRIM(jl.title)) AND LOWER(TRIM(sj.company)) = LOWER(TRIM(jl.company)) WHERE sj.user_id = ?';
+    db.all(query, [userId], (err, rows) => {
         if (err) {
             console.error('Error fetching jobs:', err.message);
             return res.status(500).json({error: 'Failed to fetch jobs'});

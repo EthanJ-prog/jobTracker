@@ -192,10 +192,12 @@ main {
     flex: 1;
     padding: 40px 20px;
   display: flex;
+  flex-direction: column;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   width: 100%;
-  overflow-x: auto;
+  gap: 20px;
+  overflow-x: hidden;
   margin-top: 80px; /* Add space below fixed navbar */
 }
 
