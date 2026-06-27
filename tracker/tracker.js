@@ -43,7 +43,7 @@ function isJobMatchFilters(job) {
   const salaryFilter = parseSalaryValue(trackerFilters.salary_min);
   const postedDateFilter = trackerFilters.posted_date;
   const remoteOnly = trackerFilters.is_remote;
-
+  
   if (statusFilter && String(job.status || '').toLowerCase() !== statusFilter.toLowerCase()) {
     return false;
   }

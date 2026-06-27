@@ -1,5 +1,0 @@
-
-finder\finder.js:1765:    alert(`Resume uploaded succesfully! Matched against ${matchCount} jobs with an average score of ${avgScore}%.`);
-
-
-
