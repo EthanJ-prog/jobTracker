@@ -1093,12 +1093,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (dropZone) {
             dropZone.innerHTML = `
               <div class="file-input-container">
-                <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+                <input type="file" id="resumeFile" accept=".pdf,application/pdf" required />
                 <div class="upload-trigger">
                   <span class="upload-icon">📄</span>
                   <span>Drop your resume here or click to upload</span>
                 </div>
-                <p class="file-types">Supported formats: PDF, DOC, DOCX</p>
+                <p class="file-types">Supported format: PDF</p>
               </div>
             `;
           }
@@ -1762,7 +1762,7 @@ async function handleResumeUpload(file) {
       }
     }
 
-    alert(`Resume uploaded succesfully! Matched against ${matchCount} jobs with an average score of ${avgScore}%.`);
+    alert(`Resume uploaded successfully! Matched against ${matchCount} jobs with an average score of ${avgScore}%.`);
 
   } catch (err) {
     console.error('Error uploading resume', err);
@@ -1777,7 +1777,7 @@ async function handleResumeUpload(file) {
           <span class="upload-icon">ADD ICON HERE</span>
           <span>Drop your resume here or click to upload</span>
         </div>
-        <p class="file-types">Supported formats: PDF</p>
+        <p class="file-types">Supported format: PDF</p>
       </div>
       `;
 
@@ -1848,12 +1848,12 @@ async function removeResume() {
     if (dropZone) {
       dropZone.innerHTML = `
         <div class="file-input-container">
-          <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required />
+          <input type="file" id="resumeFile" accept=".pdf,application/pdf" required />
           <div class="upload-trigger">
             <span class="upload-icon">📄</span>
             <span>Drop your resume here or click to upload</span>
           </div>
-          <p class="file-types">Supported formats: PDF, DOC, DOCX</p>
+          <p class="file-types">Supported format: PDF</p>
         </div>
       `;
       initializeResumeUpload();

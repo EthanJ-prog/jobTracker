@@ -1,6 +1,207 @@
 // API configuration for backend communication
 const API_BASE = "http://localhost:3000";
 
+let trackerJobs = [];
+let trackerFilters = {
+  query: '',
+  status: '',
+  job_type: '',
+  location: '',
+  salary_min: '',
+  posted_date: '',
+  is_remote: false
+};
+
+function getJobField(job, fieldNames) {
+  for (const name of fieldNames) {
+    if (job && Object.prototype.hasOwnProperty.call(job, name) && job[name] != null) {
+      return job[name];
+    }
+  }
+  return '';
+}
+
+function parseSalaryValue(value) {
+  if (value === undefined || value === null || value === '') {
+    return NaN;
+  }
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return NaN;
+  }
+  const parsed = parseFloat(value.toString().replace(/[^0-9\.\-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : NaN;
+}
+
+function isJobMatchFilters(job) {
+  const query = trackerFilters.query.trim().toLowerCase();
+  const statusFilter = trackerFilters.status;
+  const jobTypeFilter = trackerFilters.job_type;
+  const locationFilter = trackerFilters.location.trim().toLowerCase();
+  const salaryFilter = parseSalaryValue(trackerFilters.salary_min);
+  const postedDateFilter = trackerFilters.posted_date;
+  const remoteOnly = trackerFilters.is_remote;
+
+  if (statusFilter && String(job.status || '').toLowerCase() !== statusFilter.toLowerCase()) {
+    return false;
+  }
+
+  if (jobTypeFilter) {
+    const jobType = String(getJobField(job, ['employment_type', 'job_type', 'jobType', 'type'])).toLowerCase();
+    if (!jobType.includes(jobTypeFilter.toLowerCase())) {
+      return false;
+    }
+  }
+
+  if (locationFilter) {
+    const location = String(getJobField(job, ['location', 'city', 'region'])).toLowerCase();
+    if (!location.includes(locationFilter)) {
+      return false;
+    }
+  }
+
+  if (!Number.isNaN(salaryFilter)) {
+    const salaryValue = parseSalaryValue(getJobField(job, ['salary', 'salary_min', 'salary_range']));
+    if (Number.isNaN(salaryValue) || salaryValue < salaryFilter) {
+      return false;
+    }
+  }
+
+  if (postedDateFilter) {
+    const postedDate = new Date(getJobField(job, ['posted_date', 'date_posted', 'date']));
+    if (!postedDate || Number.isNaN(postedDate.getTime())) {
+      return false;
+    }
+    const now = Date.now();
+    const cutoffMap = {
+      '24H': 24 * 60 * 60 * 1000,
+      '7D': 7 * 24 * 60 * 60 * 1000,
+      '30D': 30 * 24 * 60 * 60 * 1000
+    };
+    const cutoff = cutoffMap[postedDateFilter] || 0;
+    if (cutoff > 0 && now - postedDate.getTime() > cutoff) {
+      return false;
+    }
+  }
+
+  if (remoteOnly) {
+    const remoteValue = getJobField(job, ['is_remote', 'remote', 'remote_option', 'work_from_home']);
+    if (!remoteValue || String(remoteValue).toLowerCase() === 'false') {
+      return false;
+    }
+  }
+
+  if (query) {
+    const text = [
+      job.title,
+      job.company,
+      job.notes,
+      job.link,
+      getJobField(job, ['location', 'city', 'region']),
+      job.status,
+      getJobField(job, ['employment_type', 'job_type', 'jobType', 'type'])
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (!text.includes(query)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getFilteredTrackerJobs() {
+  return trackerJobs.filter(isJobMatchFilters);
+}
+
+function renderTrackerColumns(jobs) {
+  document.querySelectorAll('.column').forEach(column => {
+    const content = column.querySelector('.column-content');
+    if (!content) return;
+    content.querySelectorAll('.job-card').forEach(card => card.remove());
+  });
+
+  jobs.forEach(job => {
+    const targetColumn = document.getElementById(job.status || 'saved');
+    if (!targetColumn) return;
+    const content = targetColumn.querySelector('.column-content');
+    if (!content) return;
+    const jobCard = createJobCard(job);
+    const insertBefore = content.querySelector('.input-wrapper');
+    if (insertBefore) {
+      content.insertBefore(jobCard, insertBefore);
+    } else {
+      content.appendChild(jobCard);
+    }
+  });
+}
+
+function applyTrackerFilters() {
+  const filtered = getFilteredTrackerJobs();
+  renderTrackerColumns(filtered);
+  return filtered;
+}
+
+function clearTrackerFilters() {
+  trackerFilters = {
+    query: '',
+    status: '',
+    job_type: '',
+    location: '',
+    salary_min: '',
+    posted_date: '',
+    is_remote: false
+  };
+  document.getElementById('tracker-search-input').value = '';
+  document.getElementById('tracker-column-filter').value = '';
+  document.getElementById('tracker-jobtype-filter').value = '';
+  document.getElementById('tracker-location-filter').value = '';
+  document.getElementById('tracker-salary-filter').value = '';
+  document.getElementById('tracker-date-posted-filter').value = '';
+  document.getElementById('tracker-remote-filter').checked = false;
+  applyTrackerFilters();
+}
+
+function setupTrackerFilters() {
+  const queryInput = document.getElementById('tracker-search-input');
+  const columnSelect = document.getElementById('tracker-column-filter');
+  const jobTypeSelect = document.getElementById('tracker-jobtype-filter');
+  const locationInput = document.getElementById('tracker-location-filter');
+  const salaryInput = document.getElementById('tracker-salary-filter');
+  const dateSelect = document.getElementById('tracker-date-posted-filter');
+  const remoteCheckbox = document.getElementById('tracker-remote-filter');
+  const clearFiltersButton = document.getElementById('tracker-clear-filters');
+
+  if (!queryInput || !columnSelect || !jobTypeSelect || !locationInput || !salaryInput || !dateSelect || !remoteCheckbox || !clearFiltersButton) {
+    return;
+  }
+
+  const updateFilters = () => {
+    trackerFilters.query = queryInput.value;
+    trackerFilters.status = columnSelect.value;
+    trackerFilters.job_type = jobTypeSelect.value;
+    trackerFilters.location = locationInput.value;
+    trackerFilters.salary_min = salaryInput.value;
+    trackerFilters.posted_date = dateSelect.value;
+    trackerFilters.is_remote = remoteCheckbox.checked;
+    applyTrackerFilters();
+  };
+
+  queryInput.addEventListener('input', updateFilters);
+  columnSelect.addEventListener('change', updateFilters);
+  jobTypeSelect.addEventListener('change', updateFilters);
+  locationInput.addEventListener('input', updateFilters);
+  salaryInput.addEventListener('input', updateFilters);
+  dateSelect.addEventListener('change', updateFilters);
+  remoteCheckbox.addEventListener('change', updateFilters);
+  clearFiltersButton.addEventListener('click', clearTrackerFilters);
+}
+
 /**
  * Return the current auth token from storage (localStorage preferred).
  * @returns {string|null}
@@ -125,18 +326,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Fetch all jobs from the API
     const jobs = await apiCall('/jobs');
-    console.log('Jobs loaded from the server:', jobs);
+    trackerJobs = Array.isArray(jobs) ? jobs : [];
+    console.log('Jobs loaded from the server:', trackerJobs);
 
-    // Create job cards and place them in appropriate columns
-    if (jobs && jobs.length > 0) {
-      jobs.forEach(job => {
-        const jobCard = createJobCard(job);
-        const targetColumn = document.getElementById(job.status);
-        targetColumn.querySelector('.column-content').insertBefore(jobCard, targetColumn.querySelector('.input-wrapper'));
-      });
+    if (trackerJobs.length > 0) {
+      renderTrackerColumns(trackerJobs);
     } else {
       console.log('No jobs found in the database');
     }
+    setupTrackerFilters();
   } catch (error) {
     console.error('Failed to load jobs from the server:', error);
     alert('Failed to load jobs from the server, please refresh your page');
@@ -296,7 +494,9 @@ function createJobCard(job) {
      card.remove();
      if (job.status === 'saved'){
       localStorage.setItem('finderCountNeedsUpdate', 'true');
-     } 
+     }
+     trackerJobs = trackerJobs.filter(item => item.id !== job.id);
+     applyTrackerFilters();
      console.log(`${job.id} was successfully deleted`);
     } catch (error) {
       console.error('Failed to delete job:', error);
@@ -326,6 +526,10 @@ function createJobCard(job) {
       
       // Update local job object and UI
       Object.assign(job, updatedValues);
+      const existingTrackerJob = trackerJobs.find(item => item.id === job.id);
+      if (existingTrackerJob) {
+        Object.assign(existingTrackerJob, updatedValues);
+      }
       titleSpan.textContent = job.title;
       const dateLabel = job.status === 'saved' ? 'Date Saved:' : 'Date Applied:';
       displayDiv.innerHTML = `
@@ -417,8 +621,10 @@ document.querySelectorAll('.column').forEach(column => {
       });
 
       // Update local job object
-      draggedJob.job.status = targetColumnId;
-
+      draggedJob.job.status = targetColumnId;      const existingTrackerJob = trackerJobs.find(item => item.id === draggedJob.job.id);
+      if (existingTrackerJob) {
+        existingTrackerJob.status = targetColumnId;
+      }
       // Create new job card in target column
       const newJobCard = createJobCard(draggedJob.job);
       container.insertBefore(newJobCard, container.querySelector('.input-wrapper'));
@@ -498,10 +704,8 @@ document.querySelectorAll('.submit-button').forEach(button => {
         status: jobData.status
       }
       
-      // Create and add job card to column
-      const newJobInput = createJobCard(completeJob);
-      const column = document.getElementById(columnId);
-      column.querySelector('.column-content').insertBefore(newJobInput, column.querySelector('.input-wrapper'));
+      trackerJobs.push(completeJob);
+      renderTrackerColumns(getFilteredTrackerJobs());
 
       // Clear form and hide it
       inputWrapper.querySelector('.job-title').value = '';

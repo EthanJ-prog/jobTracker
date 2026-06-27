@@ -24,7 +24,6 @@ const sqlite3 = require('sqlite3').verbose();
 const fetch = require('node-fetch');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
-const mammoth = require('mammoth');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
@@ -86,11 +85,11 @@ const upload = multer({
     limits: {fileSize: 10 * 1024 * 1024
     }, 
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        const allowedTypes = ['application/pdf'];
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type, only pdf and docx allowed'));
+            cb(new Error('Invalid file type, only pdf allowed'));
         }
     }
 });
@@ -858,7 +857,7 @@ async function send2FACodeByEmail(code, email) {
         await emailjs.send(
             EMAILJS_SERVICE_ID,
             EMAILJS_TEMPLATE_ID,
-            { to_email: email, verification_code: code },
+            { email: email, passcode: code, time: '15 minutes' },
             { publicKey: EMAILJS_PUBLIC_KEY, privateKey: EMAILJS_PRIVATE_KEY }
         );
 
@@ -1961,9 +1960,9 @@ app.post('/api/jobs/summarize-description', async(req, res) => {
 });
 
 /**
- * Parses resume content from PDF or DOCX files
+ * Parses resume content from PDF files only
  * @param {Buffer} fileBuffer - The file buffer content
- * @param {string} mimetype - The MIME type of the file (pdf or docx)
+ * @param {string} mimetype - The MIME type of the file (pdf)
  * @returns {Promise<string>} Extracted text content from the resume
  * @throws {Error} If file type is unsupported or parsing fails
  */
@@ -1973,11 +1972,8 @@ async function parseResume(fileBuffer, mimetype) {
             const parser = new pdfParse.PDFParse({ data: fileBuffer });
             const result = await parser.getText();
             return result.text;
-        } else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-            const result = await mammoth.extractRawText({buffer: fileBuffer});
-            return result.value;
         } else {
-            throw new Error('Unsupported file type, only pdf or docx are allowed');
+            throw new Error('Unsupported file type, only pdf is allowed');
         }
     } catch (err) {
         console.error('Error parsing resumes', err);

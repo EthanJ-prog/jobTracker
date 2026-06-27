@@ -10,6 +10,36 @@ import requests
 import json
 from datetime import datetime
 
+def fetch_all_jobs(base_url: str):
+    """Fetch all jobs from the backend API.
+
+    Args:
+        base_url (str): Base URL of the backend API.
+
+    Returns:
+        tuple: A tuple containing the fetched jobs and an error dictionary
+            if the fetch failed.
+    """
+    jobs = []
+    limit = 100
+    offset = 0
+
+    while True:
+        response = requests.get(f"{base_url}/api/jobs?limit={limit}&offset={offset}", timeout=30)
+        if response.status_code != 200:
+            error = {
+                "error": f"Failed to fetch jobs: HTTP {response.status_code}"
+            }
+            return [], error
+        
+        data = response.json()
+        page_jobs = data.get("jobs", [])
+        jobs.extend(page_jobs)
+
+        if len(page_jobs) < limit:
+            break
+        offset += limit
+    return jobs, None
 
 def mark_expired_jobs(base_url: str, dry_run: bool = False) -> dict:
     """
@@ -32,14 +62,9 @@ def mark_expired_jobs(base_url: str, dry_run: bool = False) -> dict:
         if dry_run:
             # For dry run, we'll check what jobs would be expired
             # by getting all jobs and checking their expiration dates
-            response = requests.get(f"{base_url}/api/jobs", timeout=30)
-            if response.status_code != 200:
-                print(f"HTTP {response.status_code}: {response.text[:200]}")
-                return {"error": "Failed to fetch jobs for dry run"}
-            
-            data = response.json()
-            jobs = data.get("jobs", [])
-            
+            jobs, fetch_error = fetch_all_jobs(base_url)
+            if fetch_error: return fetch_error
+
             # Count jobs that would be expired
             current_time = datetime.now().isoformat()
             expired_count = 0
@@ -88,14 +113,10 @@ def get_job_stats(base_url: str) -> dict:
         count_data = count_response.json()
         total_jobs = count_data.get("total", 0)
         
-        # Get sample of jobs to check status distribution
-        jobs_response = requests.get(f"{base_url}/api/jobs?limit=100", timeout=30)
-        if jobs_response.status_code != 200:
-            return {"total_jobs": total_jobs, "error": "Failed to get job details"}
-        
-        jobs_data = jobs_response.json()
-        jobs = jobs_data.get("jobs", [])
-        
+        jobs, fetch_error = fetch_all_jobs(base_url)
+        if fetch_error: 
+            return {"total_jobs": total_jobs, "error": fetch_error["error"]}
+
         # Count by status
         status_counts = {}
         for job in jobs:
@@ -104,7 +125,7 @@ def get_job_stats(base_url: str) -> dict:
         
         return {
             "total_jobs": total_jobs,
-            "sample_size": len(jobs),
+            "jobs_checked": len(jobs),
             "status_distribution": status_counts
         }
         
@@ -139,6 +160,7 @@ def main(argv):
             print(f"Error getting stats: {stats['error']}")
         else:
             print(f"Total jobs: {stats['total_jobs']}")
+            print(f"Jobs Checked: {stats['jobs_checked']}")
             print(f"Status distribution: {stats['status_distribution']}")
         print()
     
@@ -164,6 +186,7 @@ def main(argv):
             print(f"Error getting stats: {stats['error']}")
         else:
             print(f"Total jobs: {stats['total_jobs']}")
+            print(f"Jobs Checked: {stats['jobs_checked']}")
             print(f"Status distribution: {stats['status_distribution']}")
     
     return 0
