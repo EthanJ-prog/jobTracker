@@ -13,6 +13,7 @@
   
   <!-- Page title and stylesheet -->
   <title>Pathfinder - Progress Map</title>
+  <link rel="stylesheet" href="../shared/theme.css">
   <link rel="stylesheet" href="tracker.css">
   <link rel="stylesheet" href="../shared/popup.css">
 </head>
@@ -59,56 +60,59 @@
     <div id="popup-backdrop" class="popup-backdrop" hidden></div>
 
     <section class="tracker-search-panel">
-      <div class="search-toolbar">
-        <div class="search-item">
-          <label for="tracker-search-input">Search</label>
-          <input id="tracker-search-input" type="search" placeholder="Search tracked jobs..." aria-label="Search tracked jobs" />
+      <div class="tracker-search-bar">
+        <input id="tracker-search-input" type="search" class="tracker-search-input" placeholder="Search tracked jobs..." aria-label="Search tracked jobs" />
+        <button id="tracker-filters-toggle" type="button" class="tracker-filters-toggle" aria-expanded="false" aria-controls="tracker-filters-panel">Filters</button>
+        <button id="tracker-clear-filters" type="button" class="tracker-clear-button">Clear</button>
+      </div>
+
+      <div id="tracker-filters-panel" class="tracker-filters-panel">
+        <div class="tracker-filters-inner">
+        <div class="tracker-filter-grid">
+          <div class="tracker-field">
+            <label for="tracker-column-filter">Column</label>
+            <select id="tracker-column-filter">
+              <option value="">All Columns</option>
+              <option value="saved">Saved</option>
+              <option value="applied">Applied</option>
+              <option value="interview">Interview</option>
+              <option value="offers-decisions">Offers / Decisions</option>
+            </select>
+          </div>
+          <div class="tracker-field">
+            <label for="tracker-jobtype-filter">Job Type</label>
+            <select id="tracker-jobtype-filter">
+              <option value="">Any Type</option>
+              <option value="full_time">Full-time</option>
+              <option value="part_time">Part-time</option>
+              <option value="contract">Contract</option>
+              <option value="internship">Internship</option>
+            </select>
+          </div>
+          <div class="tracker-field">
+            <label for="tracker-location-filter">Location</label>
+            <input id="tracker-location-filter" type="text" placeholder="Location" aria-label="Filter by location" />
+          </div>
+          <div class="tracker-field">
+            <label for="tracker-salary-filter">Min Salary</label>
+            <input id="tracker-salary-filter" type="number" min="0" placeholder="Min salary" aria-label="Filter by minimum salary" />
+          </div>
+          <div class="tracker-field">
+            <label for="tracker-date-posted-filter">Date Posted</label>
+            <select id="tracker-date-posted-filter">
+              <option value="">Any time</option>
+              <option value="24H">Last 24 hours</option>
+              <option value="7D">Last 7 days</option>
+              <option value="30D">Last 30 days</option>
+            </select>
+          </div>
+          <div class="tracker-field tracker-field--checkbox">
+            <label>
+              <input id="tracker-remote-filter" type="checkbox" />
+              Remote only
+            </label>
+          </div>
         </div>
-        <div class="search-item">
-          <label for="tracker-column-filter">Column</label>
-          <select id="tracker-column-filter">
-            <option value="">All Columns</option>
-            <option value="saved">Saved</option>
-            <option value="applied">Applied</option>
-            <option value="interview">Interview</option>
-            <option value="offers-decisions">Offers / Decisions</option>
-          </select>
-        </div>
-        <div class="search-item">
-          <label for="tracker-jobtype-filter">Job Type</label>
-          <select id="tracker-jobtype-filter">
-            <option value="">Any Type</option>
-            <option value="full_time">Full-time</option>
-            <option value="part_time">Part-time</option>
-            <option value="contract">Contract</option>
-            <option value="internship">Internship</option>
-          </select>
-        </div>
-        <div class="search-item">
-          <label for="tracker-location-filter">Location</label>
-          <input id="tracker-location-filter" type="text" placeholder="Location" aria-label="Filter by location" />
-        </div>
-        <div class="search-item">
-          <label for="tracker-salary-filter">Min Salary</label>
-          <input id="tracker-salary-filter" type="number" min="0" placeholder="Min salary" aria-label="Filter by minimum salary" />
-        </div>
-        <div class="search-item">
-          <label for="tracker-date-posted-filter">Date Posted</label>
-          <select id="tracker-date-posted-filter">
-            <option value="">Any time</option>
-            <option value="24H">Last 24 hours</option>
-            <option value="7D">Last 7 days</option>
-            <option value="30D">Last 30 days</option>
-          </select>
-        </div>
-        <div class="search-item tracker-checkbox-item">
-          <label>
-            <input id="tracker-remote-filter" type="checkbox" />
-            Remote only
-          </label>
-        </div>
-        <div class="search-item tracker-actions">
-          <button id="tracker-clear-filters" type="button">Clear</button>
         </div>
       </div>
     </section>
@@ -252,6 +256,7 @@
   </main>
 
   <!-- JavaScript functionality for drag-and-drop and job management -->
+  <script src="../shared/theme.js" defer></script>
   <script src="tracker.js"></script>
 </body>
 </html>

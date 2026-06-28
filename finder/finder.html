@@ -7,51 +7,10 @@
   
   <!-- Page title and stylesheet -->
   <title>Pathfinder - Career Compass</title>
+  <link rel="stylesheet" href="../shared/theme.css">
   <link rel="stylesheet" href="finder.css">
   <link rel="stylesheet" href="../shared/popup.css">
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-  <style>
-    #map {
-      min-height: 500px;
-      width: 100%;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #f3f4f6;
-    }
-
-    /* Common button styles */
-    .button {
-        background: linear-gradient(135deg, #5C6BC0, #007acc);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-size: 0.95rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.2s ease;
-    }
-
-    .button:hover {
-        background: linear-gradient(135deg, #4a59a8, #0060a1);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    /* Common card styles */
-    .card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 12px rgba(60, 60, 120, 0.07);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(92, 107, 192, 0.12);
-    }
-  </style>
 </head>
 
 <body>
@@ -151,77 +110,77 @@
 
 
   <main>
-    <!-- Main search and filter section -->
-    <section class="board">
-      <!-- Search input and filter toggle -->
-      <div class="search-bar-container">
-        <input type="text" id="search-input" placeholder="Search jobs..." aria-label="Search jobs" />
-        <button type="button" class="filter-button" onclick="toggleFilters()">Filters</button>
-      </div>
-
-      <!-- Advanced filter panel (hidden by default) -->
-      <div class="filter-panel" id="filter-panel" hidden>
-        <div class="filter-panel-header">
-          <h3>Filters</h3>
-          <p>Narrow your search results</p>
-        </div>
-
-        <!-- Job type filter dropdown -->
-        <div class="filter-group">
-            <label for="jobType" class="visually-hidden">Job Type</label>
-            <select id="jobType" name="jobType">
-                <option value="">Job Type</option>
-                <option value="full_time">Full-time</option>
-                <option value="part_time">Part-time</option>
-                <option value="contract">Contract</option>
-                <option value="internship">Internship</option>
-            </select>
-        </div>
-
-        <!-- Location filter input -->
-        <div class="filter-group">
-            <label for="location" class="visually-hidden">Location</label>
-            <input type="text" id="location" name="location" placeholder="Location">
-        </div>
-
-        <!-- Salary filter input -->
-        <div class="filter-group">
-            <label for="salary" class="visually-hidden">Minimum Salary</label>
-            <input type="number" id="salary" name="salary" placeholder="Min Salary">
-        </div>
-
-        <div class="filter-group">
-          <label for="datePosted" class="visually-hidden">Date Posted</label>
-          <select id="datePosted" name="datePosted">
-            <option value="">Date Posted</option>
-            <option value="24H">Last Day</option>
-            <option value="7D">Last Week</option>
-            <option value="30D">Last Month</option>
-          </select>
-        </div>
-
-        <div class="filter-group checkbox-group">
-          <label for="remote" class="filter-toggle">
-            <input type="checkbox" id="remote" name="remote">
-            <span>Remote Only</span>
-          </label>
-        </div>
-
-        <!-- Filter action buttons -->
-        <div class="filter-actions">
-            <button type="button" class="clear-filters" id="clearFilters">Clear</button>
-            <button type="button" class="apply-filters" id="applyFilters">Apply Filters</button>
-        </div>
-    </div>
-    </section>
-
     <!-- Tabbed interface section -->
     <section class="tabs-section">
-      <!-- Tab navigation buttons -->
-      <div class="tab-navigation">
-        <button class="tab-button active" data-tab="jobs">Job Listings</button>
-        <button class="tab-button" data-tab="resume">Resume Match</button>
-        <button class="tab-button" data-tab="map">Job Map</button>
+      <div class="finder-controls-row">
+        <!-- Tab navigation buttons -->
+        <div class="tab-navigation">
+          <button class="tab-button active" data-tab="jobs">Job Listings</button>
+          <button class="tab-button" data-tab="resume">Resume Match</button>
+          <button class="tab-button" data-tab="map">Job Map</button>
+        </div>
+
+        <!-- Main search and filter section -->
+        <section class="board">
+          <div class="search-bar-container">
+            <input type="text" id="search-input" placeholder="Search jobs..." aria-label="Search jobs" />
+            <button type="button" class="filter-button" onclick="toggleFilters()">Filters</button>
+          </div>
+
+          <div class="filter-panel" id="filter-panel">
+            <div class="filter-panel-inner">
+            <div class="filter-panel-body">
+            <div class="filter-panel-header">
+              <h3>Filters</h3>
+              <p>Narrow your search results</p>
+            </div>
+
+            <div class="filter-group">
+                <label for="jobType" class="visually-hidden">Job Type</label>
+                <select id="jobType" name="jobType">
+                    <option value="">Job Type</option>
+                    <option value="full_time">Full-time</option>
+                    <option value="part_time">Part-time</option>
+                    <option value="contract">Contract</option>
+                    <option value="internship">Internship</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="location" class="visually-hidden">Location</label>
+                <input type="text" id="location" name="location" placeholder="Location">
+            </div>
+
+            <div class="filter-group">
+                <label for="salary" class="visually-hidden">Minimum Salary</label>
+                <input type="number" id="salary" name="salary" placeholder="Min Salary">
+            </div>
+
+            <div class="filter-group">
+              <label for="datePosted" class="visually-hidden">Date Posted</label>
+              <select id="datePosted" name="datePosted">
+                <option value="">Date Posted</option>
+                <option value="24H">Last Day</option>
+                <option value="7D">Last Week</option>
+                <option value="30D">Last Month</option>
+              </select>
+            </div>
+
+            <div class="filter-group checkbox-group">
+              <label for="remote" class="filter-toggle">
+                <input type="checkbox" id="remote" name="remote">
+                <span>Remote Only</span>
+              </label>
+            </div>
+
+            <div class="filter-actions">
+                <button type="button" class="clear-filters" id="clearFilters">Clear</button>
+                <button type="button" class="apply-filters" id="applyFilters">Apply Filters</button>
+            </div>
+            </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <!-- Tab content containers -->
@@ -230,19 +189,14 @@
         <div id="jobs-tab" class="tab-pane active">
           <section class="job-listings-section">
             <div class="job-listings-header">
-              <h2>Job Listings</h2>
+              <h2>Job Listings <span class="job-count-inline">- <span id="total-jobs-count">...</span> jobs</span></h2>
 
               <select id="sort-select">
-                <option value="match-desc">Match Score High -> Low</option>
-                <option value="match-asce">Match Score Low -> High</option>
+                <option value="match-desc">Match Score High → Low</option>
+                <option value="match-asce">Match Score Low → High</option>
                 <option value="date-desc">Date Latest</option>
                 <option value="date-asce">Date Oldest</option>
               </select>
-
-              <div class="total-jobs-display">
-                <span class="total-jobs-label">Total Jobs:</span>
-                <span class="total-jobs-value" id="total-jobs-count">...</span>
-              </div>
             </div>
 
             <!-- Dynamic job cards container (placeholder shown when JS disabled) -->
@@ -359,8 +313,7 @@
                 <div class="legend-note">Marker color reflects your resume match when available.</div>
                 <div class="legend-note">Clustered markers show a count for multiple jobs at one location.</div>
               </div>
-
-              <div id="map-marker-diagnostics" class="legend-diagnostics" hidden></div>
+              
             </div>
             <!-- Map container for visualizing job locations -->
             <div id="map" aria-label="Job locations map">
@@ -481,6 +434,7 @@
           </div>
 
           <!-- JavaScript functionality -->
+          <script src="../shared/theme.js" defer></script>
           <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
           <script src="finder.js"></script>
         </body>

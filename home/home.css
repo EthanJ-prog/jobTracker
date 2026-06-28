@@ -403,3 +403,236 @@ body {
     Styles for the home/landing page. Defines global CSS variables, base layout,
     and components used on the landing page (hero, features, steps, footer).
 */
+
+/* Pathfinder visual refresh */
+body {
+    background: var(--app-gradient);
+    color: var(--text-primary);
+}
+
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 0.85rem clamp(1rem, 3vw, 2.5rem);
+    background: rgba(255, 255, 255, 0.86);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(18px);
+}
+
+html[data-theme="dark"] .navbar {
+    background: rgba(17, 24, 39, 0.86);
+}
+
+.nav-brand {
+    color: var(--primary);
+    letter-spacing: 0;
+}
+
+.nav-links {
+    align-items: center;
+    gap: 0.75rem;
+    transform: none;
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 0.85rem;
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+}
+
+.nav-link:hover {
+    background: var(--surface-muted);
+    color: var(--primary);
+}
+
+.hero {
+    display: grid;
+    place-items: center;
+    min-height: clamp(360px, 54vh, 560px);
+    padding: 5rem clamp(1.25rem, 5vw, 5rem);
+    text-align: center;
+    background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.42)),
+        var(--brand-gradient);
+    color: #ffffff;
+}
+
+.hero h1 {
+    max-width: 780px;
+    margin-bottom: 1rem;
+    font-size: clamp(2.35rem, 6vw, 5rem);
+    line-height: 0.98;
+    letter-spacing: 0;
+}
+
+.subtitle {
+    max-width: 650px;
+    margin: 0;
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.target-audience,
+.features,
+.how-it-works {
+    padding: clamp(3rem, 6vw, 5.5rem) clamp(1.25rem, 4vw, 3rem);
+}
+
+.features {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0.18)),
+        var(--section-gradient);
+    background-size: 150% 150%;
+    transition: background-position 260ms ease;
+}
+
+html[data-theme="dark"] .features {
+    background:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.24), rgba(15, 23, 42, 0.56)),
+        var(--section-gradient);
+}
+
+.features:hover {
+    background-position: 100% 50%;
+}
+
+.target-audience {
+    position: relative;
+    background: var(--section-gradient);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    transition: background-position 260ms ease;
+    background-size: 150% 150%;
+}
+
+.target-audience::before {
+    display: none;
+}
+
+.target-audience:hover {
+    background-position: 100% 50%;
+}
+
+.target-audience h2,
+.features h2,
+.how-it-works h2 {
+    color: var(--text-primary);
+    font-size: clamp(1.65rem, 3vw, 2.25rem);
+    line-height: 1.1;
+}
+
+.target-audience p,
+.step p,
+.feature-card p {
+    color: var(--text-secondary);
+}
+
+.feature-grid,
+.steps-grid {
+    align-items: stretch;
+}
+
+.feature-card {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(95, 107, 186, 0.08), rgba(79, 90, 164, 0.08));
+    opacity: 0;
+    transition: opacity 180ms ease;
+    pointer-events: none;
+}
+
+.feature-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(124, 58, 237, 0.32);
+    box-shadow: var(--shadow-md);
+}
+
+.feature-card:hover::before {
+    opacity: 1;
+}
+
+.feature-card h3 {
+    color: var(--primary);
+}
+
+.how-it-works {
+    background: rgba(255, 255, 255, 0.46);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+html[data-theme="dark"] .how-it-works {
+    background: rgba(15, 23, 42, 0.42);
+}
+
+.step {
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-sm);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.step:hover {
+    transform: translateY(-4px);
+    border-color: rgba(37, 99, 235, 0.28);
+    box-shadow: var(--shadow-md);
+}
+
+.step-number {
+    background: var(--brand-gradient);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+}
+
+.user-menu {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+}
+
+.user-menu-item:hover {
+    background: var(--surface-muted);
+}
+
+.footer {
+    background: #0f172a;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.footer-section a {
+    color: #cbd5e1;
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        align-items: flex-start;
+        gap: 0.75rem;
+        flex-direction: column;
+    }
+
+    .nav-links {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .nav-link {
+        padding-inline: 0.7rem;
+    }
+}

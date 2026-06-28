@@ -209,6 +209,16 @@ function setupTrackerFilters() {
   dateSelect.addEventListener('change', updateFilters);
   remoteCheckbox.addEventListener('change', updateFilters);
   clearFiltersButton.addEventListener('click', clearTrackerFilters);
+
+  // Toggle the collapsible advanced-filters panel (animated slide down/up).
+  const filtersToggle = document.getElementById('tracker-filters-toggle');
+  const filtersPanel = document.getElementById('tracker-filters-panel');
+  if (filtersToggle && filtersPanel) {
+    filtersToggle.addEventListener('click', () => {
+      const isOpen = filtersPanel.classList.toggle('is-open');
+      filtersToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+  }
 }
 
 /**
@@ -311,9 +321,17 @@ async function apiCall(endpoint, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers["Authorization"] = 'Bearer ' + token;
   const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options, 
+    ...options,
     headers: { ...headers, ...(options.headers || {})}
   });
+
+  // A 401/403 means the session token is missing, expired, or invalid.
+  // Refreshing won't help, so clear the stale token and send the user to log in.
+  if (response.status === 401 || response.status === 403) {
+    clearAuthToken();
+    window.location.href = '../auth/signup.html';
+    throw new Error('SESSION_EXPIRED');
+  }
 
   if (!response.ok) {
     throw new Error(`API call failed: ${response.status} ${response.statusText}`);
@@ -345,6 +363,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     setupTrackerFilters();
   } catch (error) {
+    // An expired session already redirected to login; don't show the refresh alert.
+    if (error && error.message === 'SESSION_EXPIRED') return;
     console.error('Failed to load jobs from the server:', error);
     alert('Failed to load jobs from the server, please refresh your page');
   }

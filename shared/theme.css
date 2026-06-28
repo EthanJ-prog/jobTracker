@@ -1,0 +1,226 @@
+:root {
+  color-scheme: light;
+  --primary: rgb(95, 107, 186);
+  --primary-dark: #4f5aa4;
+  --primary-light: #e8ebff;
+  --accent: #6f7bd0;
+  --accent-soft: #eef0ff;
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --background: #f6f8fb;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-muted: #eef2f7;
+  --border: #d9e1ec;
+  --border-strong: #b8c4d5;
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 24px 70px rgba(15, 23, 42, 0.16);
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --border-radius: 8px;
+  --transition: 160ms ease;
+  --focus-ring: 0 0 0 4px rgba(95, 107, 186, 0.18);
+  --app-gradient: linear-gradient(135deg, #f8fafc 0%, #eef2fb 58%, #f8f9ff 100%);
+  --brand-gradient: linear-gradient(135deg, rgb(95, 107, 186) 0%, #4f5aa4 100%);
+  --section-gradient: linear-gradient(135deg, #eef2ff 0%, #f7f8ff 60%, #ffffff 100%);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --primary: #aeb8ff;
+  --primary-dark: rgb(95, 107, 186);
+  --primary-light: #28305f;
+  --accent: #c1c8ff;
+  --accent-soft: #28305f;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --background: #0f172a;
+  --surface: #111827;
+  --surface-raised: #172033;
+  --surface-muted: #1f2937;
+  --border: #334155;
+  --border-strong: #475569;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.26);
+  --shadow-md: 0 14px 34px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.45);
+  --focus-ring: 0 0 0 4px rgba(174, 184, 255, 0.2);
+  --app-gradient: linear-gradient(135deg, #0f172a 0%, #151b2d 55%, #171d33 100%);
+  --brand-gradient: linear-gradient(135deg, rgb(95, 107, 186) 0%, #4f5aa4 100%);
+  --section-gradient: linear-gradient(135deg, rgba(31, 41, 72, 0.92) 0%, rgba(17, 24, 39, 0.92) 100%);
+}
+
+html {
+  background: var(--background);
+}
+
+body {
+  color: var(--text-primary);
+  background: var(--app-gradient);
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  color: var(--text-primary);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition), color var(--transition);
+}
+
+.theme-toggle:hover {
+  border-color: var(--border-strong);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* Show the icon for the current mode: sun in light, moon in dark. */
+.theme-icon {
+  display: inline-block;
+}
+
+.theme-icon-moon {
+  display: none;
+}
+
+html[data-theme="dark"] .theme-icon-sun {
+  display: none;
+}
+
+html[data-theme="dark"] .theme-icon-moon {
+  display: inline-block;
+}
+
+.feature-card,
+.step,
+.job-card,
+.column,
+.search-toolbar,
+.search-bar-container,
+.filter-panel,
+.resume-upload-section,
+.map-section,
+.popup-panel {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.theme-toggle-floating {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1400;
+}
+
+.navbar,
+.user-menu,
+.popup-panel,
+.container,
+.feature-card,
+.card,
+.job-card,
+.column,
+.search-toolbar,
+.search-bar-container,
+.filter-panel,
+.resume-upload-section,
+.map-section,
+.job-overlay-content {
+  background-color: var(--surface-raised);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.nav-link,
+.user-menu-item {
+  color: var(--text-secondary);
+}
+
+.nav-brand,
+.nav-brand a,
+.feature-card h3,
+.step h3,
+.popup-title {
+  color: var(--primary);
+}
+
+.button,
+.search-button,
+.filter-button,
+.apply-filters,
+.add-button,
+.submit-button,
+.edit-button,
+.update-button,
+button[type="submit"],
+.overlay-apply-button,
+.popup-button {
+  background: var(--brand-gradient);
+  color: #ffffff;
+}
+
+.button:hover,
+.search-button:hover,
+.filter-button:hover,
+.apply-filters:hover,
+.add-button:hover,
+.submit-button:hover,
+.edit-button:hover,
+.update-button:hover,
+button[type="submit"]:hover,
+.overlay-apply-button:hover,
+.popup-button:hover {
+  filter: brightness(1.03);
+}
+
+html[data-theme="dark"] img,
+html[data-theme="dark"] video,
+html[data-theme="dark"] canvas {
+  opacity: 0.96;
+}
+

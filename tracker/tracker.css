@@ -53,136 +53,245 @@ body {
   font-weight: 400;
 }
 
+/*
+  Tracker filter bar: a clean primary search row (search + Filters + Clear).
+  The advanced filters live in a collapsible panel that the Filters button
+  reveals, so the default view stays compact and uncluttered.
+*/
 .tracker-search-panel {
   width: 100%;
   display: flex;
-  justify-content: center;
-  padding: 0 20px 20px;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 clamp(1rem, 3vw, 2rem) 18px;
   box-sizing: border-box;
 }
 
-.search-toolbar {
+.tracker-search-bar {
   width: 100%;
-  max-width: 1800px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  align-items: end;
-  background: rgba(255,255,255,0.96);
-  border: 1px solid rgba(92,108,192,0.16);
-  border-radius: 22px;
-  padding: 22px;
-  box-shadow: 0 18px 45px -28px rgba(45,65,89,0.28);
-  backdrop-filter: blur(14px);
-}
-
-.search-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.search-item label {
-  font-size: 0.9rem;
-  color: #4a5568;
-  font-weight: 700;
-}
-
-.search-item input,
-.search-item select {
-  width: 100%;
-  min-height: 44px;
-  padding: 12px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #111827;
-  font-size: 0.95rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.search-item input::placeholder {
-  color: #9ca3af;
-}
-
-.search-item input:focus,
-.search-item select:focus {
-  outline: none;
-  border-color: #5C6BC0;
-  box-shadow: 0 0 0 4px rgba(92,108,192,0.12);
-}
-
-.tracker-checkbox-item {
+  max-width: 920px;
   display: flex;
   align-items: center;
-  padding-top: 8px;
+  gap: 12px;
 }
 
-.tracker-checkbox-item label {
+.tracker-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.tracker-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.tracker-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.tracker-filters-toggle {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #334155;
-}
-
-.tracker-checkbox-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-}
-
-.tracker-actions {
-  justify-self: end;
-  align-self: center;
-  display: flex;
-  justify-content: flex-end;
-}
-
-#tracker-clear-filters {
-  min-width: 160px;
-  padding: 12px 18px;
+  gap: 8px;
+  height: 46px;
+  padding: 0 20px;
   border: none;
   border-radius: 12px;
-  background: #f8fafc;
-  color: #1f2937;
+  background: var(--brand-gradient);
+  color: #ffffff;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: filter 160ms ease, transform 160ms ease;
 }
 
-#tracker-clear-filters:hover {
-  background: #e2e8f0;
+.tracker-filters-toggle::after {
+  content: "\25BE";
+  font-size: 0.7rem;
+  transition: transform 160ms ease;
+}
+
+.tracker-filters-toggle[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+.tracker-filters-toggle:hover {
+  filter: brightness(1.04);
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(15,23,42,0.08);
 }
 
-@media (max-width: 1280px) {
-  .search-toolbar {
-    grid-template-columns: repeat(3, minmax(200px, 1fr));
-  }
+.tracker-clear-button {
+  flex: 0 0 auto;
+  height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
 }
 
-@media (max-width: 900px) {
-  .search-toolbar {
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
-  }
+.tracker-clear-button:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
 
-  .tracker-actions {
-    justify-self: stretch;
+/* Collapsible advanced-filters panel. Uses an animated grid row so the panel
+   smoothly slides open/closed, pushing the board down and back up. */
+.tracker-filters-panel {
+  width: 100%;
+  max-width: 920px;
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+  transition: grid-template-rows 260ms ease, margin-top 260ms ease, opacity 200ms ease;
+}
+
+.tracker-filters-panel.is-open {
+  grid-template-rows: 1fr;
+  margin-top: 12px;
+  opacity: 1;
+}
+
+.tracker-filters-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tracker-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px 10px;
+  align-items: end;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+}
+
+html[data-theme="dark"] .tracker-filter-grid {
+  background: rgba(17, 24, 39, 0.82);
+}
+
+.tracker-field {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tracker-field label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tracker-field input,
+.tracker-field select {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.tracker-field select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 34px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2012%208'%3E%3Cpath%20fill='%236b7280'%20d='M1.5%201.5%206%206l4.5-4.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 11px;
+}
+
+.tracker-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.tracker-field input:focus,
+.tracker-field select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* The remote toggle reads as a control of the same height as the fields. */
+.tracker-field--checkbox label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.tracker-field--checkbox label:hover {
+  background: var(--surface-muted);
+  border-color: var(--border-strong);
+}
+
+.tracker-field--checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+@media (max-width: 760px) {
+  .tracker-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  .search-toolbar {
-    grid-template-columns: 1fr;
-    padding: 18px;
+  .tracker-search-bar {
+    flex-wrap: wrap;
   }
 
-  .tracker-actions {
-    justify-self: stretch;
+  .tracker-search-input {
+    flex: 1 1 100%;
+  }
+
+  .tracker-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -852,6 +961,242 @@ main {
   .nav-links {
     gap: 12px;
     flex-wrap: wrap;
+  }
+}
+
+/* Pathfinder visual refresh */
+body {
+  background: var(--app-gradient);
+  color: var(--text-primary);
+}
+
+.navbar {
+  padding: 0.85rem clamp(1rem, 3vw, 2.5rem);
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px);
+}
+
+html[data-theme="dark"] .navbar {
+  background: rgba(17, 24, 39, 0.88);
+}
+
+.nav-links {
+  align-items: center;
+  gap: 0.75rem;
+  transform: none;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 0.85rem;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+}
+
+.nav-link:hover {
+  background: var(--surface-muted);
+  color: var(--primary);
+}
+
+.nav-link.active {
+  background: var(--brand-gradient);
+  color: #ffffff !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.site-header {
+  margin-top: 76px;
+  padding: clamp(2rem, 5vw, 4rem) 1rem 1.25rem;
+}
+
+.site-header h1 {
+  color: var(--text-primary);
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.16;
+  letter-spacing: 0;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding-bottom: 0.12em;
+  margin-bottom: 0.35rem;
+}
+
+.site-header .subtitle {
+  color: var(--text-secondary);
+}
+
+main {
+  margin-top: 0;
+  padding: 18px clamp(1rem, 3vw, 2rem) 56px;
+  justify-content: flex-start;
+  overflow-x: hidden;
+}
+
+/* Shared theming for the kanban add/edit job inputs (the filter bar is styled
+   in its own block higher up). */
+.input-wrapper input,
+.input-wrapper textarea,
+.job-card .job-details input,
+.job-card .job-details textarea {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.input-wrapper input:focus,
+.input-wrapper textarea:focus,
+.job-card .job-details input:focus,
+.job-card .job-details textarea:focus {
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+
+.board {
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: var(--shadow-md);
+  overflow-x: auto;
+}
+
+html[data-theme="dark"] .board {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.column {
+  width: 100%;
+  min-width: 292px;
+  max-width: 410px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sm);
+}
+
+.column:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.column h2 {
+  color: var(--text-primary);
+  font-size: 1.08rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.input-wrapper {
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.job-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  max-height: none;
+}
+
+.job-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.job-card .job-title {
+  color: var(--text-primary);
+  border-bottom-color: var(--border);
+}
+
+.job-card .job-details,
+.job-card .job-details div {
+  color: var(--text-secondary);
+}
+
+.job-card .job-details strong {
+  color: var(--text-primary);
+}
+
+.job-card .job-link {
+  color: var(--primary);
+}
+
+.add-button,
+.submit-button,
+.edit-button,
+.update-button,
+.button {
+  background: var(--brand-gradient);
+}
+
+.delete-button {
+  border-radius: var(--radius-sm);
+  background: var(--error);
+}
+
+.cancel-button {
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+}
+
+.user-menu {
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.user-menu-item:hover {
+  background: var(--surface-muted);
+}
+
+.column-content.drag-over {
+  outline: 3px solid rgba(20, 184, 166, 0.22);
+  outline-offset: 6px;
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 900px) {
+  .navbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .nav-links {
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .site-header {
+    margin-top: 130px;
+  }
+
+  main {
+    padding-inline: 1rem;
+  }
+
+  .board {
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  .column {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
   }
 }
 

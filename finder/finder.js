@@ -452,23 +452,12 @@ function clearJobMapMarkers() {
  * total jobs known, and how many jobs were provided as input to the map.
  * This is useful for debugging and giving users quick feedback on map state.
  */
-function updateMarkerCount(markerCountValue, mapInputCount) {
-  const legend = document.querySelector('.map-legend');
-  if (!legend) return;
-
-  let diagnostics = document.getElementById('map-marker-diagnostics');
-
-  if (!diagnostics) {
-    diagnostics = document.createElement('span');
-    diagnostics.id = 'map-marker-diagnostics';
-    legend.appendChild(diagnostics);
+function updateMarkerCount() {
+  const diagnostics = document.getElementById('map-marker-diagnostics');
+  if (diagnostics) {
+    diagnostics.setAttribute('hidden', '');
+    diagnostics.textContent = '';
   }
-
-  // Ensure diagnostics are visible and styled
-  diagnostics.classList.add('legend-diagnostics');
-  diagnostics.removeAttribute('hidden');
-  const totalLabel = typeof totalJobsCount === 'number' ? totalJobsCount.toLocaleString() : '...';
-  diagnostics.textContent = `Markers On Map: ${markerCountValue} | Total Jobs Label: ${totalLabel} | Map Input Jobs: ${mapInputCount}`;
 }
 
 /**
@@ -1435,14 +1424,10 @@ function wirePaginationButtons() {
 function toggleFilters() {
   const panel = document.getElementById('filter-panel');
   if (!panel) return;
-  const isHidden = panel.hasAttribute('hidden');
-  if (isHidden) {
-    panel.removeAttribute('hidden');
-    panel.style.display = 'grid';
-  } else {
-    panel.style.display = 'none';
-    panel.setAttribute('hidden', '');
-  }
+  // Slide the panel open/closed (pushes the listings down/up).
+  const isOpen = panel.classList.toggle('is-open');
+  const filterButton = document.querySelector('.filter-button');
+  if (filterButton) filterButton.setAttribute('aria-expanded', String(isOpen));
 }
 
 /**
@@ -1520,8 +1505,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const filterPanel = document.getElementById('filter-panel');
             if (filterPanel && tabID !== 'jobs') {
-              filterPanel.style.display = 'none';
-              filterPanel.setAttribute('hidden', '');
+              filterPanel.classList.remove('is-open');
             }
 
             const pageCtrls = document.querySelector('.pagination-controls');
@@ -1560,8 +1544,7 @@ function initializeFilters() {
   const clearFiltersBtn = document.getElementById('clearFilters');
   const filterPanel = document.getElementById('filter-panel');
   if (filterPanel) {
-    filterPanel.style.display = 'none';
-    filterPanel.setAttribute('hidden', '');
+    filterPanel.classList.remove('is-open');
   }
 
   if (applyFiltersBtn) {
@@ -1582,8 +1565,7 @@ function initializeFilters() {
       fetchJobs(currentQuery, 1, currentFilters);
       const filterPanel = document.getElementById('filter-panel');
       if (filterPanel) {
-        filterPanel.style.display = 'none';
-        filterPanel.setAttribute('hidden', '');
+        filterPanel.classList.remove('is-open');
       }
     });
   }
@@ -1613,8 +1595,7 @@ function initializeFilters() {
       fetchJobs(currentQuery, 1, currentFilters);
       const filterPanel = document.getElementById('filter-panel');
       if (filterPanel) {
-        filterPanel.style.display = 'none';
-        filterPanel.setAttribute('hidden', '');
+        filterPanel.classList.remove('is-open');
       }
     });
   }
@@ -2345,4 +2326,3 @@ document.addEventListener('DOMContentLoaded', function() {
     observer.observe(settingsPopup, { attributes: true });
   }
 });
-
