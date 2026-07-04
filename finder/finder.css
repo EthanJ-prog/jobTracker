@@ -550,22 +550,50 @@ main {
 
 .map-popup li {
     margin-bottom: 6px;
-    padding: 6px 8px;
+    padding: 7px 8px 7px 10px;
     border-radius: 10px;
     background: rgba(99, 102, 241, 0.08);
+    border-left: 4px solid var(--job-match-color, #4f46e5);
     color: #111827;
     font-size: 0.9rem;
+}
+
+.map-popup-job-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .map-popup li strong {
     display: block;
     color: #111827;
+    min-width: 0;
 }
 
 .map-popup li span {
     display: block;
     color: #4b5563;
     font-size: 0.85rem;
+}
+
+.map-popup-match-score {
+    flex: 0 0 auto;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 7px;
+    border-radius: 999px;
+    color: #ffffff !important;
+    font-size: 0.72rem !important;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.16);
+}
+
+.map-popup-company {
+    margin-top: 2px;
 }
 
 .custom-map-marker {

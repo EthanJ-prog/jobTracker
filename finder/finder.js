@@ -161,6 +161,15 @@ function getMatchScoreColor(score) {
   return '#ef4444';                   // Red for below 40%
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /**
  * Truncate text to specified length with ellipsis
  * @param {string} text - Text to truncate
@@ -477,16 +486,26 @@ function addJobMapMarker(jobsAtLocation, lat, lng) {
   let jobListHtml = '';
 
   for (const job of jobsAtLocation) {
-    const title = job.title || 'Job';
-    const company = job.company || 'Unknown Company';
+    const title = escapeHtml(job.title || 'Job');
+    const company = escapeHtml(job.company || 'Unknown Company');
+    const jobMatchData = matchScore[job.id];
+    const hasJobMatchScore = hasResume && jobMatchData && typeof jobMatchData.score === 'number';
+    const jobMatchColor = hasJobMatchScore ? getMatchScoreColor(jobMatchData.score) : '#4f46e5';
+    const matchScoreHtml = hasJobMatchScore
+      ? `<span class="map-popup-match-score" style="background: ${jobMatchColor};">${jobMatchData.score}% Match</span>`
+      : '';
+
     jobListHtml += `
-      <li>
-        <strong>${title}</strong>
-        <span>${company}</span>
+      <li class="${hasJobMatchScore ? 'map-popup-job--matched' : ''}" style="--job-match-color: ${jobMatchColor};">
+        <div class="map-popup-job-header">
+          <strong>${title}</strong>
+          ${matchScoreHtml}
+        </div>
+        <span class="map-popup-company">${company}</span>
       </li>`;
   }
 
-  const locationText = firstJob.location || 'Location Not Found';
+  const locationText = escapeHtml(firstJob.location || 'Location Not Found');
   const locationSubtitle = jobCount > 1 ? `${jobCount} jobs at this location` : 'Single job location';
 
   const popupHtml = `
