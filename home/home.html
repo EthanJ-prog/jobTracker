@@ -1,208 +1,203 @@
 <!DOCTYPE html>
-<!--
-    Home landing page for Pathfinder.
-    - Brief product intro and feature highlights for student users.
-    - Links to core app sections: Finder (job search) and Tracker (applications).
-    - Uses `home.css` for layout and shared popup styles.
--->
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pathfinder - Your Job Search Companion</title>
-    <link rel="stylesheet" href="../shared/theme.css">
-    <link rel="stylesheet" href="home.css">
-    <link rel="stylesheet" href="../shared/popup.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pathfinder - Your Job Search Companion</title>
+  <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="home.css">
+  <link rel="stylesheet" href="../shared/popup.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-brand">Pathfinder</div>
-        <div class="nav-links">
-            <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
-            <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
-            <a id="nav-login" href="../auth/signup.html" class="nav-link">Login / Signup</a>
-            <div id="nav-user-wrap" class="user-nav" style="display: none;">
-                <details id="user-menu-details">
-                    <summary id="user-profile" title="User Profile">👤</summary>
-                    <div class="user-menu">
-                        <a href="#" class="user-menu-item" id="nav-profile">
-                            <span class="menu-icon">👤</span>
-                            <span class="menu-text">Profile</span>
-                        </a>
-                        <a href="#" class="user-menu-item" id="nav-settings">
-                            <span class="menu-icon">⚙️</span>
-                            <span class="menu-text">Settings</span>
-                        </a>
-                        <button id="nav-signout" type="button" class="user-menu-item user-menu-signout">
-                            <span class="menu-icon">🚪</span>
-                            <span class="menu-text">Sign Out</span>
-                        </button>
-                    </div>
-                </details>
-            </div>
-        </div> 
-    </nav>
+  <nav class="navbar">
+    <div class="nav-brand">Pathfinder</div>
+    <div class="nav-links">
+      <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
+      <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
+      <a id="nav-login" href="../auth/signup.html" class="nav-link">Login / Signup</a>
+      <div id="nav-user-wrap" class="user-nav" style="display: none;">
+        <details id="user-menu-details">
+          <summary id="user-profile" title="User Profile">&#128100;</summary>
+          <div class="user-menu">
+            <a href="#" class="user-menu-item" id="nav-profile">
+              <span class="menu-icon">&#128100;</span>
+              <span class="menu-text">Profile</span>
+            </a>
+            <a href="#" class="user-menu-item" id="nav-settings">
+              <span class="menu-icon">&#9881;</span>
+              <span class="menu-text">Settings</span>
+            </a>
+            <button id="nav-signout" type="button" class="user-menu-item user-menu-signout">
+              <span class="menu-icon">&#128682;</span>
+              <span class="menu-text">Sign Out</span>
+            </button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </nav>
 
-    <div id="popup-backdrop" class="popup-backdrop" hidden></div>
+  <div id="popup-backdrop" class="popup-backdrop" hidden></div>
 
-    <section id="profile-popup" class="popup-panel" hidden>
-        <div class="popup-header">
-            <h2 class="popup-title">Profile</h2>
-            <button type="button" class="popup-close" aria-label="Close profile popup">&times;</button>
+  <section id="profile-popup" class="popup-panel" hidden>
+    <div class="popup-header">
+      <h2 class="popup-title">Profile</h2>
+      <button type="button" class="popup-close" aria-label="Close profile popup">&times;</button>
+    </div>
+    <div class="popup-body">
+      <div id="profile-view-mode">
+        <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
+        <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
+        <p><strong>Member since:</strong> <span id="profile-joined">Loading...</span></p>
+        <div class="popup-section">
+          <h3>Overview</h3>
+          <p>Access your account details, update your profile information, and review your preferences.</p>
         </div>
-        <div class="popup-body">
-            <div id="profile-view-mode">
-                <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
-                <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
-                <p><strong>Member since:</strong> <span id="profile-joined">Loading...</span></p>
-                <div class="popup-section">
-                    <h3>Overview</h3>
-                    <p>Access your account details, update your profile information, and review your preferences.</p>
-                </div>
-                <div class="popup-section" id="profile-resumes-section" style="display: none;">
-                    <h3>Resumes</h3>
-                    <p id="profile-current-resume-label"></p>
-                    <div id="profile-resume-history"></div>
-                </div>
-                <div class="popup-action">
-                    <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
-                    <button type="button" class="popup-button popup-close">Close</button>
-                </div>
-            </div>
-            <div id="profile-edit-mode" style="display: none;">
-                <div class="form-group">
-                    <label for="profile-name-input">Name:</label>
-                    <input type="text" id="profile-name-input" placeholder="Enter your name" />
-                </div>
-                <p><strong>Email:</strong> <span id="profile-email-display">Loading...</span></p>
-                <p><strong>Member since:</strong> <span id="profile-joined-display">Loading...</span></p>
-                <div class="popup-action">
-                    <button type="button" class="popup-button" id="profile-save-btn">Save Changes</button>
-                    <button type="button" class="popup-button" id="profile-cancel-btn">Cancel</button>
-                </div>
-            </div>
+        <div class="popup-section" id="profile-resumes-section" style="display: none;">
+          <h3>Resumes</h3>
+          <p id="profile-current-resume-label"></p>
+          <div id="profile-resume-history"></div>
         </div>
-    </section>
-
-    <section id="settings-popup" class="popup-panel" hidden>
-        <div class="popup-header">
-            <h2 class="popup-title">Settings</h2>
-            <button type="button" class="popup-close" aria-label="Close settings popup">&times;</button>
+        <div class="popup-action">
+          <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
+          <button type="button" class="popup-button popup-close">Close</button>
         </div>
-        <div class="popup-body">
-            <div class="settings-section">
-                <h3>Security</h3>
-                <button type="button" class="popup-button popup-button-danger" id="profile-delete-btn">Delete Account</button>
-                <div class="settings-item">
-                    <div class="settings-label">
-                        <strong>Two-Factor Authentication (2FA)</strong>
-                        <p class="settings-description">Require a verification code when logging in</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="twofa-toggle" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <p id="twofa-status" class="settings-status">Status: Loading...</p>
-            </div>
-            <div class ="settings-section" id="admin-section" hidden>
-                <h3>Admin</h3>
-                <h4>Users</h4>
-                <div id="admin-users-list"></div>
-                <h4>Jobs</h4>
-                <div id="admin-jobs-list"></div>
-            </div>
-            <div class="popup-action">
-                <button type="button" class="popup-button popup-close">Close</button>
-            </div>
+      </div>
+      <div id="profile-edit-mode" style="display: none;">
+        <div class="form-group">
+          <label for="profile-name-input">Name:</label>
+          <input type="text" id="profile-name-input" placeholder="Enter your name">
         </div>
-    </section>
+        <p><strong>Email:</strong> <span id="profile-email-display">Loading...</span></p>
+        <p><strong>Member since:</strong> <span id="profile-joined-display">Loading...</span></p>
+        <div class="popup-action">
+          <button type="button" class="popup-button" id="profile-save-btn">Save Changes</button>
+          <button type="button" class="popup-button" id="profile-cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <header class="hero">
-        <h1>Welcome to Pathfinder</h1>
-        <p class="subtitle">Your intelligent job search and tracking companion</p>
-    </header>
+  <section id="settings-popup" class="popup-panel" hidden>
+    <div class="popup-header">
+      <h2 class="popup-title">Settings</h2>
+      <button type="button" class="popup-close" aria-label="Close settings popup">&times;</button>
+    </div>
+    <div class="popup-body">
+      <div class="settings-section">
+        <h3>Security</h3>
+        <button type="button" class="popup-button popup-button-danger" id="profile-delete-btn">Delete Account</button>
+        <div class="settings-item">
+          <div class="settings-label">
+            <strong>Two-Factor Authentication (2FA)</strong>
+            <p class="settings-description">Require a verification code when logging in</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="twofa-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <p id="twofa-status" class="settings-status">Status: Loading...</p>
+      </div>
+      <div class="settings-section" id="admin-section" hidden>
+        <h3>Admin</h3>
+        <h4>Users</h4>
+        <div id="admin-users-list"></div>
+        <h4>Jobs</h4>
+        <div id="admin-jobs-list"></div>
+      </div>
+      <div class="popup-action">
+        <button type="button" class="popup-button popup-close">Close</button>
+      </div>
+    </div>
+  </section>
 
+  <header class="hero">
+    <h1>Welcome to Pathfinder</h1>
+    <p class="subtitle">Your intelligent job search and tracking companion</p>
+  </header>
+
+  <main>
     <section class="target-audience">
-        <h2>Built for Students</h2>
-        <p>Pathfinder is designed specifically for students like you—searching for internships, co-ops, 
-            and entry-level positions while balancing your academic workload.</p>
+      <h2>Built for Students</h2>
+      <p>Pathfinder is designed specifically for students like you: searching for internships, co-ops, and entry-level positions while balancing your academic workload.</p>
     </section>
 
     <section class="features">
-        <h2>Features</h2>
-        <div class="feature-grid">
-            <div class="feature-card">
-                <h3>Save Time Searching</h3>
-                <p>Find relevant opportunities matching your skills without endless scrolling</p>
-            </div>
-            <div class="feature-card">
-                <h3>Stay Organized</h3>
-                <p>Track all your applications in one place—never miss a deadline or lose important details</p>
-            </div>
-            <div class="feature-card">
-                <h3>Improve Your Success Rate</h3>
-                <p>Get insights into your progress and optimize your application strategy</p>
-            </div>
-        </div>
+      <h2>Features</h2>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <h3>Save Time Searching</h3>
+          <p>Find relevant opportunities matching your skills without endless scrolling</p>
+        </article>
+        <article class="feature-card">
+          <h3>Stay Organized</h3>
+          <p>Track all your applications in one place so you never miss a deadline or lose important details</p>
+        </article>
+        <article class="feature-card">
+          <h3>Improve Your Success Rate</h3>
+          <p>Get insights into your progress and optimize your application strategy</p>
+        </article>
+      </div>
     </section>
 
     <section class="how-it-works">
-        <h2>How It Works</h2>
-        <div class="steps-grid">
-            <div class="step">
-                <div class="step-number">1</div>
-                <h3>Search</h3>
-                <p>Find jobs that match your skills and interests</p>
-            </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <h3>Apply</h3>
-                <p>Submit applications directly from the platform</p>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <h3>Track</h3>
-                <p>Monitor your applications and stay on top of opportunities</p>
-            </div>
-        </div>
+      <h2>How It Works</h2>
+      <div class="steps-grid">
+        <article class="step">
+          <div class="step-number">1</div>
+          <h3>Search</h3>
+          <p>Find jobs that match your skills and interests</p>
+        </article>
+        <article class="step">
+          <div class="step-number">2</div>
+          <h3>Apply</h3>
+          <p>Submit applications directly from the platform</p>
+        </article>
+        <article class="step">
+          <div class="step-number">3</div>
+          <h3>Track</h3>
+          <p>Monitor your applications and stay on top of opportunities</p>
+        </article>
+      </div>
     </section>
+  </main>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h4>Pathfinder</h4>
-                <p>&copy; 2025 All rights reserved.</p>
-            </div>
-            <div class="footer-section">
-                <h4>Company</h4>
-                <ul>
-                    <li><a href="#">About Us</a></li>
-                    <li><a href="#">Blog</a></li>
-                    <li><a href="#">Careers</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>Support</h4>
-                <ul>
-                    <li><a href="#">Contact Us</a></li>
-                    <li><a href="#">FAQ</a></li>
-                    <li><a href="#">Help Center</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h4>Legal</h4>
-                <ul>
-                    <li><a href="#">Privacy Policy</a></li>
-                    <li><a href="#">Terms of Service</a></li>
-                    <li><a href="#">Cookie Policy</a></li>
-                </ul>
-            </div>
-        </div>
-    </footer>
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-section">
+        <h4>Pathfinder</h4>
+        <p>&copy; 2025 All rights reserved.</p>
+      </div>
+      <div class="footer-section">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About Us</a></li>
+          <li><a href="#">Blog</a></li>
+          <li><a href="#">Careers</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Contact Us</a></li>
+          <li><a href="#">FAQ</a></li>
+          <li><a href="#">Help Center</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+          <li><a href="#">Cookie Policy</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
 
-    <script src="../shared/theme.js" defer></script>
-    <script src="../shared/pathfinder.js"></script>
-    <script src="home.js"></script>
+  <script src="../shared/theme.js" defer></script>
+  <script src="../shared/pathfinder.js"></script>
+  <script src="home.js"></script>
 </body>
 </html>

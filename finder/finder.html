@@ -1,205 +1,196 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Basic meta tags for character encoding and responsive design -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  
-  <!-- Page title and stylesheet -->
   <title>Pathfinder - Career Compass</title>
   <link rel="stylesheet" href="../shared/theme.css">
   <link rel="stylesheet" href="finder.css">
   <link rel="stylesheet" href="../shared/popup.css">
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 </head>
-
 <body>
-
-  <!-- Navigation bar section -->
   <nav class="navbar">
     <div class="nav-brand">
-        <a href="../home/home.html">Pathfinder</a>
+      <a href="../home/home.html">Pathfinder</a>
     </div>
     <div class="nav-links">
-        <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
-        <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
-        <a id="nav-login" href="../auth/signup.html" class="nav-link">Login / Signup</a>
-            <div id="nav-user-wrap" class="user-nav" style="display: none;">
-                <details id="user-menu-details">
-                    <summary id="user-profile" title="User Profile">👤</summary>
-                    <div class="user-menu">
-                        <a href="#" class="user-menu-item" id="nav-profile">
-                            <span class="menu-icon">👤</span>
-                            <span class="menu-text">Profile</span>
-                        </a>
-                        <a href="#" class="user-menu-item" id="nav-settings">
-                            <span class="menu-icon">⚙️</span>
-                            <span class="menu-text">Settings</span>
-                        </a>
-                        <button id="nav-signout" type="button" class="user-menu-item user-menu-signout">
-                            <span class="menu-icon">🚪</span>
-                            <span class="menu-text">Sign Out</span>
-                        </button>
-                    </div>
-                </details>
-            </div> 
+      <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
+      <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
+      <a id="nav-login" href="../auth/signup.html" class="nav-link">Login / Signup</a>
+      <div id="nav-user-wrap" class="user-nav" style="display: none;">
+        <details id="user-menu-details">
+          <summary id="user-profile" title="User Profile">&#128100;</summary>
+          <div class="user-menu">
+            <a href="#" class="user-menu-item" id="nav-profile">
+              <span class="menu-icon">&#128100;</span>
+              <span class="menu-text">Profile</span>
+            </a>
+            <a href="#" class="user-menu-item" id="nav-settings">
+              <span class="menu-icon">&#9881;</span>
+              <span class="menu-text">Settings</span>
+            </a>
+            <button id="nav-signout" type="button" class="user-menu-item user-menu-signout">
+              <span class="menu-icon">&#128682;</span>
+              <span class="menu-text">Sign Out</span>
+            </button>
+          </div>
+        </details>
+      </div>
     </div>
-</nav>
+  </nav>
 
-    <div id="popup-backdrop" class="popup-backdrop" hidden></div>
+  <div id="popup-backdrop" class="popup-backdrop" hidden></div>
 
-    <section id="profile-popup" class="popup-panel" hidden>
-        <div class="popup-header">
-            <h2 class="popup-title">Profile</h2>
-            <button type="button" class="popup-close" aria-label="Close profile popup">&times;</button>
+  <section id="profile-popup" class="popup-panel" hidden>
+    <div class="popup-header">
+      <h2 class="popup-title">Profile</h2>
+      <button type="button" class="popup-close" aria-label="Close profile popup">&times;</button>
+    </div>
+    <div class="popup-body">
+      <div id="profile-view-mode">
+        <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
+        <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
+        <p><strong>Member since:</strong> <span id="profile-joined">Loading...</span></p>
+        <div class="popup-section">
+          <h3>Overview</h3>
+          <p>Access your account details, update your profile information, and review your preferences.</p>
         </div>
-        <div class="popup-body">
-            <div id="profile-view-mode">
-                <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
-                <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
-                <p><strong>Member since:</strong> <span id="profile-joined">Loading...</span></p>
-                <div class="popup-section">
-                    <h3>Overview</h3>
-                    <p>Access your account details, update your profile information, and review your preferences.</p>
-                </div>
-                <div class="popup-action">
-                    <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
-                    <button type="button" class="popup-button popup-close">Close</button>
-                </div>
-            </div>
-            <div id="profile-edit-mode" style="display: none;">
-                <div class="form-group">
-                    <label for="profile-name-input">Name:</label>
-                    <input type="text" id="profile-name-input" placeholder="Enter your name" />
-                </div>
-                <p><strong>Email:</strong> <span id="profile-email-display">Loading...</span></p>
-                <p><strong>Member since:</strong> <span id="profile-joined-display">Loading...</span></p>
-                <div class="popup-action">
-                    <button type="button" class="popup-button" id="profile-save-btn">Save Changes</button>
-                    <button type="button" class="popup-button" id="profile-cancel-btn">Cancel</button>
-                </div>
-            </div>
+        <div class="popup-section" id="profile-resumes-section" style="display: none;">
+          <h3>Resumes</h3>
+          <p id="profile-current-resume-label"></p>
+          <div id="profile-resume-history"></div>
         </div>
-    </section>
+        <div class="popup-action">
+          <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
+          <button type="button" class="popup-button popup-close">Close</button>
+        </div>
+      </div>
+      <div id="profile-edit-mode" style="display: none;">
+        <div class="form-group">
+          <label for="profile-name-input">Name:</label>
+          <input type="text" id="profile-name-input" placeholder="Enter your name">
+        </div>
+        <p><strong>Email:</strong> <span id="profile-email-display">Loading...</span></p>
+        <p><strong>Member since:</strong> <span id="profile-joined-display">Loading...</span></p>
+        <div class="popup-action">
+          <button type="button" class="popup-button" id="profile-save-btn">Save Changes</button>
+          <button type="button" class="popup-button" id="profile-cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <section id="settings-popup" class="popup-panel" hidden>
-        <div class="popup-header">
-            <h2 class="popup-title">Settings</h2>
-            <button type="button" class="popup-close" aria-label="Close settings popup">&times;</button>
+  <section id="settings-popup" class="popup-panel" hidden>
+    <div class="popup-header">
+      <h2 class="popup-title">Settings</h2>
+      <button type="button" class="popup-close" aria-label="Close settings popup">&times;</button>
+    </div>
+    <div class="popup-body">
+      <div class="settings-section">
+        <h3>Security</h3>
+        <div class="settings-item">
+          <div class="settings-label">
+            <strong>Two-Factor Authentication (2FA)</strong>
+            <p class="settings-description">Require a verification code when logging in</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="twofa-toggle">
+            <span class="slider"></span>
+          </label>
         </div>
-        <div class="popup-body">
-            <div class="settings-section">
-                <h3>Security</h3>
-                <div class="settings-item">
-                    <div class="settings-label">
-                        <strong>Two-Factor Authentication (2FA)</strong>
-                        <p class="settings-description">Require a verification code when logging in</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="twofa-toggle" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <p id="twofa-status" class="settings-status">Status: Loading...</p>
-            </div>
-            <div class="popup-action">
-                <button type="button" class="popup-button popup-close">Close</button>
-            </div>
-        </div>
-    </section>
-
+        <p id="twofa-status" class="settings-status">Status: Loading...</p>
+      </div>
+      <div class="popup-action">
+        <button type="button" class="popup-button popup-close">Close</button>
+      </div>
+    </div>
+  </section>
 
   <main>
-    <!-- Tabbed interface section -->
     <section class="tabs-section">
       <div class="finder-controls-row">
-        <!-- Tab navigation buttons -->
         <div class="tab-navigation">
-          <button class="tab-button active" data-tab="jobs">Job Listings</button>
-          <button class="tab-button" data-tab="resume">Resume Match</button>
-          <button class="tab-button" data-tab="map">Job Map</button>
+          <button type="button" class="tab-button active" data-tab="jobs">Job Listings</button>
+          <button type="button" class="tab-button" data-tab="resume">Resume Match</button>
+          <button type="button" class="tab-button" data-tab="map">Job Map</button>
         </div>
 
-        <!-- Main search and filter section -->
         <section class="board">
           <div class="search-bar-container">
-            <input type="text" id="search-input" placeholder="Search jobs..." aria-label="Search jobs" />
+            <input type="text" id="search-input" placeholder="Search jobs..." aria-label="Search jobs">
             <button type="button" class="filter-button" onclick="toggleFilters()">Filters</button>
           </div>
 
           <div class="filter-panel" id="filter-panel">
             <div class="filter-panel-inner">
-            <div class="filter-panel-body">
-            <div class="filter-panel-header">
-              <h3>Filters</h3>
-              <p>Narrow your search results</p>
-            </div>
+              <div class="filter-panel-body">
+                <div class="filter-panel-header">
+                  <h3>Filters</h3>
+                  <p>Narrow your search results</p>
+                </div>
 
-            <div class="filter-group">
-                <label for="jobType" class="visually-hidden">Job Type</label>
-                <select id="jobType" name="jobType">
+                <div class="filter-group">
+                  <label for="jobType" class="visually-hidden">Job Type</label>
+                  <select id="jobType" name="jobType">
                     <option value="">Job Type</option>
                     <option value="full_time">Full-time</option>
                     <option value="part_time">Part-time</option>
                     <option value="contract">Contract</option>
                     <option value="internship">Internship</option>
-                </select>
-            </div>
+                  </select>
+                </div>
 
-            <div class="filter-group">
-                <label for="location" class="visually-hidden">Location</label>
-                <input type="text" id="location" name="location" placeholder="Location">
-            </div>
+                <div class="filter-group">
+                  <label for="location" class="visually-hidden">Location</label>
+                  <input type="text" id="location" name="location" placeholder="Location">
+                </div>
 
-            <div class="filter-group">
-                <label for="salary" class="visually-hidden">Minimum Salary</label>
-                <input type="number" id="salary" name="salary" placeholder="Min Salary">
-            </div>
+                <div class="filter-group">
+                  <label for="salary" class="visually-hidden">Minimum Salary</label>
+                  <input type="number" id="salary" name="salary" placeholder="Min Salary">
+                </div>
 
-            <div class="filter-group">
-              <label for="datePosted" class="visually-hidden">Date Posted</label>
-              <select id="datePosted" name="datePosted">
-                <option value="">Date Posted</option>
-                <option value="24H">Last Day</option>
-                <option value="7D">Last Week</option>
-                <option value="30D">Last Month</option>
-              </select>
-            </div>
+                <div class="filter-group">
+                  <label for="datePosted" class="visually-hidden">Date Posted</label>
+                  <select id="datePosted" name="datePosted">
+                    <option value="">Date Posted</option>
+                    <option value="24H">Last Day</option>
+                    <option value="7D">Last Week</option>
+                    <option value="30D">Last Month</option>
+                  </select>
+                </div>
 
-            <div class="filter-group checkbox-group">
-              <label for="remote" class="filter-toggle">
-                <input type="checkbox" id="remote" name="remote">
-                <span>Remote Only</span>
-              </label>
-            </div>
+                <div class="filter-group checkbox-group">
+                  <label for="remote" class="filter-toggle">
+                    <input type="checkbox" id="remote" name="remote">
+                    <span>Remote Only</span>
+                  </label>
+                </div>
 
-            <div class="filter-actions">
-                <button type="button" class="clear-filters" id="clearFilters">Clear</button>
-                <button type="button" class="apply-filters" id="applyFilters">Apply Filters</button>
-            </div>
-            </div>
+                <div class="filter-actions">
+                  <button type="button" class="clear-filters" id="clearFilters">Clear</button>
+                  <button type="button" class="apply-filters" id="applyFilters">Apply Filters</button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
       </div>
 
-      <!-- Tab content containers -->
       <div class="tab-content">
-        <!-- Job listings tab (active by default) -->
         <div id="jobs-tab" class="tab-pane active">
           <section class="job-listings-section">
             <div class="job-listings-header">
               <h2>Job Listings <span class="job-count-inline">- <span id="total-jobs-count">...</span> jobs</span></h2>
-
-              <select id="sort-select">
-                <option value="match-desc">Match Score High → Low</option>
-                <option value="match-asce">Match Score Low → High</option>
+              <select id="sort-select" aria-label="Sort job listings">
+                <option value="match-desc">Match Score High to Low</option>
+                <option value="match-asce">Match Score Low to High</option>
                 <option value="date-desc">Date Latest</option>
                 <option value="date-asce">Date Oldest</option>
               </select>
             </div>
 
-            <!-- Dynamic job cards container (placeholder shown when JS disabled) -->
             <div class="job-listings-container">
               <div class="loading-message card" role="status">
                 <h3>Loading jobs...</h3>
@@ -209,25 +200,22 @@
           </section>
         </div>
 
-        <!-- Resume matching tab -->
         <div id="resume-tab" class="tab-pane">
           <section class="resume-upload-section">
             <h2>Resume Analysis</h2>
             <p class="resume-subtext">Get personalized job matches and improve your resume</p>
-            
-            <!-- Enhanced file upload area -->
+
             <div class="resume-preview" id="dropZone">
               <div class="file-input-container">
-                <input type="file" id="resumeFile" accept=".pdf,application/pdf" required />
+                <input type="file" id="resumeFile" accept=".pdf,application/pdf" required>
                 <div class="upload-trigger">
-                  <span class="upload-icon">📄</span>
+                  <span class="upload-icon">&#128196;</span>
                   <span>Drop your resume here or click to upload</span>
                 </div>
                 <p class="file-types">Supported format: PDF</p>
               </div>
             </div>
 
-            <!-- Resume action buttons container -->
             <div class="resume-action-buttons" id="resumeActionButtons" style="display: none;">
               <button type="button" id="uploadNewResume" class="button">Upload Resume</button>
               <button type="button" id="removeResume" class="button button-danger">Remove Resume</button>
@@ -236,12 +224,11 @@
             <div class="resume-loading-overlay" id="resumeLoadingOverlay" aria-hidden="true">
               <div class="loader-content">
                 <div class="loader-spinner" aria-hidden="true"></div>
-                <p>Uploading and analyzing your resume…</p>
+                <p>Uploading and analyzing your resume...</p>
                 <p>Calculating job match scores now.</p>
               </div>
             </div>
 
-            <!-- Skills Analysis Section -->
             <div class="skills-match" id="skillsAnalysis" style="display: none;">
               <h3>Skills Analysis</h3>
               <div class="match-indicator">
@@ -250,59 +237,52 @@
                   <div class="match-fill" style="width: 0%"></div>
                 </div>
               </div>
-              
+
               <h4>Detected Skills</h4>
               <div class="skills-grid" id="detectedSkills"></div>
-              
+
               <h4>Missing In-Demand Skills</h4>
               <div class="skills-grid" id="missingSkills"></div>
             </div>
 
-            <!-- Improvement Suggestions -->
             <div class="suggestions" id="resumeSuggestions" style="display: none;">
               <h3>Resume Improvement Tips</h3>
-              <div class="suggestion-list">
-                <!-- Suggestions will be added dynamically -->
-              </div>
+              <div class="suggestion-list"></div>
             </div>
 
-            <!-- Job Matches -->
             <div id="suggested-jobs" class="suggested-jobs" style="display: none;">
               <h3>Best Job Matches</h3>
-              <div class="job-matches-grid">
-                <!-- Matched jobs will be added here -->
-              </div>
+              <div class="job-matches-grid"></div>
             </div>
           </section>
         </div>
 
-        <!-- Job map tab -->
         <div id="map-tab" class="tab-pane">
           <section class="map-section">
             <h2>Job Locations</h2>
             <div class="map-legend" role="group" aria-label="Map legend">
               <div class="legend-section">
-                <div class="legend-title">Marker — Match Score</div>
+                <div class="legend-title">Marker - Match Score</div>
                 <div class="legend-items">
                   <div class="legend-item">
-                    <span class="legend-swatch" style="background:#22c55e"></span>
-                    <span class="legend-label">80–100 — High match</span>
+                    <span class="legend-swatch legend-swatch--high"></span>
+                    <span class="legend-label">80-100 - High match</span>
                   </div>
                   <div class="legend-item">
-                    <span class="legend-swatch" style="background:#eab308"></span>
-                    <span class="legend-label">60–79 — Good match</span>
+                    <span class="legend-swatch legend-swatch--good"></span>
+                    <span class="legend-label">60-79 - Good match</span>
                   </div>
                   <div class="legend-item">
-                    <span class="legend-swatch" style="background:#f97316"></span>
-                    <span class="legend-label">40–59 — Moderate match</span>
+                    <span class="legend-swatch legend-swatch--moderate"></span>
+                    <span class="legend-label">40-59 - Moderate match</span>
                   </div>
                   <div class="legend-item">
-                    <span class="legend-swatch" style="background:#ef4444"></span>
-                    <span class="legend-label">0–39 — Low match</span>
+                    <span class="legend-swatch legend-swatch--low"></span>
+                    <span class="legend-label">0-39 - Low match</span>
                   </div>
                   <div class="legend-item">
-                    <span class="legend-swatch" style="background:#4f46e5"></span>
-                    <span class="legend-label">Neutral — no match data / clusters</span>
+                    <span class="legend-swatch legend-swatch--neutral"></span>
+                    <span class="legend-label">Neutral - no match data / clusters</span>
                   </div>
                 </div>
               </div>
@@ -313,14 +293,13 @@
                 <div class="legend-note">Marker color reflects your resume match when available.</div>
                 <div class="legend-note">Clustered markers show a count for multiple jobs at one location.</div>
               </div>
-              
             </div>
-            <!-- Map container for visualizing job locations -->
+
             <div id="map" aria-label="Job locations map">
-              <div class="map-placeholder" style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;padding:24px;">
+              <div class="map-placeholder">
                 <div>
                   <strong>Map initialization pending</strong>
-                  <p style="margin:8px 0 0">Select the Map tab to initialize the job map.</p>
+                  <p>Select the Map tab to initialize the job map.</p>
                 </div>
               </div>
             </div>
@@ -330,113 +309,87 @@
     </section>
   </main>
 
-          <!-- Pagination controls fixed at bottom -->
-          <div class="pagination-controls">
-            <button id="prev-page" disabled>Previous</button>
-            <span id="page-info">Page 1</span>
-            <button id="next-page" disabled>Next</button>
-          </div>
-          
-          <!-- Job detail overlay model -->
-          <div id="job-detail-overlay" class="job-overlay">
+  <div class="pagination-controls">
+    <button type="button" id="prev-page" disabled>Previous</button>
+    <span id="page-info">Page 1</span>
+    <button type="button" id="next-page" disabled>Next</button>
+  </div>
 
-            <!-- Main content container -->
-            <div class="job-overlay-content">
-              <!-- Header with job title and close button -->
-              <div class="job-overlay-header">
-                <h2 id="overlay-job-title"></h2>
-                <button class="close-overlay" id="close-overlay">&times;</button>
+  <div id="job-detail-overlay" class="job-overlay">
+    <div class="job-overlay-content">
+      <div class="job-overlay-header">
+        <h2 id="overlay-job-title"></h2>
+        <button type="button" class="close-overlay" id="close-overlay" aria-label="Close job detail overlay">&times;</button>
+      </div>
+
+      <div class="job-overlay-body">
+        <div class="job-overlay-meta">
+          <div class="meta-item"><strong>Company:</strong> <span id="overlay-company"></span></div>
+          <div class="meta-item"><strong>Location:</strong> <span id="overlay-location"></span></div>
+          <div class="meta-item"><strong>Type:</strong> <span id="overlay-employment-type"></span></div>
+          <div class="meta-item" id="overlay-remote-container"><strong>Remote:</strong> <span id="overlay-remote"></span></div>
+          <div class="meta-item"><strong>Posted:</strong> <span id="overlay-posted-date"></span></div>
+          <div class="meta-item"><strong>Added to DB:</strong> <span id="overlay-created-date"></span></div>
+          <div class="meta-item" id="overlay-salary-container"><strong>Salary:</strong> <span id="overlay-salary"></span></div>
+        </div>
+
+        <div id="overlay-match-section" class="overlay-match-section">
+          <div class="match-header">
+            <h3>Resume Match Analysis</h3>
+            <div class="match-score-display">
+              <span id="overlay-match-score" class="match-score-value">0%</span>
+              <div class="match-bar-container">
+                <div id="overlay-match-bar" class="match-bar-fill"></div>
               </div>
-
-              <!-- Body Section -->
-               <div class="job-overlay-body"> 
-                <div class="job-overlay-meta">  
-                  <div class="meta-item">
-                    <strong>Company:</strong> <span id="overlay-company"></span>
-                  </div>
-                  <div class="meta-item">
-                    <strong>Location:</strong> <span id="overlay-location"></span>
-                  </div>
-                  <div class="meta-item">
-                    <strong>Type:</strong> <span id="overlay-employment-type"></span>
-                  </div>
-                  <div class="meta-item" id="overlay-remote-container">
-                    <strong>Remote:</strong> <span id="overlay-remote"></span>
-                  </div>
-                  <div class="meta-item">
-                    <strong>Posted:</strong> <span id="overlay-posted-date"></span>
-                  </div>
-                  <div class="meta-item">
-                    <strong>Added to DB:</strong> <span id="overlay-created-date"></span>
-                  </div>
-                  <div class="meta-item" id="overlay-salary-container">
-                    <strong>Salary:</strong> <span id="overlay-salary"></span>
-                  </div>
-                </div>
-
-
-                <div id = "overlay-match-section" class="overlay-match-section">
-                  <div class="match-header">
-                    <h3>Resume Match Analysis</h3>
-                    <div class="match-score-display">
-                      <span id="overlay-match-score" class="match-score-value">0%</span>
-                      <div class="match-bar-container">
-                        <div id="overlay-match-bar" class="match-bar-fill"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="match-breakdown">
-                    <div class="breakdown-item">
-                      <span class="breakdown-label">Technical Skills</span>
-                      <span id="overlay-technical-score" class="breakdown-value">0%</span>
-                    </div>
-
-                    <div class="breakdown-item">
-                      <span class="breakdown-label">Soft Skills</span>
-                      <span id="overlay-softSkills-score" class="breakdown-value">0%</span>
-                    </div>
-
-                    <div class="breakdown-item">
-                      <span class="breakdown-label">Experience</span>
-                      <span id="overlay-experience-score" class="breakdown-value">0%</span>
-                    </div>  
-
-                    <div class="breakdown-item">
-                      <span class="breakdown-label">Education</span>
-                      <span id="overlay-education-score" class="breakdown-value">0%</span>
-                    </div>
-                  </div>
-
-                  <div class="skills-section matched-skills">
-                    <h4>Matched Skills</h4>
-                    <div id="overlay-matched-skills" class="skills-tags"></div>
-                  </div>
-
-                  <div class="skills-section missing-skills">
-                    <h4>Missing Skills</h4>
-                    <div id="overlay-missing-skills" class="skills-tags"></div>
-                  </div>
-
-                </div>
-                  <div class="job-overlay-description">
-                    <h3>Job Description</h3>
-                    <div id="overlay-description"></div>
-                  </div>
-              </div>
-              
-              <div class="job-overlay-footer"> 
-                <button class="overlay-apply-button" id="overlay-apply-button">Apply Now</button>
-                <button class="overlay-save-button" id="overlay-save-button">Save Job</button>
-              </div>
-
             </div>
           </div>
 
-          <!-- JavaScript functionality -->
-          <script src="../shared/theme.js" defer></script>
-          <script src="../shared/pathfinder.js"></script>
-          <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-          <script src="finder.js"></script>
-        </body>
-        </html>
+          <div class="match-breakdown">
+            <div class="breakdown-item">
+              <span class="breakdown-label">Technical Skills</span>
+              <span id="overlay-technical-score" class="breakdown-value">0%</span>
+            </div>
+            <div class="breakdown-item">
+              <span class="breakdown-label">Soft Skills</span>
+              <span id="overlay-softSkills-score" class="breakdown-value">0%</span>
+            </div>
+            <div class="breakdown-item">
+              <span class="breakdown-label">Experience</span>
+              <span id="overlay-experience-score" class="breakdown-value">0%</span>
+            </div>
+            <div class="breakdown-item">
+              <span class="breakdown-label">Education</span>
+              <span id="overlay-education-score" class="breakdown-value">0%</span>
+            </div>
+          </div>
+
+          <div class="skills-section matched-skills">
+            <h4>Matched Skills</h4>
+            <div id="overlay-matched-skills" class="skills-tags"></div>
+          </div>
+
+          <div class="skills-section missing-skills">
+            <h4>Missing Skills</h4>
+            <div id="overlay-missing-skills" class="skills-tags"></div>
+          </div>
+        </div>
+
+        <div class="job-overlay-description">
+          <h3>Job Description</h3>
+          <div id="overlay-description"></div>
+        </div>
+      </div>
+
+      <div class="job-overlay-footer">
+        <button type="button" class="overlay-apply-button" id="overlay-apply-button">Apply Now</button>
+        <button type="button" class="overlay-save-button" id="overlay-save-button">Save Job</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/theme.js" defer></script>
+  <script src="../shared/pathfinder.js"></script>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script src="finder.js"></script>
+</body>
+</html>

@@ -1134,6 +1134,86 @@ app.get('/api/user/resumes', authenticateToken, (req, res) => {
   );
 });
 
+app.post('/api/user/resumes/:id/restore', authenticateToken, (req, res) => {
+    const userId = req.user.userId;
+    const historyId = parseInt(req.params.id, 10);
+
+    if (!Number.isInteger(historyId)) {
+      return res.status(400).json({ error: 'Invalid history ID' });
+    }
+
+    // Implementation for restoring a resume from history
+
+    db.get('SELECT * FROM resume_history WHERE id = ? AND user_id = ?', [historyId, userId], (historyErr, historyResume) => {
+        if (historyErr) {
+            console.error('Error fetching resume history:', historyErr);
+            return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (!historyResume) {
+            return res.status(404).json({ error: 'Resume history not found' });
+        }
+
+        db.get('SELECT * FROM resumes WHERE user_id = ?', [userId], (currentErr, currentResume) => {
+            
+            if (currentErr) {
+                console.error('Error fetching current resume before storing:', currentErr);
+                return res.status(500).json({ error: 'Database error' });
+            }
+
+            const finishRestore = async (activeResumeId) => {
+                try {
+                    const matchStats = await calculateAllMatches(activeResumeId, historyResume.raw_text || '');
+                    return res.json({ message: 'Resume restored successfully', id: activeResumeId, filename: historyResume.filename, matchesCalculated: matchStats.jobsProcessed, averagescore: matchstats.averageScore });
+                } catch (matchErr) {
+                    console.error('Could not restore match score after resume was restored', matchErr);
+                    return res.json({ message: 'Resume restored successfully, match calculation pending', id: activeResumeId, filename: historyResume.filename, matchescalculated: 0 });
+                }
+            };
+            
+            const deleteHistoryAndRecalculate = (activeResumeId) => {
+                db.run('DELETE FROM resume_history WHERE id = ? AND user_id = ?', [historyId, userId], (deleteErr) => {
+                    if (deleteErr) {
+                        console.error('Error deleting restored resume history', deleteErr);
+                        return res.status(500).json({ error: 'Failed to clean up restored resume history items' });
+                    }
+                    finishRestore(activeResumeId);
+                });
+            };
+
+            if (!currentResume) {
+
+                db.run(`INSERT INTO resumes (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, updated_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, 
+                    [userId, historyResume.filename, historyResume.file_type, historyResume.raw_text, historyResume.skills, historyResume.experience, historyResume.education, historyResume.contactInfo], 
+                    function(insertErr) {
+                    if (insertErr) {
+                        console.error('Error inserting restored resume:', insertErr);
+                        return res.status(500).json({ error: 'Failed to restore resume' });
+                    }
+                    deleteHistoryAndRecalculate(this.lastId);
+                });
+                return;
+            }
+
+            db.run(`INSERT INTO resume_history (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, uploaded_at, replaced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, [userId, currentResume.filename, currentResume.file_type, currentResume.raw_text, currentResume.skills, currentResume.experience, currentResume.education, currentResume.contact_info, currentResume.created_at || new Date().toISOString()], (archiveErr) => {
+                if (archiveErr) {
+                    console.error('Error archiving current resume before restoring:', archiveErr);
+                    return res.status(500).json({ error: 'Failed to archive current resume' });
+                }
+                db.run(`UPDATE resumes filename = ?, file_type = ?, raw_text = ?, skills = ?, experience = ?, education = ?, contact_info = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`, [historyResume.filename, historyResume.file_type, historyResume.raw_text, historyResume.skills, historyResume.experience, historyResume.education, historyResume.contact_info, userId], (updatedErr) => {
+                    if (updateErr) {
+                        console.error('Error updating resume before inserting:', updatedErr);
+                        return res.status(500).json({ error: 'Failed to update resume'});
+                    }
+                    deleteHistoryAndRecalculate(currentResume.id);
+                });
+            });
+        });
+    });
+});
+
+
 // Update user profile endpoint: allows updating user name
 app.put('/api/user/profile', authenticateToken, async (req, res) => {
   try {

@@ -1,261 +1,238 @@
 <!DOCTYPE html>
-<!--
-  Tracker page: Kanban-style board for managing job application stages.
-  - Columns represent application status (Saved, Applied, Interview, Offers/Decisions).
-  - Uses `tracker.js` for drag/drop and API integration, `tracker.css` for styles.
--->
 <html lang="en">
-
 <head>
-  <!-- Basic meta tags for character encoding and responsive design -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  
-  <!-- Page title and stylesheet -->
   <title>Pathfinder - Progress Map</title>
   <link rel="stylesheet" href="../shared/theme.css">
   <link rel="stylesheet" href="tracker.css">
   <link rel="stylesheet" href="../shared/popup.css">
 </head>
-
 <body>
-  <!-- Site header with title and subtitle -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <a href="../home/home.html">Pathfinder</a>
+    </div>
+    <div class="nav-links">
+      <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
+      <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
+      <a id="nav-login" href="../auth/signup.html" class="nav-link">Login / Signup</a>
+      <div id="nav-user-wrap" class="user-nav" style="display: none;">
+        <details id="user-menu-details">
+          <summary id="user-profile" title="User Profile">&#128100;</summary>
+          <div class="user-menu">
+            <a href="#" class="user-menu-item" id="nav-profile">
+              <span class="menu-icon">&#128100;</span>
+              <span class="menu-text">Profile</span>
+            </a>
+            <a href="#" class="user-menu-item" id="nav-settings">
+              <span class="menu-icon">&#9881;</span>
+              <span class="menu-text">Settings</span>
+            </a>
+            <button id="nav-signout" type="button" class="user-menu-item user-menu-signout">
+              <span class="menu-icon">&#128682;</span>
+              <span class="menu-text">Sign Out</span>
+            </button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </nav>
+
   <header class="site-header">
     <h1>Progress Map</h1>
     <p class="subtitle">Track your job applications and career progress</p>
   </header>
 
-  <!-- Main content area with kanban board -->
   <main>
-    <nav class="navbar">
-        <div class="nav-brand">
-            <a href="../home/home.html">Pathfinder</a>
-        </div>
-        <div class="nav-links">
-            <a href="../finder/finder.html" class="nav-link">Find Jobs</a>
-            <a href="../tracker/tracker.html" class="nav-link">Track Applications</a>
-            <a id="nav-login" href="../auth/signup.html" class="nav-link">Login / Signup</a>
-            <div id="nav-user-wrap" class="user-nav" style="display: none;">
-                <details id="user-menu-details">
-                    <summary id="user-profile" title="User Profile">👤</summary>
-                    <div class="user-menu">
-                        <a href="#" class="user-menu-item" id="nav-profile">
-                            <span class="menu-icon">👤</span>
-                            <span class="menu-text">Profile</span>
-                        </a>
-                        <a href="#" class="user-menu-item" id="nav-settings">
-                            <span class="menu-icon">⚙️</span>
-                            <span class="menu-text">Settings</span>
-                        </a>
-                        <button id="nav-signout" type="button" class="user-menu-item user-menu-signout">
-                            <span class="menu-icon">🚪</span>
-                            <span class="menu-text">Sign Out</span>
-                        </button>
-                    </div>
-                </details>
-            </div>
-        </div>
-    </nav>
-
     <div id="popup-backdrop" class="popup-backdrop" hidden></div>
 
     <section class="tracker-search-panel">
       <div class="tracker-search-bar">
-        <input id="tracker-search-input" type="search" class="tracker-search-input" placeholder="Search tracked jobs..." aria-label="Search tracked jobs" />
+        <input id="tracker-search-input" type="search" class="tracker-search-input" placeholder="Search tracked jobs..." aria-label="Search tracked jobs">
         <button id="tracker-filters-toggle" type="button" class="tracker-filters-toggle" aria-expanded="false" aria-controls="tracker-filters-panel">Filters</button>
         <button id="tracker-clear-filters" type="button" class="tracker-clear-button">Clear</button>
       </div>
 
       <div id="tracker-filters-panel" class="tracker-filters-panel">
         <div class="tracker-filters-inner">
-        <div class="tracker-filter-grid">
-          <div class="tracker-field">
-            <label for="tracker-column-filter">Column</label>
-            <select id="tracker-column-filter">
-              <option value="">All Columns</option>
-              <option value="saved">Saved</option>
-              <option value="applied">Applied</option>
-              <option value="interview">Interview</option>
-              <option value="offers-decisions">Offers / Decisions</option>
-            </select>
+          <div class="tracker-filter-grid">
+            <div class="tracker-field">
+              <label for="tracker-column-filter">Column</label>
+              <select id="tracker-column-filter">
+                <option value="">All Columns</option>
+                <option value="saved">Saved</option>
+                <option value="applied">Applied</option>
+                <option value="interview">Interview</option>
+                <option value="offers-decisions">Offers / Decisions</option>
+              </select>
+            </div>
+            <div class="tracker-field">
+              <label for="tracker-jobtype-filter">Job Type</label>
+              <select id="tracker-jobtype-filter">
+                <option value="">Any Type</option>
+                <option value="full_time">Full-time</option>
+                <option value="part_time">Part-time</option>
+                <option value="contract">Contract</option>
+                <option value="internship">Internship</option>
+              </select>
+            </div>
+            <div class="tracker-field">
+              <label for="tracker-location-filter">Location</label>
+              <input id="tracker-location-filter" type="text" placeholder="Location" aria-label="Filter by location">
+            </div>
+            <div class="tracker-field">
+              <label for="tracker-salary-filter">Min Salary</label>
+              <input id="tracker-salary-filter" type="number" min="0" placeholder="Min salary" aria-label="Filter by minimum salary">
+            </div>
+            <div class="tracker-field">
+              <label for="tracker-date-posted-filter">Date Posted</label>
+              <select id="tracker-date-posted-filter">
+                <option value="">Any time</option>
+                <option value="24H">Last 24 hours</option>
+                <option value="7D">Last 7 days</option>
+                <option value="30D">Last 30 days</option>
+              </select>
+            </div>
+            <div class="tracker-field tracker-field--checkbox">
+              <label>
+                <input id="tracker-remote-filter" type="checkbox">
+                Remote only
+              </label>
+            </div>
           </div>
-          <div class="tracker-field">
-            <label for="tracker-jobtype-filter">Job Type</label>
-            <select id="tracker-jobtype-filter">
-              <option value="">Any Type</option>
-              <option value="full_time">Full-time</option>
-              <option value="part_time">Part-time</option>
-              <option value="contract">Contract</option>
-              <option value="internship">Internship</option>
-            </select>
-          </div>
-          <div class="tracker-field">
-            <label for="tracker-location-filter">Location</label>
-            <input id="tracker-location-filter" type="text" placeholder="Location" aria-label="Filter by location" />
-          </div>
-          <div class="tracker-field">
-            <label for="tracker-salary-filter">Min Salary</label>
-            <input id="tracker-salary-filter" type="number" min="0" placeholder="Min salary" aria-label="Filter by minimum salary" />
-          </div>
-          <div class="tracker-field">
-            <label for="tracker-date-posted-filter">Date Posted</label>
-            <select id="tracker-date-posted-filter">
-              <option value="">Any time</option>
-              <option value="24H">Last 24 hours</option>
-              <option value="7D">Last 7 days</option>
-              <option value="30D">Last 30 days</option>
-            </select>
-          </div>
-          <div class="tracker-field tracker-field--checkbox">
-            <label>
-              <input id="tracker-remote-filter" type="checkbox" />
-              Remote only
-            </label>
-          </div>
-        </div>
         </div>
       </div>
     </section>
 
     <section id="profile-popup" class="popup-panel" hidden>
-        <div class="popup-header">
-            <h2 class="popup-title">Profile</h2>
-            <button type="button" class="popup-close" aria-label="Close profile popup">&times;</button>
+      <div class="popup-header">
+        <h2 class="popup-title">Profile</h2>
+        <button type="button" class="popup-close" aria-label="Close profile popup">&times;</button>
+      </div>
+      <div class="popup-body">
+        <div id="profile-view-mode">
+          <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
+          <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
+          <p><strong>Member since:</strong> <span id="profile-joined">Loading...</span></p>
+          <div class="popup-section">
+            <h3>Overview</h3>
+            <p>Access your account details, update your profile information, and review your preferences.</p>
+          </div>
+          <div class="popup-section" id="profile-resumes-section" style="display: none;">
+            <h3>Resumes</h3>
+            <p id="profile-current-resume-label"></p>
+            <div id="profile-resume-history"></div>
+          </div>
+          <div class="popup-action">
+            <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
+            <button type="button" class="popup-button popup-close">Close</button>
+          </div>
         </div>
-        <div class="popup-body">
-            <div id="profile-view-mode">
-                <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
-                <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
-                <p><strong>Member since:</strong> <span id="profile-joined">Loading...</span></p>
-                <div class="popup-section">
-                    <h3>Overview</h3>
-                    <p>Access your account details, update your profile information, and review your preferences.</p>
-                </div>
-                <div class="popup-section" id="profile-resumes-section" style="display: none;">
-                    <h3>Resumes</h3>
-                    <p id="profile-current-resume-label"></p>
-                    <div id="profile-resume-history"></div>
-                </div>
-                <div class="popup-action">
-                    <button type="button" class="popup-button" id="profile-edit-btn">Edit Profile</button>
-                    <button type="button" class="popup-button popup-close">Close</button>
-                </div>
-            </div>
-            <div id="profile-edit-mode" style="display: none;">
-                <div class="form-group">
-                    <label for="profile-name-input">Name:</label>
-                    <input type="text" id="profile-name-input" placeholder="Enter your name" />
-                </div>
-                <p><strong>Email:</strong> <span id="profile-email-display">Loading...</span></p>
-                <p><strong>Member since:</strong> <span id="profile-joined-display">Loading...</span></p>
-                <div class="popup-action">
-                    <button type="button" class="popup-button" id="profile-save-btn">Save Changes</button>
-                    <button type="button" class="popup-button" id="profile-cancel-btn">Cancel</button>
-                </div>
-            </div>
+        <div id="profile-edit-mode" style="display: none;">
+          <div class="form-group">
+            <label for="profile-name-input">Name:</label>
+            <input type="text" id="profile-name-input" placeholder="Enter your name">
+          </div>
+          <p><strong>Email:</strong> <span id="profile-email-display">Loading...</span></p>
+          <p><strong>Member since:</strong> <span id="profile-joined-display">Loading...</span></p>
+          <div class="popup-action">
+            <button type="button" class="popup-button" id="profile-save-btn">Save Changes</button>
+            <button type="button" class="popup-button" id="profile-cancel-btn">Cancel</button>
+          </div>
         </div>
+      </div>
     </section>
 
     <section id="settings-popup" class="popup-panel" hidden>
-        <div class="popup-header">
-            <h2 class="popup-title">Settings</h2>
-            <button type="button" class="popup-close" aria-label="Close settings popup">&times;</button>
-        </div>
-        <div class="popup-body">
-            <div class="settings-section">
-                <h3>Security</h3>
-                <div class="settings-item">
-                    <div class="settings-label">
-                        <strong>Two-Factor Authentication (2FA)</strong>
-                        <p class="settings-description">Require a verification code when logging in</p>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="twofa-toggle" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <p id="twofa-status" class="settings-status">Status: Loading...</p>
+      <div class="popup-header">
+        <h2 class="popup-title">Settings</h2>
+        <button type="button" class="popup-close" aria-label="Close settings popup">&times;</button>
+      </div>
+      <div class="popup-body">
+        <div class="settings-section">
+          <h3>Security</h3>
+          <div class="settings-item">
+            <div class="settings-label">
+              <strong>Two-Factor Authentication (2FA)</strong>
+              <p class="settings-description">Require a verification code when logging in</p>
             </div>
-            <div class="popup-action">
-                <button type="button" class="popup-button popup-close">Close</button>
-            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="twofa-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p id="twofa-status" class="settings-status">Status: Loading...</p>
         </div>
+        <div class="popup-action">
+          <button type="button" class="popup-button popup-close">Close</button>
+        </div>
+      </div>
     </section>
 
-    <!-- Kanban board section with job tracking columns -->
     <section class="board">
-      
-      <!-- Saved jobs column with job creation form -->
       <div class="column" id="saved">
         <div class="column-content">
           <h2>Saved</h2>
-          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <input type="text" class="job-title" placeholder="Job Title" />
-            <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied" />
-            <input type="url" class="job-link" placeholder="Job Link" />
+            <input type="text" class="job-title" placeholder="Job Title">
+            <input type="text" class="company-name" placeholder="Company">
+            <input type="date" class="date-applied">
+            <input type="url" class="job-link" placeholder="Job Link">
             <textarea class="job-notes" placeholder="Notes"></textarea>
-            <button class="submit-button" data-column="saved">Submit Job</button>
+            <button type="button" class="submit-button" data-column="saved">Submit Job</button>
           </div>
         </div>
-        <button class="add-button" data-column="saved">Add Job</button>
+        <button type="button" class="add-button" data-column="saved">Add Job</button>
       </div>
 
-      <!-- Applied jobs column -->
       <div class="column" id="applied">
         <div class="column-content">
           <h2>Applied</h2>
-          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <input type="text" class="job-title" placeholder="Job Title" />
-            <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied" />
-            <input type="url" class="job-link" placeholder="Job Link" />
+            <input type="text" class="job-title" placeholder="Job Title">
+            <input type="text" class="company-name" placeholder="Company">
+            <input type="date" class="date-applied">
+            <input type="url" class="job-link" placeholder="Job Link">
             <textarea class="job-notes" placeholder="Notes"></textarea>
-            <button class="submit-button" data-column="applied">Submit Job</button>
+            <button type="button" class="submit-button" data-column="applied">Submit Job</button>
           </div>
         </div>
-        <button class="add-button" data-column="applied">Add Job</button>
+        <button type="button" class="add-button" data-column="applied">Add Job</button>
       </div>
 
-      <!-- Interview stage column -->
       <div class="column" id="interview">
         <div class="column-content">
           <h2>Interview</h2>
-          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <input type="text" class="job-title" placeholder="Job Title" />
-            <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied" />
-            <input type="url" class="job-link" placeholder="Job Link" />
+            <input type="text" class="job-title" placeholder="Job Title">
+            <input type="text" class="company-name" placeholder="Company">
+            <input type="date" class="date-applied">
+            <input type="url" class="job-link" placeholder="Job Link">
             <textarea class="job-notes" placeholder="Notes"></textarea>
-            <button class="submit-button" data-column="interview">Submit Job</button>
+            <button type="button" class="submit-button" data-column="interview">Submit Job</button>
           </div>
         </div>
-        <button class="add-button" data-column="interview">Add Job</button>
+        <button type="button" class="add-button" data-column="interview">Add Job</button>
       </div>
 
-      <!-- Job offers and decisions column -->
       <div class="column" id="offers-decisions">
         <div class="column-content">
           <h2>Offers / Decisions</h2>
-          <!-- Job creation form (hidden by default) -->
           <div class="input-wrapper" style="display: none;">
-            <input type="text" class="job-title" placeholder="Job Title" />
-            <input type="text" class="company-name" placeholder="Company" />
-            <input type="date" class="date-applied" />
-            <input type="url" class="job-link" placeholder="Job Link" />
+            <input type="text" class="job-title" placeholder="Job Title">
+            <input type="text" class="company-name" placeholder="Company">
+            <input type="date" class="date-applied">
+            <input type="url" class="job-link" placeholder="Job Link">
             <textarea class="job-notes" placeholder="Notes"></textarea>
-            <button class="submit-button" data-column="offers-decisions">Submit Job</button>
+            <button type="button" class="submit-button" data-column="offers-decisions">Submit Job</button>
           </div>
         </div>
-        <button class="add-button" data-column="offers-decisions">Add Job</button>
+        <button type="button" class="add-button" data-column="offers-decisions">Add Job</button>
       </div>
     </section>
   </main>
 
-  <!-- JavaScript functionality for drag-and-drop and job management -->
   <script src="../shared/theme.js" defer></script>
   <script src="../shared/pathfinder.js"></script>
   <script src="tracker.js"></script>

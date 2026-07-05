@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // Setup Upload Different Resume button
       const uploadNewBtn = document.getElementById('uploadNewResume');
       if (uploadNewBtn) {
-        uploadNewBtn.addEventListener('click', () => {
+       uploadNewBtn.onclick = () => {
           if (dropZone) {
             dropZone.innerHTML = `
               <div class="file-input-container">
@@ -1057,13 +1057,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           }
           actionButtonsContainer.style.display = 'none';
           initializeResumeUpload();
-        });
+        };
       }
       
       // Setup Remove Resume button
       const removeBtn = document.getElementById('removeResume');
       if (removeBtn) {
-        removeBtn.addEventListener('click', removeResume);
+        removeBtn.onclick = removeResume;
       }
     }
   }
@@ -1525,28 +1525,28 @@ function initializeResumeUpload() {
 
   if (!dropZone || !resumeFile) return;
 
-  resumeFile.addEventListener('change', (e) => {
+  resumeFile.onchange = (e) => {
     const file = e.target.files[0];
     if (file) handleResumeUpload(file);
-  });
+  };
 
-  dropZone.addEventListener('dragover', (e) => {
+  dropZone.ondragover = (e) => {    
     e.preventDefault();
     dropZone.classList.add('dragover');
-  });
+  };
 
-  dropZone.addEventListener('dragleave', () => {
+  dropZone.ondragleave = () => {
     dropZone.classList.remove('dragover');
-  });
+  };
 
-  dropZone.addEventListener('drop', (e) => {
+  dropZone.ondrop = (e) => {    
     e.preventDefault();
     dropZone.classList.remove('dragover');
     const file = e.dataTransfer.files[0];
     if (file) {
       handleResumeUpload(file);
     }
-  });
+  };
 
 }
 
@@ -1647,17 +1647,17 @@ async function handleResumeUpload(file) {
       // Setup Upload Different Resume button
       const uploadNewBtn = document.getElementById('uploadNewResume');
       if (uploadNewBtn) {
-        uploadNewBtn.addEventListener('click', () => {
+        uploadNewBtn.onclick = () => {
           dropZone.innerHTML = originalContent;
           actionButtonsContainer.style.display = 'none';
           initializeResumeUpload();
-        });
+        };
       }
       
       // Setup Remove Resume button
       const removeBtn = document.getElementById('removeResume');
       if (removeBtn) {
-        removeBtn.addEventListener('click', removeResume);
+        removeBtn.onclick = removeResume;
       }
     }
 
@@ -1680,10 +1680,6 @@ async function handleResumeUpload(file) {
       </div>
       `;
 
-    document.getElementById('resumeFile').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) handleResumeUpload(file);
-    });
     initializeResumeUpload();
 
   } finally {
@@ -2013,7 +2009,62 @@ function initializeJobDetailOverlay() {
  * Load user profile data from the server and display it
  */
 async function loadUserProfile() {
-  await PF.loadUserProfile(API_BASE);
+  await PF.loadUserProfile(API_BASE, loadUserResumes);
+}
+
+async function loadUserResumes() {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  if (!token) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/user/resumes`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+
+    if (!response.ok) {
+      console.error('Failed to load resume history');
+      return;
+    }
+
+    const data = await response.json();
+    const section = document.getElementById('profile-resumes-section');
+    const currentLabel = document.getElementById('profile-current-resume-label');
+    const historyContainer = document.getElementById('profile-resume-history');
+
+    if (!section || !currentLabel || !historyContainer) {
+      return;
+    }
+
+    if (!data.current && (!Array.isArray(data.history) || data.history.length === 0)) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    if (data.current) {
+      currentLabel.textContent = `Active resume: ${data.current.filename} (updated ${new Date(data.current.updated_at).toLocaleDateString()})`;
+    } else {
+      currentLabel.textContent = 'No active resume uploaded.';
+    }
+
+    if (Array.isArray(data.history) && data.history.length > 0) {
+      historyContainer.innerHTML = `
+        <ul class="resume-history-list">
+          ${data.history.map((resume) => `
+            <li>
+              <strong>${resume.filename}</strong> — replaced ${new Date(resume.replaced_at).toLocaleDateString()}
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    } else {
+      historyContainer.innerHTML = '<p>No previous resumes saved yet.</p>';
+    }
+  } catch (err) {
+    console.error('Error loading user resumes:', err);
+  }
 }
 
 function toggleProfileEditMode(isEdit) {
