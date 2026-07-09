@@ -531,10 +531,12 @@ document.querySelectorAll('.column').forEach(column => {
       });
 
       // Update local job object
-      draggedJob.job.status = targetColumnId;      const existingTrackerJob = trackerJobs.find(item => item.id === draggedJob.job.id);
+      draggedJob.job.status = targetColumnId;
+      const existingTrackerJob = trackerJobs.find(item => item.id === draggedJob.job.id);
       if (existingTrackerJob) {
         existingTrackerJob.status = targetColumnId;
       }
+
       // Create new job card in target column
       const newJobCard = createJobCard(draggedJob.job);
       container.insertBefore(newJobCard, container.querySelector('.input-wrapper'));
