@@ -249,10 +249,19 @@
     }
   }
 
+  function resizeJobMap() {
+    if (!jobMap || typeof jobMap.resize !== 'function') return;
+    try {
+      jobMap.resize();
+    } catch (e) {}
+  }
+
   window.PathfinderFinderMap = {
     initializeJobMap,
     updateJobMap,
-    focusJobOnMap
+    focusJobOnMap,
+    resizeJobMap
   };
 })();
+
 

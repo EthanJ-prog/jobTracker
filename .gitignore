@@ -2,3 +2,4 @@ backend/node_modules
 .env
 backend/.env
 venv/
+backend/jobs.db

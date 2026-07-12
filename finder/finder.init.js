@@ -21,9 +21,21 @@
 
   function wireTabs() {
     const tabButtons = document.querySelectorAll('.tab-button');
+
+    // Ensure map stays correctly sized if the viewport changes after the tab is opened.
+    if (!window.PathfinderFinderMapResizeHooked) {
+      window.PathfinderFinderMapResizeHooked = true;
+      window.addEventListener('resize', () => {
+        if (window.PathfinderFinderMap && typeof window.PathfinderFinderMap.resizeJobMap === 'function') {
+          window.PathfinderFinderMap.resizeJobMap();
+        }
+      });
+    }
+
     tabButtons.forEach(button => {
       button.addEventListener('click', () => {
         const tabID = button.dataset.tab;
+
 
         // resume match requires auth
         if (tabID === 'resume' && !core.getAuthToken()) {
@@ -51,13 +63,24 @@
           if (window.PathfinderFinderMap && typeof window.PathfinderFinderMap.initializeJobMap === 'function') {
             window.PathfinderFinderMap.initializeJobMap();
           }
-          setTimeout(() => {
-            // refresh map with current list if map module implements it
+
+          // Mapbox needs an explicit resize after the tab becomes visible.
+          // `display: none` -> `display: block` can otherwise result in an incorrect map height.
+          const runAfterVisible = () => {
             if (window.PathfinderFinderMap && typeof window.PathfinderFinderMap.updateJobMap === 'function') {
               window.PathfinderFinderMap.updateJobMap(state.allActiveJobsForMap);
             }
-          }, 200);
+
+            if (window.PathfinderFinderMap && typeof window.PathfinderFinderMap.resizeJobMap === 'function') {
+              window.PathfinderFinderMap.resizeJobMap();
+            }
+          };
+
+          requestAnimationFrame(() => {
+            requestAnimationFrame(runAfterVisible);
+          });
         }
+
       });
     });
   }
