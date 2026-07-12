@@ -75,16 +75,45 @@ async function loadUserResumes() {
           ${data.history.map((resume) => `
             <li>
               <strong>${resume.filename}</strong> — replaced ${new Date(resume.replaced_at).toLocaleDateString()}
+              <button type="button" class="resume-restore-button" data-resume-id="${resume.id}">Restore<button>
             </li>
           `).join('')}
         </ul>
       `;
+      document.querySelectorAll('.resume-restore-button').forEach((button) => {
+        button.addEventListener('click', () => {
+          restoreResume(button.dataset.resumeId);
+        });
+      });
     } else {
       historyContainer.innerHTML = '<p>No previous resumes saved yet.</p>';
     }
   } catch (err) {
     console.error('Error loading user resumes:', err);
   }
+}
+
+async function restoreResume(resumeId) {
+  const token = getAuthToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch(`${API_URL}/api/user/resumes/${resumeId}/restore`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    
+    if (!res.ok) {
+      alert('Failed to restore resume');
+      return;
+    }
+
+    await loadUserResumes();
+  } catch (err) {
+    console.error('Could not restore resume, please try again', err);
+    alert('Error restoring resume');
+  }
+
 }
 
 /**

@@ -268,7 +268,7 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
 
     const technicalScore = jobSkills.technical.length > 0 
     ? (matchedTechnical.length / jobSkills.technical.length) * 100
-    : 100;
+    : 0;
 
     const matchedSoftSkills = jobSkills.softSkills.filter(skill => 
         resumeSkills.softSkills.includes(skill)
@@ -276,7 +276,7 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
 
     const softSkillsScore = jobSkills.softSkills.length > 0
     ? (matchedSoftSkills.length / jobSkills.softSkills.length) * 100
-    : 100;
+    : 0;
 
         const matchedExp = jobSkills.experience.filter(skill => 
         resumeSkills.experience.includes(skill)
@@ -284,7 +284,7 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
 
     const experienceScore = jobSkills.experience.length > 0
         ? (matchedExp.length / jobSkills.experience.length) * 100
-        : 100;
+        : 0;
 
     const matchedEducation = jobSkills.education.filter(skill => 
         resumeSkills.education.includes(skill)
@@ -292,7 +292,7 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
 
     const educationScore = jobSkills.education.length > 0
     ? (matchedEducation.length / jobSkills.education.length) * 100
-    : 100;
+    : 0;
 
     const finalScore = Math.round(
         (technicalScore * .1) + 
@@ -1164,10 +1164,10 @@ app.post('/api/user/resumes/:id/restore', authenticateToken, (req, res) => {
             const finishRestore = async (activeResumeId) => {
                 try {
                     const matchStats = await calculateAllMatches(activeResumeId, historyResume.raw_text || '');
-                    return res.json({ message: 'Resume restored successfully', id: activeResumeId, filename: historyResume.filename, matchesCalculated: matchStats.jobsProcessed, averagescore: matchstats.averageScore });
+                    return res.json({ message: 'Resume restored successfully', id: activeResumeId, filename: historyResume.filename, matchesCalculated: matchStats.jobsProcessed, averageScore: matchStats.averageScore });
                 } catch (matchErr) {
                     console.error('Could not restore match score after resume was restored', matchErr);
-                    return res.json({ message: 'Resume restored successfully, match calculation pending', id: activeResumeId, filename: historyResume.filename, matchescalculated: 0 });
+                    return res.json({ message: 'Resume restored successfully, match calculation pending', id: activeResumeId, filename: historyResume.filename, matchesCalculated: 0 });
                 }
             };
             
@@ -1185,7 +1185,7 @@ app.post('/api/user/resumes/:id/restore', authenticateToken, (req, res) => {
 
                 db.run(`INSERT INTO resumes (user_id, filename, file_type, raw_text, skills, experience, education, contact_info, updated_at) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`, 
-                    [userId, historyResume.filename, historyResume.file_type, historyResume.raw_text, historyResume.skills, historyResume.experience, historyResume.education, historyResume.contactInfo], 
+                    [userId, historyResume.filename, historyResume.file_type, historyResume.raw_text, historyResume.skills, historyResume.experience, historyResume.education, historyResume.contact_info], 
                     function(insertErr) {
                     if (insertErr) {
                         console.error('Error inserting restored resume:', insertErr);
@@ -1201,8 +1201,8 @@ app.post('/api/user/resumes/:id/restore', authenticateToken, (req, res) => {
                     console.error('Error archiving current resume before restoring:', archiveErr);
                     return res.status(500).json({ error: 'Failed to archive current resume' });
                 }
-                db.run(`UPDATE resumes filename = ?, file_type = ?, raw_text = ?, skills = ?, experience = ?, education = ?, contact_info = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`, [historyResume.filename, historyResume.file_type, historyResume.raw_text, historyResume.skills, historyResume.experience, historyResume.education, historyResume.contact_info, userId], (updatedErr) => {
-                    if (updateErr) {
+                db.run(`UPDATE resumes SET filename = ?, file_type = ?, raw_text = ?, skills = ?, experience = ?, education = ?, contact_info = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`, [historyResume.filename, historyResume.file_type, historyResume.raw_text, historyResume.skills, historyResume.experience, historyResume.education, historyResume.contact_info, userId], (updatedErr) => {
+                    if (updatedErr) {
                         console.error('Error updating resume before inserting:', updatedErr);
                         return res.status(500).json({ error: 'Failed to update resume'});
                     }
