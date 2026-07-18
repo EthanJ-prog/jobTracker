@@ -638,6 +638,39 @@ function normalizeResumeContactInfo(contactInfo) {
     };
 }
 
+function normalizeJobRequirement(requirement) {
+    if (!requirement || typeof requirement !== 'object' || Array.isArray(requirement)) return null;
+    const name = typeof requirement.name === 'string' ? requirement.name.trim() : '';
+    if (!name) return null;
+    const allowedTypes = ['technical', 'soft', 'experience', 'education', 'certification'];
+    const allowedImportance = ['required', 'preferred', 'optional'];
+    if (!allowedTypes.includes(requirement.type)) return null;
+    if (!allowedImportance.includes(requirement.importance)) return null;
+    const category = requirement.type;
+    const requirementImportance = requirement.importance;
+    const minYears = Number.isFinite(requirement.min_years) && requirement.min_years >= 0 ? requirement.min_years : null;
+    const evidence = typeof requirement.evidence === 'string' ? requirement.evidence.trim() : '';
+    return { name, category, importance: requirementImportance, min_years: minYears, evidence };
+}
+
+async function analyzeJobRequirementsWithGemini(jobTitle, jobDescription) {
+    if (!GEMINI_API_KEY) {
+        throw new Error('Gemini is not configured. No GEMINI_API_KEY was found. Ensure backend .env contains GEMINI_API_KEY and the server is loading the correct .env file.');
+    }
+    if (!geminiClient) {
+        throw new Error('Gemini client initialization failed. Verify GEMINI_API_KEY and backend configuration.');
+    }
+    if (!geminiModel) {
+        throw new Error(`Gemini model is not initialized. Check GEMINI_MODEL (${GEMINI_MODEL}) and GEMINI_API_KEY configuration.`);
+    }
+    if (!jobDescription || typeof jobDescription !== 'string' || !jobDescription.trim()) {
+        throw new Error('Job description is empty or invalid.');
+    }
+
+    const prompt = `Analyze this job description and return ONLY valid JSON with this exact shape:
+{"requirements":[{"name":"python","category":"technical","importance":"required","min_years":2,"evidence":"2+ years of Python experience"}]}. Category must be exactly one of "technical", "soft", "experience", "education", or "certification". Importance must be exactly one of "required", "preferred", or "optional". Set min_years to a number only when the posting explicitly requires it, otherwise set it to null. Include every explicitly stated qualification, skill, education requirment, certification, and evidence requirment. Evidence is optional and should be a string if present. Return an empty array if no requirements are found.`;
+}
+
 /**
  * Parse a resume using the configured Gemini model.
  * This wrapper validates configuration and enforces PDF-only processing
