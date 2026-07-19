@@ -646,6 +646,7 @@ function normalizeJobRequirement(requirement) {
     const allowedImportance = ['required', 'preferred', 'optional'];
     if (!allowedTypes.includes(requirement.category)) return null;
     if (!allowedImportance.includes(requirement.importance)) return null;
+    if (requirement.min_years !== null && (!Number.isFinite(requirement.min_years) || requirement.min_years < 0)) return null;
     const category = requirement.category;
     const requirementImportance = requirement.importance;
     const minYears = Number.isFinite(requirement.min_years) && requirement.min_years >= 0 ? requirement.min_years : null;
@@ -682,10 +683,47 @@ ${jobDescription.trim()}`;
     if (!jsonString) throw new Error('Gemini did not return valid json');
 
     const parsed = JSON.parse(jsonString);
-    const rawRequirements = Array.isArray(parsed.requirements) ? parsed.requirements : [];
-    const requirements = rawRequirements.map(normalizeJobRequirement).filter(Boolean);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Gemini returned invalid JSON structure');
+    if (!Array.isArray(parsed.requirements)) throw new Error('Gemini returned invalid requirements array');
+    const requirements = parsed.requirements.map(normalizeJobRequirement);
+    if (requirements.some(req => req === null)) throw new Error('Gemini returned invalid requirement objects');
 
     return { requirements };
+}
+
+
+let jobRequirementsSchemaPromise = null;
+
+function ensureJobRequirementsColumn(db) {
+    if (jobRequirementsSchemaPromise) return jobRequirementsSchemaPromise;
+    jobRequirementsSchemaPromise = new Promise((resolve, reject) => {
+        database.all(`PRAGMA table_info(job_listings)`, (err, columns) => {
+            if (err) return reject(err);
+            const columnNames = columns.map(col => col.name);
+            const missingColumns = [];
+            if (!columnNames.includes('requirements_json')) {
+            missingColumns.push('ALTER TABLE job_listings ADD COLUMN requirements_json TEXT');
+        }
+        if (!columnNames.includes('requirements_analyzed_at')) {
+            missingColumns.push('ALTER TABLE job_listings ADD COLUMN requirements_analyzed_at DATETIME');
+        }
+        if (missingColumns.length === 0) return resolve();
+        let completedChanges = 0;
+        for (const change of missingColumns) {
+            database.run(change, (err) => {
+                if (err) return reject(err);
+                completedChanges++;
+                if (completedChanges === missingColumns.length) {
+                    resolve();
+                }
+
+            });
+        }
+
+    });
+
+    return jobRequirementsSchemaPromise;
+
 }
 
 /**
@@ -756,24 +794,33 @@ function mapJSearchJobToDB(job){
  * @returns {Promise<number>} Number of affected rows
  */
 async function upsertJobListing(db, row){
+    await ensureJobRequirementsColumn(db);
+    if (!row.description) throw new Error('Job description is required for upserting job listing.');
     const expiration = calculateJobExpiration(row.posted_date, new Date().toISOString());
     let descriptionSummary = null;
     let ollamaTime = 0;
-    if(row.description){
-        const existingJob = await new Promise((resolve, reject) => {
-            db.get('SELECT description_summary FROM job_listings WHERE job_id = ?', [row.job_id], (err, result) => {
-                if(err) return reject(err);
-                resolve(result);
-            });
-        }).catch(() => null);
-        
-        if (!existingJob || !existingJob.description_summary) {
-            const result = await generateJobDescriptionSummary(row.description);
-            descriptionSummary = result.summary;
-            ollamaTime = result.elapsed;
-        } else {
-            descriptionSummary = existingJob.description_summary;
-        }
+
+    const existingJob = await new Promise((resolve, reject) => {
+        const sql = 'SELECT title, description, description_summary, requirements_json, requirements_analyzed_at FROM job_listings WHERE job_id = ?';
+        db.get(sql, [row.job_id], (err, existingRow) => {
+            if (err) return reject(err);
+            resolve(existingRow);
+        });
+    });
+    let requirementsJson = existingJob ? existingJob.requirements_json : null;
+    let requirementsAnalyzedAt = existingJob ? existingJob.requirements_analyzed_at : null;
+    const requirementsAreCurrent = existingJob && existingJob.title === row.title && existingJob.description === row.description && requirementsJson;
+    if (!requirementsAreCurrent) {
+        const analysis = await analyzeJobRequirementsWithGemini(row.title, row.description);
+        requirementsJson = JSON.stringify(analysis.requirements);
+        requirementsAnalyzedAt = new Date().toISOString();
+    }
+    if (!existingJob || !existingJob.description_summary) {
+        const summaryResult = await generateJobDescriptionSummary(row.description);
+        descriptionSummary = summaryResult.summary;
+        ollamaTime = summaryResult.elapsed;
+    } else {
+        descriptionSummary = existingJob.description_summary;
     }
 
     return new Promise((resolve, reject) => {
@@ -782,8 +829,8 @@ async function upsertJobListing(db, row){
             INSERT INTO job_listings (
                 job_id, title, company, location, employment_type, description, description_summary, 
                 apply_link, is_remote, posted_date, salary_min, salary_max,
-                status, expiration_method, expires_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, expiration_method, expires_at, requirements_json, requirements_analyzed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 title = excluded.title,
                 company = excluded.company,
@@ -798,6 +845,8 @@ async function upsertJobListing(db, row){
                 salary_max = excluded.salary_max,
                 expiration_method = excluded.expiration_method,
                 expires_at = excluded.expires_at
+                requirements_json = excluded.requirements_json,
+                requirements_analyzed_at = excluded.requirements_analyzed_at
         `;
         
         // Execute the upsert query with job data including expiration info
@@ -818,7 +867,9 @@ async function upsertJobListing(db, row){
                 row.salary_max,
                 'active', // Default status for new jobs
                 expiration.expirationMethod,
-                expiration.expiresAt
+                expiration.expiresAt,
+                requirementsJson,
+                requirementsAnalyzedAt
             ], 
             function(err) {
                 if(err) {
@@ -1563,14 +1614,10 @@ app.get('/api/jobs/search', async (req, res) => {
         for (const job of jobs) {
             const row = mapJSearchJobToDB(job);
             if(!row.job_id) continue; // Skip jobs without valid ID
-            try{
-                const result = await upsertJobListing(db, row);
-                if(result.ollamaTime > 0) {
-                    ollamaTime.push(result.ollamaTime);
-                    console.log(`Ollama: ${result.ollamaTime.toFixed(1)}s`);
-                }
-            } catch (e) {
-                
+            const result = await upsertJobListing(db, row);
+            if (result.ollamaTime > 0) {
+                ollamaTime.push(result.ollamaTime);
+                console.log(`Ollama took ${result.ollamaTime.toFixed(1)} seconds to generate a description summary`);
             }
         }
 
@@ -1699,7 +1746,9 @@ db.run(`
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         status TEXT DEFAULT 'active',
         expiration_method TEXT DEFAULT 'posted_date',
-        expires_at DATETIME
+        expires_at DATETIME,
+        requirements_json TEXT,
+        requirements_analyzed_at DATETIME 
     )
 `);
 
