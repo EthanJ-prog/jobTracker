@@ -644,9 +644,9 @@ function normalizeJobRequirement(requirement) {
     if (!name) return null;
     const allowedTypes = ['technical', 'soft', 'experience', 'education', 'certification'];
     const allowedImportance = ['required', 'preferred', 'optional'];
-    if (!allowedTypes.includes(requirement.type)) return null;
+    if (!allowedTypes.includes(requirement.category)) return null;
     if (!allowedImportance.includes(requirement.importance)) return null;
-    const category = requirement.type;
+    const category = requirement.category;
     const requirementImportance = requirement.importance;
     const minYears = Number.isFinite(requirement.min_years) && requirement.min_years >= 0 ? requirement.min_years : null;
     const evidence = typeof requirement.evidence === 'string' ? requirement.evidence.trim() : '';
@@ -667,8 +667,25 @@ async function analyzeJobRequirementsWithGemini(jobTitle, jobDescription) {
         throw new Error('Job description is empty or invalid.');
     }
 
+    const title = typeof jobTitle === 'string' ? jobTitle.trim() : '';
     const prompt = `Analyze this job description and return ONLY valid JSON with this exact shape:
-{"requirements":[{"name":"python","category":"technical","importance":"required","min_years":2,"evidence":"2+ years of Python experience"}]}. Category must be exactly one of "technical", "soft", "experience", "education", or "certification". Importance must be exactly one of "required", "preferred", or "optional". Set min_years to a number only when the posting explicitly requires it, otherwise set it to null. Include every explicitly stated qualification, skill, education requirment, certification, and evidence requirment. Evidence is optional and should be a string if present. Return an empty array if no requirements are found.`;
+{"requirements":[{"name":"python","category":"technical","importance":"required","min_years":2,"evidence":"2+ years of Python experience"}]}. Category must be exactly one of "technical", "soft", "experience", "education", or "certification". Importance must be exactly one of "required", "preferred", or "optional". Set min_years to a number only when the posting explicitly requires it, otherwise set it to null. Include every explicitly stated qualification, skill, education requirement, certification, and evidence requirement. Evidence is optional and should be a string if present. Return an empty array if no requirements are found.
+
+Job Title: ${title}
+
+Job Description:
+${jobDescription.trim()}`;
+
+    const result = await geminiModel.generateContent(prompt);
+    const responseText = result && result.response ? result.response.text() : '';
+    const jsonString = extractJsonObject(responseText);
+    if (!jsonString) throw new Error('Gemini did not return valid json');
+
+    const parsed = JSON.parse(jsonString);
+    const rawRequirements = Array.isArray(parsed.requirements) ? parsed.requirements : [];
+    const requirements = rawRequirements.map(normalizeJobRequirement).filter(Boolean);
+
+    return { requirements };
 }
 
 /**
