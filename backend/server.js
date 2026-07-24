@@ -154,6 +154,11 @@ const TOOLS_AND_PLATFORMS = [
     'yarn', 'pip', 'maven', 'gradle', 'cmake', 'make'
 ];
 
+// Version constant for the Gemini requirements extraction prompt.
+// Increment this when you modify the prompt in analyzeJobRequirementsWithGemini()
+// so existing jobs are reanalyzed to pick up the improved extraction logic.
+const REQUIREMENTS_EXTRACTOR_VERSION = '1.0';
+
 const SOFT_SKILLS_AND_CONCEPTS = [
     'agile', 'scrum', 'kanban', 'ci/cd', 'devops', 'microservices', 'api',
     'rest api', 'testing', 'unit testing', 'integration testing', 'tdd',
@@ -250,14 +255,29 @@ function extractAllSkills(text) {
 }
 
 /**
- * Calculates a match score between a resume and job description
- * Evaluates technical skills (10%), soft skills (20%), experience (40%), and education (30%)
+ * Calculates a match score between a resume and job description using structured requirements
+ * when available. Falls back to keyword-based scoring when no structured requirements exist.
+ * 
+ * For structured requirements, each requirement's importance determines its weight:
+ * - required: 100% weight
+ * - preferred: 50% weight  
+ * - optional: 25% weight
+ * 
+ * The overall score is the percentage of weighted requirements that are satisfied.
+ * 
  * @param {string} resumeText - The resume text content
  * @param {string} jobDesc - The job description text
  * @param {string} jobTitle - Optional job title to include in analysis
+ * @param {Array} requirements - Optional structured requirements array from Gemini extraction
  * @returns {Object} Match score and detailed breakdown of matched/missing skills
  */
-function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
+function calculateMatchScore(resumeText, jobDesc, jobTitle = '', requirements = null) {
+    // If structured requirements are available, use them for the score
+    if (requirements && Array.isArray(requirements) && requirements.length > 0) {
+        return calculateStructuredMatchScore(resumeText, requirements);
+    }
+
+    // Fallback to keyword-based matching
     const fullJobText = `${jobTitle} ${jobDesc}`;
     const resumeSkills = extractAllSkills(resumeText);
     const jobSkills = extractAllSkills(jobDesc);
@@ -335,6 +355,107 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '') {
             totalJobRequirements: jobSkills.all.length,
             totalMatched: matchedTechnical.length + matchedEducation.length +
                         matchedExp.length + matchedSoftSkills.length,
+            resumeSkillsCount: resumeSkills.all.length
+        }
+    };
+}
+
+/**
+ * Importance weight multiplier for structured requirements.
+ * @param {string} importance - One of 'required', 'preferred', 'optional'
+ * @returns {number} Weight multiplier (0-1)
+ */
+function getRequirementWeight(importance) {
+    switch (importance) {
+        case 'required': return 1.0;
+        case 'preferred': return 0.5;
+        case 'optional': return 0.25;
+        default: return 0.5;
+    }
+}
+
+/**
+ * Calculates match score using structured requirements extracted by Gemini.
+ * Each requirement's importance determines its contribution to the overall score.
+ * Returns the same shape as calculateMatchScore for frontend compatibility.
+ * 
+ * @param {string} resumeText - The resume text content
+ * @param {Array} requirements - Array of structured requirement objects
+ * @returns {Object} Match score and detailed breakdown
+ */
+function calculateStructuredMatchScore(resumeText, requirements) {
+    const normalizedResume = normalizeText(resumeText);
+    const resumeSkills = extractAllSkills(resumeText);
+
+    let weightedTotal = 0;
+    let weightedEarned = 0;
+
+    const matchedByCategory = { technical: [], soft: [], experience: [], education: [], certification: [] };
+    const missingByCategory = { technical: [], soft: [], experience: [], education: [], certification: [] };
+
+    for (const req of requirements) {
+        const weight = getRequirementWeight(req.importance);
+        weightedTotal += weight;
+
+        // Check if the requirement is satisfied in the resume
+        const reqNameLower = req.name.toLowerCase();
+        const isMatched = normalizedResume.includes(reqNameLower) || 
+            resumeSkills.all.some(skill => skill.toLowerCase().includes(reqNameLower)) ||
+            resumeSkills.all.some(skill => reqNameLower.includes(skill.toLowerCase()));
+
+        const category = req.category || 'technical';
+
+        if (isMatched) {
+            weightedEarned += weight;
+            if (matchedByCategory[category]) {
+                matchedByCategory[category].push(req.name);
+            } else {
+                matchedByCategory[category] = [req.name];
+            }
+        } else {
+            if (missingByCategory[category]) {
+                missingByCategory[category].push(req.name);
+            } else {
+                missingByCategory[category] = [req.name];
+            }
+        }
+    }
+
+    const overallScore = weightedTotal > 0 ? Math.round((weightedEarned / weightedTotal) * 100) : 0;
+
+    // Calculate per-category scores for breakdown
+    const breakdownScores = {};
+    for (const cat of ['technical', 'soft', 'experience', 'education', 'certification']) {
+        const catMatched = matchedByCategory[cat] || [];
+        const catMissing = missingByCategory[cat] || [];
+        const catTotal = catMatched.length + catMissing.length;
+        breakdownScores[cat] = catTotal > 0 ? Math.round((catMatched.length / catTotal) * 100) : 0;
+    }
+
+    const allMatched = Object.values(matchedByCategory).flat();
+    const allMissing = Object.values(missingByCategory).flat();
+
+    return {
+        score: overallScore,
+        breakdown: {
+            technical: breakdownScores.technical,
+            softSkills: breakdownScores.soft,
+            experience: breakdownScores.experience,
+            education: breakdownScores.education
+        },
+        matchedSkills: {
+            technical: matchedByCategory.technical || [],
+            softSkills: matchedByCategory.soft || [],
+            experience: matchedByCategory.experience || [],
+            education: matchedByCategory.education || []
+        },
+        missingSkills: {
+            technical: missingByCategory.technical || [],
+            softSkills: missingByCategory.soft || []
+        },
+        summary: {
+            totalJobRequirements: requirements.length,
+            totalMatched: allMatched.length,
             resumeSkillsCount: resumeSkills.all.length
         }
     };
@@ -696,35 +817,42 @@ let jobRequirementsSchemaPromise = null;
 
 function ensureJobRequirementsColumn(db) {
     if (jobRequirementsSchemaPromise) return jobRequirementsSchemaPromise;
+
     jobRequirementsSchemaPromise = new Promise((resolve, reject) => {
-        database.all(`PRAGMA table_info(job_listings)`, (err, columns) => {
+        db.all(`PRAGMA table_info(job_listings)`, (err, columns) => {
             if (err) return reject(err);
-            const columnNames = columns.map(col => col.name);
+
+            const columnNames = (columns || []).map(col => col.name);
             const missingColumns = [];
+
             if (!columnNames.includes('requirements_json')) {
-            missingColumns.push('ALTER TABLE job_listings ADD COLUMN requirements_json TEXT');
-        }
-        if (!columnNames.includes('requirements_analyzed_at')) {
-            missingColumns.push('ALTER TABLE job_listings ADD COLUMN requirements_analyzed_at DATETIME');
-        }
-        if (missingColumns.length === 0) return resolve();
-        let completedChanges = 0;
-        for (const change of missingColumns) {
-            database.run(change, (err) => {
-                if (err) return reject(err);
-                completedChanges++;
-                if (completedChanges === missingColumns.length) {
-                    resolve();
-                }
+                missingColumns.push('ALTER TABLE job_listings ADD COLUMN requirements_json TEXT');
+            }
+            if (!columnNames.includes('requirements_analyzed_at')) {
+                missingColumns.push('ALTER TABLE job_listings ADD COLUMN requirements_analyzed_at DATETIME');
+            }
+            if (!columnNames.includes('requirements_extractor_version')) {
+                missingColumns.push("ALTER TABLE job_listings ADD COLUMN requirements_extractor_version TEXT DEFAULT '0.0'");
+            }
 
-            });
-        }
+            if (missingColumns.length === 0) return resolve();
 
+            let completedChanges = 0;
+            for (const change of missingColumns) {
+                db.run(change, (runErr) => {
+                    if (runErr) return reject(runErr);
+                    completedChanges++;
+                    if (completedChanges === missingColumns.length) {
+                        resolve();
+                    }
+                });
+            }
+        });
     });
 
     return jobRequirementsSchemaPromise;
-
 }
+
 
 /**
  * Parse a resume using the configured Gemini model.
@@ -801,7 +929,7 @@ async function upsertJobListing(db, row){
     let ollamaTime = 0;
 
     const existingJob = await new Promise((resolve, reject) => {
-        const sql = 'SELECT title, description, description_summary, requirements_json, requirements_analyzed_at FROM job_listings WHERE job_id = ?';
+        const sql = 'SELECT title, description, description_summary, requirements_json, requirements_analyzed_at, requirements_extractor_version FROM job_listings WHERE job_id = ?';
         db.get(sql, [row.job_id], (err, existingRow) => {
             if (err) return reject(err);
             resolve(existingRow);
@@ -809,7 +937,9 @@ async function upsertJobListing(db, row){
     });
     let requirementsJson = existingJob ? existingJob.requirements_json : null;
     let requirementsAnalyzedAt = existingJob ? existingJob.requirements_analyzed_at : null;
-    const requirementsAreCurrent = existingJob && existingJob.title === row.title && existingJob.description === row.description && requirementsJson;
+    const existingVersion = existingJob ? existingJob.requirements_extractor_version : null;
+    const versionChanged = existingVersion !== REQUIREMENTS_EXTRACTOR_VERSION;
+    const requirementsAreCurrent = existingJob && existingJob.title === row.title && existingJob.description === row.description && requirementsJson && !versionChanged;
     if (!requirementsAreCurrent) {
         const analysis = await analyzeJobRequirementsWithGemini(row.title, row.description);
         requirementsJson = JSON.stringify(analysis.requirements);
@@ -824,13 +954,14 @@ async function upsertJobListing(db, row){
     }
 
     return new Promise((resolve, reject) => {
-        // SQL query to insert or update job listing based on job_id
+// SQL query to insert or update job listing based on job_id
         const sql = `
             INSERT INTO job_listings (
                 job_id, title, company, location, employment_type, description, description_summary, 
                 apply_link, is_remote, posted_date, salary_min, salary_max,
-                status, expiration_method, expires_at, requirements_json, requirements_analyzed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                status, expiration_method, expires_at, requirements_json, requirements_analyzed_at,
+                requirements_extractor_version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(job_id) DO UPDATE SET
                 title = excluded.title,
                 company = excluded.company,
@@ -844,9 +975,10 @@ async function upsertJobListing(db, row){
                 salary_min = excluded.salary_min,
                 salary_max = excluded.salary_max,
                 expiration_method = excluded.expiration_method,
-                expires_at = excluded.expires_at
+                expires_at = excluded.expires_at,
                 requirements_json = excluded.requirements_json,
-                requirements_analyzed_at = excluded.requirements_analyzed_at
+                requirements_analyzed_at = excluded.requirements_analyzed_at,
+                requirements_extractor_version = excluded.requirements_extractor_version
         `;
         
         // Execute the upsert query with job data including expiration info
@@ -869,8 +1001,9 @@ async function upsertJobListing(db, row){
                 expiration.expirationMethod,
                 expiration.expiresAt,
                 requirementsJson,
-                requirementsAnalyzedAt
-            ], 
+                requirementsAnalyzedAt,
+                REQUIREMENTS_EXTRACTOR_VERSION
+            ],
             function(err) {
                 if(err) {
                     return reject(err);
@@ -1546,6 +1679,94 @@ app.delete('/api/admin/jobs/:id', authenticateToken, requireAdmin, async (req, r
     } catch (err) {
         console.error('Error deleting job:', err);
         res.status(500).json({ error: 'Database Error' });
+    }
+});
+
+/**
+ * Batch analyze requirements for existing jobs.
+ * POST /api/admin/jobs/analyze-requirements
+ * 
+ * Admin-only endpoint that scans all active jobs missing requirements_json
+ * or with an outdated requirements_extractor_version, then re-analyzes them
+ * using the configured Gemini model. Useful after deploying a prompt change
+ * (increment REQUIREMENTS_EXTRACTOR_VERSION) or for initial population.
+ * 
+ * Request body (optional):
+ *   { "reanalyze": true }  — force reanalysis even for jobs that already have
+ *                            current requirements (default: only missing/outdated)
+ *   { "jobIds": [1,2,3] }  — limit analysis to specific job_listings IDs
+ * 
+ * Response:
+ *   { "total": number, "succeeded": number, "failed": number, "errors": string[] }
+ */
+app.post('/api/admin/jobs/analyze-requirements', authenticateToken, requireAdmin, async (req, res) => {
+    const { reanalyze = false, jobIds = null } = req.body || {};
+
+    try {
+        await ensureJobRequirementsColumn(db);
+
+        // Build query to find jobs that need analysis
+        let whereClause = "WHERE status = 'active' AND description IS NOT NULL";
+        const params = [];
+
+        if (Array.isArray(jobIds) && jobIds.length > 0) {
+            const placeholders = jobIds.map(() => '?').join(',');
+            whereClause += ` AND id IN (${placeholders})`;
+            params.push(...jobIds);
+        } else if (!reanalyze) {
+            // Only process jobs missing requirements or with outdated version
+            whereClause += ` AND (requirements_json IS NULL OR requirements_extractor_version IS NULL OR requirements_extractor_version != ?)`;
+            params.push(REQUIREMENTS_EXTRACTOR_VERSION);
+        }
+
+        const jobs = await new Promise((resolve, reject) => {
+            db.all(`SELECT id, job_id, title, description FROM job_listings ${whereClause}`, params, (err, rows) => {
+                if (err) return reject(err);
+                resolve(rows || []);
+            });
+        });
+
+        if (jobs.length === 0) {
+            return res.json({ total: 0, succeeded: 0, failed: 0, errors: [] });
+        }
+
+        const total = jobs.length;
+        let succeeded = 0;
+        let failed = 0;
+        const errors = [];
+
+        for (const job of jobs) {
+            try {
+                const analysis = await analyzeJobRequirementsWithGemini(job.title, job.description);
+                const requirementsJson = JSON.stringify(analysis.requirements);
+                const now = new Date().toISOString();
+
+                await new Promise((resolve, reject) => {
+                    db.run(
+                        `UPDATE job_listings SET requirements_json = ?, requirements_analyzed_at = ?, requirements_extractor_version = ? WHERE id = ?`,
+                        [requirementsJson, now, REQUIREMENTS_EXTRACTOR_VERSION, job.id],
+                        (err) => {
+                            if (err) return reject(err);
+                            resolve();
+                        }
+                    );
+                });
+
+                // Recalculate match scores with the new requirements
+                recalculateMatches(job.id, job.title, job.description);
+                succeeded++;
+            } catch (err) {
+                failed++;
+                errors.push(`Job ${job.id} (${job.title || 'no title'}): ${err.message}`);
+                console.error(`Failed to analyze requirements for job ${job.id}:`, err.message);
+            }
+        }
+
+        console.log(`Batch requirements analysis complete: ${succeeded}/${total} succeeded, ${failed} failed`);
+        res.json({ total, succeeded, failed, errors });
+    } catch (err) {
+        console.error('Batch requirements analysis error:', err);
+        res.status(500).json({ error: 'Batch analysis failed: ' + err.message });
     }
 });
 
@@ -2310,9 +2531,9 @@ function calculateAllMatches(resumeID, rawText) {
                 return reject(err);
             }
             
-            // Fetch all active job listings
+            // Fetch all active job listings with requirements_json
             db.all(
-                `SELECT id, title, description FROM job_listings WHERE status = 'active'`,
+                `SELECT id, title, description, requirements_json FROM job_listings WHERE status = 'active'`,
                 [],
                 (err, jobs) =>{
                     if (err) {
@@ -2335,8 +2556,18 @@ function calculateAllMatches(resumeID, rawText) {
                           continue;
                         }
 
+                        // Parse requirements if available
+                        let requirements = null;
+                        if (job.requirements_json) {
+                            try {
+                                requirements = JSON.parse(job.requirements_json);
+                            } catch (e) {
+                                // ignore parse errors
+                            }
+                        }
+
                         // Calculate match score between resume and job
-                        const matchResult = calculateMatchScore(rawText, job.description, job.title || '');
+                        const matchResult = calculateMatchScore(rawText, job.description, job.title || '', requirements);
 
                         // Store match result in database
                         db.run(
@@ -2398,52 +2629,58 @@ function recalculateMatches(jobID, jobTitle, jobDesc) {
         return;
     }
 
-    db.all('SELECT id, raw_text FROM resumes', [], (err, resumes) => {
-        if (err) {
-            console.error('Error fetching resumes for match recalculation', err);
-            return;
+    // Fetch job requirements for match recalculation
+    db.get('SELECT requirements_json FROM job_listings WHERE id = ?', [jobID], (jobErr, jobRow) => {
+        let requirements = null;
+        if (!jobErr && jobRow && jobRow.requirements_json) {
+            try {
+                requirements = JSON.parse(jobRow.requirements_json);
+            } catch (e) {
+                // ignore parse errors
+            }
         }
 
-        if (!resumes || resumes.length === 0) {
-            console.log('Resume not found');
-            return;
-        }
-
-        for (const resume of resumes){
-            if (!resume.raw_text){
-                continue;
+        db.all('SELECT id, raw_text FROM resumes', [], (err, resumes) => {
+            if (err) {
+                console.error('Error fetching resumes for match recalculation', err);
+                return;
             }
 
-            const matchResult = calculateMatchScore(resume.raw_text, jobDesc, jobTitle || '');
+            if (!resumes || resumes.length === 0) {
+                console.log('Resume not found');
+                return;
+            }
 
-            db.run(
-                `INSERT or REPLACE INTO job_matches
-                (resume_id, job_id, matched_score, breakdown_json, matched_skills_json, missing_skills_json, calculated_at)
-                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-                [
-                    resume.id,
-                    jobID,
-                    matchResult.score,
-                    JSON.stringify(matchResult.breakdown),
-                    JSON.stringify(matchResult.matchedSkills),
-                    JSON.stringify(matchResult.missingSkills)
-                ],
-                (err) =>{
-                    if (err){
-                        console.error(`Error saving match for job ${jobID}: `, err);
-                    } else {
-                        console.log(`Match score recalculated for ${jobID}`, matchResult.score);
-                    }
-
+            for (const resume of resumes){
+                if (!resume.raw_text){
+                    continue;
                 }
 
-            );
-        }
-        
-        
+                const matchResult = calculateMatchScore(resume.raw_text, jobDesc, jobTitle || '', requirements);
+
+                db.run(
+                    `INSERT or REPLACE INTO job_matches
+                    (resume_id, job_id, matched_score, breakdown_json, matched_skills_json, missing_skills_json, calculated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                    [
+                        resume.id,
+                        jobID,
+                        matchResult.score,
+                        JSON.stringify(matchResult.breakdown),
+                        JSON.stringify(matchResult.matchedSkills),
+                        JSON.stringify(matchResult.missingSkills)
+                    ],
+                    (err) =>{
+                        if (err){
+                            console.error(`Error saving match for job ${jobID}: `, err);
+                        } else {
+                            console.log(`Match score recalculated for ${jobID}`, matchResult.score);
+                        }
+                    }
+                );
+            }
+        });
     });
-
-
 }
 
 app.get('/api/resume', authenticateToken, (req, res) => {
