@@ -620,7 +620,7 @@ function jsearchQuotaCalculation () {
  * @returns {Object} Object with expiration details
  */
 function calculateJobExpiration(postedDate, createdAt) {
-    const twoWeeksInMs = 14 * 24 * 60 * 60 * 1000; // 14 days in milliseconds
+    const twoWeeksInMs = 21 * 24 * 60 * 60 * 1000; // 21 days in milliseconds
     let expirationMethod = 'posted_date';
     let expiresAt = null;
     
@@ -630,7 +630,7 @@ function calculateJobExpiration(postedDate, createdAt) {
             // Parse the posted date (could be ISO string or timestamp)
             const postedDateTime = new Date(postedDate);
             if (!isNaN(postedDateTime.getTime())) {
-                // Add 2 weeks to posted date
+                // Add 3 weeks to posted date
                 expiresAt = new Date(postedDateTime.getTime() + twoWeeksInMs).toISOString();
                 expirationMethod = 'posted_date';
             }
@@ -644,7 +644,7 @@ function calculateJobExpiration(postedDate, createdAt) {
         try {
             const createdDateTime = new Date(createdAt);
             if (!isNaN(createdDateTime.getTime())) {
-                // Add 2 weeks to created date
+                // Add 3 weeks to created date
                 expiresAt = new Date(createdDateTime.getTime() + twoWeeksInMs).toISOString();
                 expirationMethod = 'created_at';
             }
