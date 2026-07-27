@@ -251,6 +251,53 @@ body.modal-open {
   overflow: hidden;
 }
 
+/* Resume restore button */
+.resume-restore-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 12px;
+  color: #ffffff;
+  background: var(--brand-gradient);
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: filter var(--transition), transform var(--transition);
+}
+
+.resume-restore-button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.resume-history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+
+.resume-history-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.4rem;
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+}
+
+.resume-history-list li strong {
+  color: var(--text-primary);
+}
+
 @media (max-width: 520px) {
   .popup-panel {
     padding: 1.1rem;

@@ -75,7 +75,7 @@ async function loadUserResumes() {
           ${data.history.map((resume) => `
             <li>
               <strong>${resume.filename}</strong> — replaced ${new Date(resume.replaced_at).toLocaleDateString()}
-              <button type="button" class="resume-restore-button" data-resume-id="${resume.id}">Restore<button>
+              <button type="button" class="resume-restore-button" data-resume-id="${resume.id}">Restore</button>
             </li>
           `).join('')}
         </ul>
