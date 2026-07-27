@@ -277,49 +277,62 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '', requirements = 
         return calculateStructuredMatchScore(resumeText, requirements);
     }
 
-    // Fallback to keyword-based matching
+    // Fallback to keyword-based matching. Include the job title alongside the
+    // description so title-only signals (e.g. "Full Stack Software Engineer")
+    // aren't dropped on the floor.
     const fullJobText = `${jobTitle} ${jobDesc}`;
     const resumeSkills = extractAllSkills(resumeText);
-    const jobSkills = extractAllSkills(jobDesc);
+    const jobSkills = extractAllSkills(fullJobText);
 
-    const matchedTechnical = jobSkills.technical.filter(skill => 
+    const matchedTechnical = jobSkills.technical.filter(skill =>
         resumeSkills.technical.includes(skill)
     );
 
-    const technicalScore = jobSkills.technical.length > 0 
+    // null (not 0) when the job side has no keywords in this category — a job
+    // posting that simply doesn't mention e.g. soft skills shouldn't be
+    // scored as if the candidate failed to meet them.
+    const technicalScore = jobSkills.technical.length > 0
     ? (matchedTechnical.length / jobSkills.technical.length) * 100
-    : 0;
+    : null;
 
-    const matchedSoftSkills = jobSkills.softSkills.filter(skill => 
+    const matchedSoftSkills = jobSkills.softSkills.filter(skill =>
         resumeSkills.softSkills.includes(skill)
     );
 
     const softSkillsScore = jobSkills.softSkills.length > 0
     ? (matchedSoftSkills.length / jobSkills.softSkills.length) * 100
-    : 0;
+    : null;
 
-        const matchedExp = jobSkills.experience.filter(skill => 
+        const matchedExp = jobSkills.experience.filter(skill =>
         resumeSkills.experience.includes(skill)
     );
 
     const experienceScore = jobSkills.experience.length > 0
         ? (matchedExp.length / jobSkills.experience.length) * 100
-        : 0;
+        : null;
 
-    const matchedEducation = jobSkills.education.filter(skill => 
+    const matchedEducation = jobSkills.education.filter(skill =>
         resumeSkills.education.includes(skill)
     );
 
     const educationScore = jobSkills.education.length > 0
     ? (matchedEducation.length / jobSkills.education.length) * 100
-    : 0;
+    : null;
 
-    const finalScore = Math.round(
-        (technicalScore * .1) + 
-        (softSkillsScore * .2) + 
-        (experienceScore * .4) + 
-        (educationScore * .3)
-    );
+    // Weighted average over only the categories where the job posting
+    // actually had keywords, renormalizing the remaining weights to sum to 1
+    // instead of penalizing a job for not mentioning a category at all.
+    const categoryWeights = { technical: .1, softSkills: .2, experience: .4, education: .3 };
+    const categoryScores = { technical: technicalScore, softSkills: softSkillsScore, experience: experienceScore, education: educationScore };
+    let weightedSum = 0;
+    let weightTotal = 0;
+    for (const key of Object.keys(categoryScores)) {
+        if (categoryScores[key] !== null) {
+            weightedSum += categoryScores[key] * categoryWeights[key];
+            weightTotal += categoryWeights[key];
+        }
+    }
+    const finalScore = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 0;
 
     const missingTechnical = jobSkills.technical.filter(skill => 
         !resumeSkills.technical.includes(skill)
@@ -333,10 +346,10 @@ function calculateMatchScore(resumeText, jobDesc, jobTitle = '', requirements = 
         score: finalScore,
 
         breakdown: {
-            technical: Math.round(technicalScore),
-            softSkills: Math.round(softSkillsScore),
-            experience: Math.round(experienceScore),
-            education: Math.round(educationScore)
+            technical: technicalScore !== null ? Math.round(technicalScore) : 0,
+            softSkills: softSkillsScore !== null ? Math.round(softSkillsScore) : 0,
+            experience: experienceScore !== null ? Math.round(experienceScore) : 0,
+            education: educationScore !== null ? Math.round(educationScore) : 0
         },
 
         matchedSkills: {
@@ -397,11 +410,19 @@ function calculateStructuredMatchScore(resumeText, requirements) {
         const weight = getRequirementWeight(req.importance);
         weightedTotal += weight;
 
-        // Check if the requirement is satisfied in the resume
+        // Check if the requirement is satisfied in the resume. The third check
+        // (does the requirement phrase contain one of the resume's skills)
+        // needs a word-boundary match and a minimum skill length — otherwise
+        // single/double-letter skills like "r" or "c" match as a raw substring
+        // of nearly any phrase (e.g. "r" inside "corporate", "financial reasoning").
         const reqNameLower = req.name.toLowerCase();
-        const isMatched = normalizedResume.includes(reqNameLower) || 
+        const isMatched = normalizedResume.includes(reqNameLower) ||
             resumeSkills.all.some(skill => skill.toLowerCase().includes(reqNameLower)) ||
-            resumeSkills.all.some(skill => reqNameLower.includes(skill.toLowerCase()));
+            resumeSkills.all.some(skill => {
+                const skillLower = skill.toLowerCase();
+                if (skillLower.length < 3) return false;
+                return new RegExp(`\\b${escapeRegex(skillLower)}\\b`, 'i').test(reqNameLower);
+            });
 
         const category = req.category || 'technical';
 
