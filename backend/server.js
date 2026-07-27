@@ -641,7 +641,7 @@ function jsearchQuotaCalculation () {
  * @returns {Object} Object with expiration details
  */
 function calculateJobExpiration(postedDate, createdAt) {
-    const twoWeeksInMs = 21 * 24 * 60 * 60 * 1000; // 21 days in milliseconds
+    const twoWeeksInMs = 28 * 24 * 60 * 60 * 1000; // 28 days in milliseconds
     let expirationMethod = 'posted_date';
     let expiresAt = null;
     
