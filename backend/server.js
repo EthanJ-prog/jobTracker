@@ -28,6 +28,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { normalizeJobDescription } = require('./jobDescription');
 // Backend main server for Pathfinder.
 // - Serves REST endpoints for job search, job storage, resume upload/analysis,
 //   user authentication (including optional 2FA) and match-score calculation.
@@ -692,7 +693,8 @@ function calculateJobExpiration(postedDate, createdAt) {
  * @returns {Promise<Object>} Object with summary text and elapsed time in seconds
  */
 async function generateJobDescriptionSummary(description) {
-    if(!description || typeof description !== 'string' || !description.trim()){
+    const cleanDescription = normalizeJobDescription(description);
+    if (!cleanDescription) {
         return {summary: null, elapsed: 0};
     }
 
@@ -700,9 +702,6 @@ async function generateJobDescriptionSummary(description) {
 
     const startTime = Date.now();
     try {
-        const cleanDescription = description.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-        if (!cleanDescription) return {summary: null, elapsed: 0};
-
         const prompt = `You are an expert job description analyst. Create a concise, professional summary of the following job posting. 
         
         INSTRUCTIONS: 
@@ -927,7 +926,7 @@ function mapJSearchJobToDB(job){
         company: job.employer_name || null,
         location: [job.job_city, job.job_state, job.job_country].filter(Boolean).join(', '),
         employment_type: job.job_employment_type || null,
-        description: job.job_description || null,
+        description: normalizeJobDescription(job.job_description),
         apply_link: (job.job_apply_link || (Array.isArray(job.job_apply_links) ? job.job_apply_links[0] : null)) || null,
         is_remote: job.job_is_remote ? 1 : 0,
         posted_date: job.job_posted_at_datetime_utc || job.job_posted_at_timestamp || null,
@@ -2361,19 +2360,19 @@ app.delete('/jobs/:id', authenticateToken, (req, res) =>{
 app.post('/api/jobs/summarize-description', async(req, res) => {
     const startTime = Date.now();
     try {
-        const {description} = req.body;
-        if (!description || typeof description !== 'string') {
+        const description = normalizeJobDescription(req.body.description);
+        if (!description) {
             return res.status(400).json({error: 'Description is required'});
         }
         if (!ollamaAvailable) {
             return res.status(500).json({error: 'Ollama is not available. Make sure Ollama is running and the model is installed.'});
         }
 
-        const summary = await generateJobDescriptionSummary(description);
+        const summaryResult = await generateJobDescriptionSummary(description);
         const elapsed = Date.now() - startTime;
         console.log(`✓ Summary endpoint: ${(elapsed/1000).toFixed(1)}s`);
 
-        res.json({summary: summary || ''});
+        res.json({summary: summaryResult.summary || ''});
     } catch (err){
         const elapsed = Date.now() - startTime;
         console.error(`✗ Summary endpoint error after ${(elapsed/1000).toFixed(1)}s: ${err.message}`);
@@ -2788,5 +2787,4 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server started at http://localhost:${PORT}`);
 });
-
 

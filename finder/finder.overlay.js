@@ -112,15 +112,11 @@
     }
 
     // description
-    const desc = job.description
-      ? job.description
-          .replace(/<[^>]*>/g, '')
-          .replace(/&nbsp;/g, ' ')
-          .replace(/&amp;/g, '&')
-          .trim()
+    const desc = job.description && job.description.trim()
+      ? job.description.trim()
       : 'No description available';
 
-    document.getElementById('overlay-description').innerHTML = desc.replace(/\n/g, '<br>');
+    document.getElementById('overlay-description').textContent = desc;
 
     // apply button
     const applyBtn = document.getElementById('overlay-apply-button');
@@ -181,4 +177,3 @@
     closeJobDetailOverlay
   };
 })();
-

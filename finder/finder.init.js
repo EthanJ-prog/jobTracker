@@ -90,6 +90,10 @@
     ui.setupInitHooks();
     wireTabs();
 
+    if (window.PathfinderFinderOverlay && typeof window.PathfinderFinderOverlay.initializeJobDetailOverlay === 'function') {
+      window.PathfinderFinderOverlay.initializeJobDetailOverlay();
+    }
+
     // initialize resume upload controls (if present on this page)
     if (window.PathfinderFinderResume && typeof window.PathfinderFinderResume.initializeResumeUpload === 'function') {
       window.PathfinderFinderResume.initializeResumeUpload();
@@ -162,4 +166,3 @@
     }
   };
 })();
-

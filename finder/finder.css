@@ -1036,6 +1036,7 @@ html[data-theme="dark"] .resume-loading-overlay {
 #overlay-description {
   color: var(--text-primary);
   line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .job-overlay-footer {
